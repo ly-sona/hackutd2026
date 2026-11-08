@@ -6,6 +6,7 @@ import {
   highlightExcerpt,
   incidentTime,
   findingsNeedingTasks,
+  isRecordedEvent,
   type Finding,
   type IncidentEvent,
 } from "../lib/incident-model";
@@ -28,6 +29,11 @@ describe("readable incident times", () => {
 });
 
 describe("incident investigation and personal attention", () => {
+  it("colors completed report generation as recorded without treating report preparation as success", () => {
+    expect(isRecordedEvent({ type: "report", title: "Report v2 generated", status: "" })).toBe(true);
+    expect(isRecordedEvent({ type: "report", title: "Report generation pending", status: "" })).toBe(false);
+    expect(isRecordedEvent({ type: "classification", title: "Classification updated", status: "" })).toBe(false);
+  });
   it("moves a finding with a persisted task out of attention without resolving it", () => {
     expect(findingsNeedingTasks([finding], [])).toEqual([finding]);
     expect(findingsNeedingTasks([finding], [{ relatedFindingId: finding.id }])).toEqual([]);

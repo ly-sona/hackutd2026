@@ -21,7 +21,14 @@ import type {
   ApprovalRequest,
 } from "@/lib/recovery";
 const tone = (s: string) =>
-  s === "Do Not Use" || s === "Failed" || s === "Rejected"
+  [
+    "Do Not Use",
+    "Restricted",
+    "Disrupted",
+    "Failed",
+    "Rejected",
+    "Invalidated",
+  ].includes(s)
     ? "text-red-400"
     : [
           "Available",
@@ -29,9 +36,32 @@ const tone = (s: string) =>
           "Succeeded",
           "Fallback Active",
           "Operational",
+          "Recorded",
+          "Executed",
         ].includes(s)
       ? "text-emerald-400"
-      : "text-amber-300";
+      : ["Draft", "Expired", "Canceled", "Not recorded"].includes(s)
+        ? "text-muted-foreground"
+        : "text-amber-300";
+function StatusTag({
+  value,
+  color = tone(value),
+}: {
+  value: string;
+  color?: string;
+}) {
+  return (
+    <span
+      className={`inline-flex max-w-full items-center gap-2 rounded-full border border-current/30 bg-current/10 px-2.5 py-1 text-sm font-medium ${color}`}
+    >
+      <span
+        aria-hidden="true"
+        className="size-2 shrink-0 rounded-full bg-current"
+      />
+      {value}
+    </span>
+  );
+}
 // Approval state is independent of recovery progress and trust restrictions.
 const requestTone = (status: string) => {
   if (["Approved", "Executed", "Recorded"].includes(status))
@@ -61,15 +91,7 @@ export function TrustWarning({
             {w.kind}
           </span>
         </span>
-        <span
-          className={`flex items-center gap-2 text-base font-medium ${tone(w.category)}`}
-        >
-          <span
-            aria-hidden="true"
-            className="size-2 shrink-0 rounded-full bg-current"
-          />
-          {w.category}
-        </span>
+        <StatusTag value={w.category} />
         <ChevronDown
           aria-hidden="true"
           size={18}
@@ -327,10 +349,16 @@ export function AffectedOperations({
                     {o.operatingMode}
                   </p>
                 </td>
-                <td className={`p-3 ${tone(o.status)}`}>{o.status}</td>
                 <td className="p-3">
-                  {d.warnings.find((w) => w.entityId === o.entityId)
-                    ?.category ?? "Available"}
+                  <StatusTag value={o.status} />
+                </td>
+                <td className="p-3">
+                  <StatusTag
+                    value={
+                      d.warnings.find((w) => w.entityId === o.entityId)
+                        ?.category ?? "Available"
+                    }
+                  />
                 </td>
                 <td className="p-3">{o.readiness}</td>
               </tr>
@@ -614,9 +642,11 @@ export function RecoveryWorkspace() {
         {inReview} in review
         <span className="mx-2">·</span>
         {
-          d.requests.filter((request) => request.status === "Approved").length
+          d.requests.filter((request) =>
+            ["Approved", "Recorded", "Executed"].includes(request.status),
+          ).length
         }{" "}
-        approved
+        approved / recorded
       </p>
       <details className="mb-5">
         <summary className="cursor-pointer text-sm text-muted-foreground">
@@ -642,14 +672,11 @@ export function RecoveryWorkspace() {
                   {request.displayReference}
                 </span>
               </span>
-              <span
-                className={`flex shrink-0 items-center gap-2 text-base ${requestTone(request.status)}`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="size-2 rounded-full bg-current"
+              <span className="flex shrink-0 items-center">
+                <StatusTag
+                  value={request.status}
+                  color={requestTone(request.status)}
                 />
-                {request.status}
               </span>
             </button>
           ))}
@@ -715,15 +742,18 @@ export function RecoveryWorkspace() {
                 <h2 className="text-[34px] leading-tight font-semibold break-words">
                   {r.title}
                 </h2>
-                <span
-                  className={`text-2xl font-semibold ${requestTone(r.status)}`}
-                >
-                  {r.status}
-                </span>
+                <StatusTag value={r.status} color={requestTone(r.status)} />
               </div>
               <p className="mt-2 text-base leading-7 text-muted-foreground sm:text-lg">
                 {r.description}
               </p>
+              {(JSON.parse(r.parameters) as { syntheticExample?: boolean })
+                .syntheticExample && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Synthetic demo example · sample outcome only; no live action
+                  performed.
+                </p>
+              )}
               <dl className="my-5 grid grid-cols-[110px_minmax(0,1fr)] gap-x-4 gap-y-2 text-base sm:grid-cols-[200px_minmax(0,1fr)] sm:text-lg">
                 <dt>Requester</dt>
                 <dd className="text-muted-foreground">
@@ -774,12 +804,28 @@ export function RecoveryWorkspace() {
                           </p>
                         )}
                       </div>
-                      <span
-                        className={`ml-auto text-base sm:text-lg ${decision?.eligible && decision.decision === "Approve" ? "text-emerald-400" : decision?.decision === "Reject" ? "text-red-400" : "text-amber-300"}`}
-                      >
-                        {decision
-                          ? `${decision.decision === "Approve" ? "Approved" : "Rejected"}${decision.eligible ? "" : " · No longer eligible"}`
-                          : "Pending"}
+                      <span className="ml-auto">
+                        <StatusTag
+                          color={
+                            decision?.eligible &&
+                            decision.decision === "Approve"
+                              ? "text-emerald-400"
+                              : decision?.decision === "Reject"
+                                ? "text-red-400"
+                                : decision
+                                  ? "text-amber-300"
+                                  : r.status === "Pending"
+                                    ? "text-amber-300"
+                                    : "text-muted-foreground"
+                          }
+                          value={
+                            decision
+                              ? `${decision.decision === "Approve" ? "Approved" : "Rejected"}${decision.eligible ? "" : " · No longer eligible"}`
+                              : r.status === "Pending"
+                                ? "Pending"
+                                : "Not recorded"
+                          }
+                        />
                       </span>
                     </div>
                   );

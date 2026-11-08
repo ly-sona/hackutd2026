@@ -201,10 +201,20 @@ test("desktop demo opens all five live pages and essential controls", async ({ c
     await navigation.getByRole("link", { name: section, exact: true }).click();
     await expect(page.getByRole("heading", { name: heading, exact: true }).first()).toBeVisible();
     if (section === "Operations") {
+      const requests = page.getByRole("heading", { name: "Requests", exact: true }).locator("..");
+      await expect(requests.getByRole("button", { name: /Recovery hardware/ })).toContainText("Pending");
+      await expect(requests.getByRole("button", { name: /Temporary support access/ })).toContainText("Rejected");
+      await expect(requests.getByRole("button", { name: /Backup storage extension/ })).toContainText("Recorded");
       await page.getByRole("button", { name: "New request", exact: true }).click();
       await expect(page.getByRole("dialog")).toContainText("Restore Customer Support Capability");
       await page.getByRole("button", { name: "Close", exact: true }).click();
     }
     if (section === "Team") await expect(page.getByRole("textbox", { name: "Message", exact: true })).toBeEnabled();
+    if (section === "Timeline") {
+      const events = page.getByTestId("timeline-events");
+      await expect(events.getByRole("button").filter({ hasText: "Conflicting isolation reports" }).locator(".bg-red-400")).toBeVisible();
+      await expect(events.getByRole("button").filter({ hasText: "Independent purchasing route documented" }).locator(".bg-emerald-400")).toBeVisible();
+      await expect(events.getByRole("button").filter({ hasText: "Vendor approval depends on affected SSO" }).locator(".bg-amber-400")).toBeVisible();
+    }
   }
 });

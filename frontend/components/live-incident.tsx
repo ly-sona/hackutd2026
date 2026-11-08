@@ -43,6 +43,7 @@ import { incidentBase } from "@/lib/roles";
 import {
   unresolved,
   findingsNeedingTasks,
+  isRecordedEvent,
   isUnread,
   incidentTime,
   type Finding,
@@ -557,9 +558,7 @@ export function LiveTimeline() {
         unresolved(f))
     );
   };
-  const recorded = (e: (typeof d.events)[number]) =>
-    ["Resolved", "Completed", "Acknowledged", "Ruled Out"].includes(e.status) ||
-    e.type === "decision";
+  const recorded = isRecordedEvent;
   const current =
     events.find((e) => e.id === (selected ?? params.get("event"))) || events[0];
   const currentId = current?.id;
@@ -660,7 +659,7 @@ export function LiveTimeline() {
               <span className="min-w-0 flex-1">
                 <span
                   data-event-title={e.title}
-                  className="block text-lg font-semibold leading-7 sm:text-xl"
+                  className={`block text-lg font-semibold leading-7 sm:text-xl ${e.type === "report" && recorded(e) ? "text-emerald-400" : ""}`}
                 >
                   {urgent(e) && <span className="text-red-400">Urgent · </span>}
                   {e.type === "decision" && (
@@ -833,7 +832,7 @@ export function LiveTimeline() {
                         Synthetic fixture correction #{current.timingCorrectionId}.
                         Original observation: {incidentTime(current.originalObservedAt!)}.
                         {current.originalRecordedAt && ` Original recording: ${incidentTime(current.originalRecordedAt)}.`}
-                        Corrected by {d.members.find((member) => member.userId === "maya")?.name ?? "maya"} on {incidentTime(current.timingCorrectedAt!)}.
+                        Corrected by {d.members.find((member) => member.userId === current.timingCorrectedBy)?.name ?? (current.timingCorrectedBy === "system" ? "System" : current.timingCorrectedBy || "Not recorded")} on {incidentTime(current.timingCorrectedAt!)}.
                       </dd>
                     </>
                   )}

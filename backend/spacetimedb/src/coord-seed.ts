@@ -1,5 +1,5 @@
 import type { Ctx } from "./index";
-import { seedDemoEventTimings } from "./demo-event-timing";
+import { seedDemoEventTimings, seedDemoHighlightTimings } from "./demo-event-timing";
 import { reconcileDemoConsistency } from "./demo-consistency";
 import { ensureRoom } from "./coord-access";
 import { json, key, time, appendEvent } from "./incident-domain";
@@ -12,6 +12,7 @@ export function seedCoordination(ctx: Ctx) {
     seedVisualExamples(ctx);
     seedDemoEventTimings(ctx);
     reconcileDemoConsistency(ctx);
+    seedDemoHighlightTimings(ctx);
     return { seeded: false };
   }
   if (!ctx.db.scenarioSeeds.id.find("acme-phase3-v1"))
@@ -331,6 +332,7 @@ export function seedCoordination(ctx: Ctx) {
   seedVisualExamples(ctx);
   seedDemoEventTimings(ctx);
   reconcileDemoConsistency(ctx);
+  seedDemoHighlightTimings(ctx);
   return { seeded: true };
 }
 

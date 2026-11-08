@@ -38,6 +38,7 @@ export interface IncidentEvent {
   originalRecordedAt?: string;
   timingCorrectionId?: string;
   timingCorrectedAt?: string;
+  timingCorrectedBy?: string;
   id: string;
   organizationId: string;
   incidentId: string;
@@ -127,6 +128,11 @@ export function sortEvents(events: readonly IncidentEvent[]) {
       Number(BigInt(b.createdAt) - BigInt(a.createdAt)) ||
       (BigInt(b.id) > BigInt(a.id) ? 1 : -1),
   );
+}
+export function isRecordedEvent(event: Pick<IncidentEvent, "type" | "status" | "title">) {
+  return ["Resolved", "Completed", "Acknowledged", "Ruled Out"].includes(event.status) ||
+    event.type === "decision" ||
+    (event.type === "report" && /^Report v\d+ generated$/.test(event.title));
 }
 export function incidentTime(ms: string | number, full = true) {
   const timestamp = Number(ms);

@@ -290,6 +290,8 @@ Deployment requires independent HTTPS/WSS hosting, private service credentials a
 
 ## Phase 5 recovery and reporting
 
+Operations uses colored status tags. Development/test seeding labels untouched predefined requests as pending, recorded and rejected synthetic examples; no human approval, access grant or infrastructure action is fabricated. Responder decisions and user-created requests are preserved. A one-time demo timing correction brings the three colored timeline examples near the seed run's current time while retaining original timestamps and correction provenance. Successful report-generation events appear green.
+
 Run the existing `npm run dev` workflow; no additional dependency, service, environment variable or credential is required. The bootstrap preserves existing data and adds `acme-phase5-v1`, predefined versioned recovery templates, synthetic verification originals, independent safe support records and incident reporting metadata.
 
 - **Recovery demo:** Jordan requests customer-support recovery in Operations. Alex and Maya independently approve. The default deterministic verification fails; a separate fallback request and fresh approvals can grant Jordan read-only access to SAFE-001–003 for one hour. Original database restrictions and record-impact assessments remain unchanged. `npm run demo:recovery -- --outcome=success` selects the successful fixture for the next primary execution; use `--outcome=failure` to restore the default. This CLI is development-only and service-gated; no HTTP fixture endpoint exists.
