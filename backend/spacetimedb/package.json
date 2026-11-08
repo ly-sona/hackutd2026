@@ -1,0 +1,16 @@
+{
+  "name": "@aegis/backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/db.mjs build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "spacetimedb": "2.14.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}
