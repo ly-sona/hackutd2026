@@ -40,7 +40,8 @@ for (const signal of ["SIGINT", "SIGTERM"])
     stop();
   });
 function start(args) {
-  const child = launch(cli, args, { detached: true });
+  // Unix needs a process group for cleanup; Windows uses taskkill /T instead.
+  const child = launch(cli, args, { detached: process.platform !== "win32" });
   children.add(child);
   child.once("exit", () => children.delete(child));
   return child;
@@ -122,7 +123,7 @@ try {
           "--port",
           port,
         ],
-        { detached: true },
+        { detached: process.platform !== "win32" },
       );
       children.add(next);
       next.once("exit", () => children.delete(next));

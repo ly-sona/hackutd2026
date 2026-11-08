@@ -35,6 +35,7 @@ import {
 } from "./ui/dialog";
 import { Avatar } from "./account-menu";
 import { AccessState } from "./access-state";
+import { Disclosure } from "./workspace-ui";
 
 type Delivery = {
   id: string;
@@ -622,7 +623,12 @@ export function MembersPage() {
     </>
   );
 }
-export function InvitationsPage() {
+export function PendingInvitations() {
+  return <InvitationsPage compact />;
+}
+export function InvitationsPage({
+  compact = false,
+}: { compact?: boolean } = {}) {
   const access = useAccess();
   const [rows, ready] = useTable(tables.visibleInvitations);
   const [result, setResult] = useState<Delivery>();
@@ -631,14 +637,18 @@ export function InvitationsPage() {
   const [revoke, setRevoke] = useState<string>();
   const [replacementId, setReplacementId] = useState<string>();
   if (!access.can("members:invite"))
-    return (
+    return compact ? null : (
       <AccessState message="Your role does not permit invitation management." />
     );
   const invitations = rows.filter(
-    (i) => i.organizationId === access.organizationId,
+    (i) =>
+      i.organizationId === access.organizationId &&
+      (!compact || i.status === "pending"),
   );
   async function replace(id: string) {
-    const invite = invitations.find((i) => i.id === id);
+    const invite = rows.find(
+      (i) => i.organizationId === access.organizationId && i.id === id,
+    );
     if (!invite) return;
     setPending(id);
     setError("");
@@ -678,97 +688,165 @@ export function InvitationsPage() {
       setPending("");
     }
   }
+  const invitationActions = (invite: (typeof invitations)[number]) => (
+    <>
+      {invite.status !== "accepted" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!!pending}
+          onClick={() => {
+            setError("");
+            setReplacementId(invite.id);
+          }}
+        >
+          Generate replacement
+        </Button>
+      )}
+      {invite.status === "pending" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!!pending}
+          onClick={() => setRevoke(invite.id)}
+        >
+          Revoke
+        </Button>
+      )}
+    </>
+  );
   return (
     <>
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-[40px]">Invitations</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            One-hour, single-use access invitations for your organization.
-          </p>
-        </div>
-        <InviteResponder />
-      </div>
-      <div className="mb-6 flex gap-5 text-xs text-muted-foreground">
-        <Link
-          href={`/org/${access.organizationId}/members`}
-          className="underline underline-offset-4"
+      {compact ? (
+        <Disclosure
+          title={`Invitations pending (${ready ? invitations.length : "…"})`}
+          className="mt-5"
         >
-          Manage members
-        </Link>
-        <span>Delivery: simulated</span>
-      </div>
-      {error && !revoke && (
-        <p role="alert" className="mb-4 text-sm text-red-400">
-          {error}
-        </p>
-      )}
-      <div className="rounded-lg border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-5">Recipient</TableHead>
-              <TableHead>Assigned role</TableHead>
-              <TableHead>Incident</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Expires</TableHead>
-              <TableHead className="text-right pr-5">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+          <div className="space-y-4">
             {invitations.map((invite) => (
-              <TableRow key={invite.id}>
-                <TableCell className="pl-5">
+              <article
+                key={invite.id}
+                data-testid="pending-invitation"
+                className="border-b border-border pb-4 last:border-0"
+              >
+                <p className="break-words text-base font-medium">
                   {invite.recipientContact}
-                </TableCell>
-                <TableCell>{roleLabels[invite.intendedRole]}</TableCell>
-                <TableCell>{invite.incidentId}</TableCell>
-                <TableCell>
-                  <StatusBadge status={invite.status} />
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {new Date(Number(invite.expiresAt)).toLocaleString()}
-                </TableCell>
-                <TableCell className="space-x-2 text-right pr-5">
-                  {invite.status !== "accepted" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={!!pending}
-                      onClick={() => {
-                        setError("");
-                        setReplacementId(invite.id);
-                      }}
-                    >
-                      Generate replacement
-                    </Button>
-                  )}
-                  {invite.status === "pending" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={!!pending}
-                      onClick={() => setRevoke(invite.id)}
-                    >
-                      Revoke
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
+                </p>
+                <dl className="mt-3 grid grid-cols-[90px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+                  <dt className="text-muted-foreground">Assigned role</dt>
+                  <dd>{roleLabels[invite.intendedRole]}</dd>
+                  <dt className="text-muted-foreground">Incident</dt>
+                  <dd>{invite.incidentId}</dd>
+                  <dt className="text-muted-foreground">Status</dt>
+                  <dd>
+                    <StatusBadge status={invite.status} />
+                  </dd>
+                  <dt className="text-muted-foreground">Expires</dt>
+                  <dd data-testid="invitation-expiry" className="break-words">
+                    {new Date(Number(invite.expiresAt)).toLocaleString()}
+                  </dd>
+                </dl>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {invitationActions(invite)}
+                </div>
+              </article>
             ))}
-          </TableBody>
-        </Table>
-        {!ready && (
-          <p role="status" className="p-6 text-sm text-muted-foreground">
-            Loading invitations…
-          </p>
-        )}
-        {ready && !invitations.length && (
-          <p className="p-6 text-sm text-muted-foreground">
-            No invitations yet. Invite a responder to get started.
-          </p>
-        )}
-      </div>
+            {!ready && (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading invitations…
+              </p>
+            )}
+            {ready && !invitations.length && (
+              <p className="text-sm text-muted-foreground">
+                No pending invitations.
+              </p>
+            )}
+            {error && !revoke && (
+              <p role="alert" className="text-sm text-red-400">
+                {error}
+              </p>
+            )}
+            <Link
+              className="block text-sm underline underline-offset-4"
+              href={`/org/${access.organizationId}/invitations`}
+            >
+              View all invitations →
+            </Link>
+          </div>
+        </Disclosure>
+      ) : (
+        <>
+          <div className="mb-8 flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-[40px]">
+                Invitations
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                One-hour, single-use access invitations for your organization.
+              </p>
+            </div>
+            <InviteResponder />
+          </div>
+          <div className="mb-6 flex gap-5 text-xs text-muted-foreground">
+            <Link
+              href={`/org/${access.organizationId}/members`}
+              className="underline underline-offset-4"
+            >
+              Manage members
+            </Link>
+            <span>Delivery: simulated</span>
+          </div>
+          {error && !revoke && (
+            <p role="alert" className="mb-4 text-sm text-red-400">
+              {error}
+            </p>
+          )}
+          <div className="rounded-lg border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-5">Recipient</TableHead>
+                  <TableHead>Assigned role</TableHead>
+                  <TableHead>Incident</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead className="text-right pr-5">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invitations.map((invite) => (
+                  <TableRow key={invite.id}>
+                    <TableCell className="pl-5">
+                      {invite.recipientContact}
+                    </TableCell>
+                    <TableCell>{roleLabels[invite.intendedRole]}</TableCell>
+                    <TableCell>{invite.incidentId}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={invite.status} />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(Number(invite.expiresAt)).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="space-x-2 text-right pr-5">
+                      {invitationActions(invite)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {!ready && (
+              <p role="status" className="p-6 text-sm text-muted-foreground">
+                Loading invitations…
+              </p>
+            )}
+            {ready && !invitations.length && (
+              <p className="p-6 text-sm text-muted-foreground">
+                No invitations yet. Invite a responder to get started.
+              </p>
+            )}
+          </div>
+        </>
+      )}
       <Dialog
         open={!!replacementId}
         onOpenChange={(open) => {

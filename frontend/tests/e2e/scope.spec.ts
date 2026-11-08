@@ -652,7 +652,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
       [alex, "alex"],
     ] as const)
       await login(c, id);
-    for (const c of [admin, legal, operations])
+    for (const c of [legal, operations])
       expect(
         (await post(c.request, "asset.create", asset("FORBIDDEN"))).status(),
       ).toBe(403);
@@ -660,7 +660,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
       (
         await read(admin.request, "entity", { entityId: "acme:record:C-1044" })
       ).status(),
-    ).toBe(403);
+    ).toBe(200);
     expect(
       (
         await read(legal.request, "entity", { entityId: "acme:record:C-1044" })

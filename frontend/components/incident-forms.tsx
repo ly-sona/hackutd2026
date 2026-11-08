@@ -209,7 +209,7 @@ export function NewIncident({
         <select className={fieldClass} name="commanderId">
           <option value="">Unassigned</option>
           {responders
-            .filter((r) => r.role === "commander")
+            .filter((r) => ["commander", "administrator"].includes(r.role))
             .map((r) => (
               <option key={r.userId} value={r.userId}>
                 {r.name}
@@ -458,7 +458,7 @@ export function UpdateIncident() {
         >
           <option value="">Unassigned</option>
           {d.members
-            .filter((m) => m.role === "commander")
+            .filter((m) => ["commander", "administrator"].includes(m.role))
             .map((m) => (
               <option key={m.id} value={m.userId}>
                 {m.name}

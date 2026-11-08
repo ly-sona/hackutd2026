@@ -141,11 +141,9 @@ export function appendEvent(
   });
 }
 function recipients(ctx: Ctx, org: string, inc: string, ports: Ports) {
-  return [...ctx.db.incidentMemberships.organizationId.filter(org)].filter(
-    (m) =>
-      m.incidentId === inc &&
-      m.membershipStatus === "active" &&
-      ports.activeMember(ctx, org, m.userId, time(ctx)),
+  return [...ctx.db.memberships.organizationId.filter(org)].filter(
+    (m) => ports.activeMember(ctx, org, m.userId, time(ctx)) &&
+      (m.role === "administrator" || ctx.db.incidentMemberships.id.find(`${org}:${inc}:${m.userId}`)?.membershipStatus === "active"),
   );
 }
 function notify(
@@ -305,7 +303,7 @@ function execute(
   function member(user: string, commander = false) {
     if (!user) return;
     const m = p.activeMember(ctx, org, user, at);
-    if (!m || (commander && m.role !== "commander"))
+    if (!m || (commander && !["commander", "administrator"].includes(m.role)))
       return p.fail(
         "INVALID_INPUT",
         commander
@@ -314,6 +312,7 @@ function execute(
       );
     if (
       inc &&
+      m.role !== "administrator" &&
       ctx.db.incidentMemberships.id.find(`${org}:${inc}:${user}`)
         ?.membershipStatus !== "active"
     )

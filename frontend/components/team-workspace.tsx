@@ -7,7 +7,7 @@ import { useIncident } from "./incident-data";
 import { useAccess } from "./workspace-provider";
 import { useCoordination, useCoordinationCommand } from "./coordination-data";
 import { Avatar } from "./account-menu";
-import { InviteResponder } from "./member-administration";
+import { InviteResponder, PendingInvitations } from "./member-administration";
 import { FindingForm } from "./incident-forms";
 import {
   TaskForm,
@@ -40,7 +40,6 @@ export function TeamWorkspace() {
     params = useSearchParams();
   const [query, setQuery] = useState(""),
     [directoryOpen, setDirectoryOpen] = useState(false),
-    [members, setMembers] = useState(false),
     [tasksOpen, setTasksOpen] = useState(false),
     [references, setReferences] = useState(false),
     [error, setError] = useState(""),
@@ -55,6 +54,8 @@ export function TeamWorkspace() {
   const messages = d.messages.filter((m) => m.conversationId === c?.id),
     latest = messages.at(-1),
     base = incidentBase(a.organizationId, a.incidentId);
+  const reviewing =
+    c?.type === "Direct Message" && !c.participants.includes(a.userId);
   const taskId =
     params.get("task") ??
     d.pages.find((p) => p.id === params.get("page"))?.taskId ??
@@ -129,9 +130,7 @@ export function TeamWorkspace() {
       {!a.can("messages:view") ? (
         <section className="space-y-5">
           <p className="rounded-md border border-border p-6 text-base text-muted-foreground">
-            Administrator access manages memberships and invitations. Incident
-            chat requires an operational responder role and current incident
-            assignment.
+            Your current role does not grant incident chat access.
           </p>
           <div className="flex gap-5 text-base">
             <Link
@@ -246,6 +245,7 @@ export function TeamWorkspace() {
                   const conv = d.conversations.find(
                     (c) =>
                       c.type === "Direct Message" &&
+                      c.participants.includes(a.userId) &&
                       c.participants.includes(r.id),
                   );
                   return (
@@ -281,6 +281,7 @@ export function TeamWorkspace() {
                     </button>
                   );
                 })}
+              <PendingInvitations />
               <div className="mt-5 border-t border-border pt-5">
                 <label className="flex items-center gap-3 text-base">
                   You ·
@@ -329,7 +330,9 @@ export function TeamWorkspace() {
                       <p className="mt-1 text-sm text-muted-foreground">
                         {c?.type === "Incident Room"
                           ? "Created with this incident"
-                          : "Private to its two current incident responders"}{" "}
+                          : reviewing
+                            ? "Read-only administrator review"
+                            : "Participants and organization administrators"}{" "}
                         · {c?.participants.length ?? 0} members
                       </p>
                     </div>
@@ -352,6 +355,7 @@ export function TeamWorkspace() {
                                   analyst: "Security",
                                   legal: "Legal",
                                   operations: "Operations",
+                                  administrator: "Administrator",
                                 })[
                                   d.responders.find(
                                     (person) => person.id === id,
@@ -364,13 +368,6 @@ export function TeamWorkspace() {
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMembers(true)}
-                >
-                  Members
-                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -421,11 +418,17 @@ export function TeamWorkspace() {
                       </p>
                       {messages.some((item) => item.correctionOf === m.id) ? (
                         <details className="mt-1 text-muted-foreground">
-                          <summary className="cursor-pointer text-sm">Original message (corrected below)</summary>
-                          <p className="mt-2 whitespace-pre-wrap break-words text-base leading-6">{m.content}</p>
+                          <summary className="cursor-pointer text-sm">
+                            Original message (corrected below)
+                          </summary>
+                          <p className="mt-2 whitespace-pre-wrap break-words text-base leading-6">
+                            {m.content}
+                          </p>
                         </details>
                       ) : (
-                        <p className="mt-1 whitespace-pre-wrap break-words text-base leading-6">{m.content}</p>
+                        <p className="mt-1 whitespace-pre-wrap break-words text-base leading-6">
+                          {m.content}
+                        </p>
                       )}
                       {m.correctionOf !== "0" && (
                         <p className="mt-1 text-sm text-amber-300">
@@ -515,7 +518,9 @@ export function TeamWorkspace() {
                   name="content"
                   placeholder={
                     c?.readOnly
-                      ? "A participant no longer has access. Conversation is read-only."
+                      ? reviewing
+                        ? "Read-only administrator review"
+                        : "A participant no longer has access. Conversation is read-only."
                       : c?.type === "Direct Message"
                         ? "Message " + display(c) + "…"
                         : "Message the response team…"
@@ -548,7 +553,7 @@ export function TeamWorkspace() {
                   </button>
                   <span className="hidden text-sm text-muted-foreground sm:inline">
                     {c?.type === "Direct Message"
-                      ? "Two participants only"
+                      ? "Administrator oversight available"
                       : "Incident members only"}
                   </span>
                   <Button
@@ -564,30 +569,6 @@ export function TeamWorkspace() {
           </div>
         </>
       )}
-      <Dialog open={members} onOpenChange={setMembers}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Conversation members</DialogTitle>
-            <DialogDescription>
-              Current incident authorization controls access; availability does
-              not grant permissions.
-            </DialogDescription>
-          </DialogHeader>
-          {c?.participants.map((id) => (
-            <div key={id} className="flex gap-3 text-base">
-              <Avatar name={d.name(id)} small />
-              <div>
-                {d.name(id)}
-                <p className="text-sm text-muted-foreground">
-                  {roleLabels[
-                    d.responders.find((r) => r.id === id)?.role ?? ""
-                  ] ?? "Access no longer active"}
-                </p>
-              </div>
-            </div>
-          ))}
-        </DialogContent>
-      </Dialog>
       <Dialog open={tasksOpen} onOpenChange={setTasksOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>

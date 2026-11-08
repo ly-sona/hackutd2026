@@ -53,7 +53,12 @@ export function launch(command, args, options = {}) {
     command = process.execPath;
     args = [process.env.npm_execpath, ...args];
   }
-  return spawn(command, args, { cwd: root, stdio: "inherit", ...options });
+  return spawn(command, args, {
+    cwd: root,
+    stdio: "inherit",
+    windowsHide: true,
+    ...options,
+  });
 }
 export function completed(child) {
   return new Promise((resolve, reject) => {

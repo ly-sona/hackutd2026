@@ -372,8 +372,14 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
       expect(pd.rows<Message>("message").some((m) => m.content === text)).toBe(
         false,
       );
-      expect(sd.rows<Message>("message")).toEqual([]);
-      expect(sd.rows<Conversation>("conversation")).toEqual([]);
+      await expect
+        .poll(() =>
+          sd
+            .rows<Message>("message")
+            .some((message) => message.content === text),
+        )
+        .toBe(true);
+      expect(sd.rows<Conversation>("conversation").length).toBeGreaterThan(0);
       expect(
         pd
           .incident<Notification>("notification")
@@ -392,11 +398,11 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
         (
           await post(sam.request, "message.send", {
             conversationId: "acme:IR-2041:room",
-            content: "admin bypass",
+            content: "Administrator coordination",
             references: [],
           })
         ).status(),
-      ).toBe(403);
+      ).toBe(200);
       expect(
         (
           await post(maya.request, "message.send", {

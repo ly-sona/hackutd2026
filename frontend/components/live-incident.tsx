@@ -302,6 +302,7 @@ export function LiveOverview() {
               {i.severity}
             </Badge>
             {a.can("findings:create") && <FindingForm />}
+            <IncidentReports />
             <Button
               variant="ghost"
               size="icon"
@@ -322,7 +323,6 @@ export function LiveOverview() {
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="outline">{i.status}</Badge>
             {a.can("incident:manage") && <UpdateIncident />}
-            <IncidentReports />
             {a.can("notes:create") && <AddNote />}
             {a.can("evidence:upload") && <AttachEvidence />}
             {a.can("incident:create") && (
@@ -425,8 +425,8 @@ export function LiveOverview() {
           </div>
         ))}
       </div>
-      <div className="grid items-start gap-12 xl:grid-cols-[2fr_1fr]">
-        <div className="relative">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-12 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="relative min-w-0">
           <h2 className="mb-4 text-2xl font-semibold">Needs your attention</h2>
           <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
             {attention.map((f) => (

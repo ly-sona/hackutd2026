@@ -16,7 +16,8 @@ export function canReadConversation(
     c.organizationId === a.organizationId &&
     c.incidentId === a.incidentId &&
     (JSON.parse(a.permissions) as string[]).includes("messages:view") &&
-    (c.type === "Incident Room" ||
+    ((JSON.parse(a.permissions) as string[]).includes("organization:manage") ||
+      c.type === "Incident Room" ||
       !!ctx.db.conversationParticipants.id.find(`${id}:${a.userId}`))
   );
 }
@@ -61,8 +62,9 @@ export function responderAccess(
     !isRole(m.role) ||
     ctx.db.users.id.find(userId)?.accountStatus !== "active" ||
     ctx.db.organizations.id.find(org)?.status !== "active" ||
-    ctx.db.incidentMemberships.id.find(`${org}:${inc}:${userId}`)
-      ?.membershipStatus !== "active"
+    (m.role !== "administrator" &&
+      ctx.db.incidentMemberships.id.find(`${org}:${inc}:${userId}`)
+        ?.membershipStatus !== "active")
   )
     return;
   return {
@@ -86,6 +88,22 @@ export function ensureRoom(ctx: Ctx, org: string, inc: string, actor: string) {
       createdAt: ctx.timestamp.microsSinceUnixEpoch / 1000n,
     });
   return id;
+}
+export function incidentResponders(
+  ctx: Reader,
+  org: string,
+  inc: string,
+  at: bigint,
+) {
+  return [...ctx.db.memberships.organizationId.filter(org)]
+    .filter((member) => {
+      const access = responderAccess(ctx, org, inc, member.userId, at);
+      return (
+        access &&
+        (JSON.parse(access.permissions) as string[]).includes("messages:view")
+      );
+    })
+    .map((member) => member.userId);
 }
 export function visibleReference(
   ctx: Reader,

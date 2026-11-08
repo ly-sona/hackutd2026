@@ -75,12 +75,12 @@ test("keeps demo chronology, references, counts and incident context consistent 
           await expect(page.getByText("Responders", { exact: true }).locator("..").locator("p").first()).toHaveText(String(count));
         }
         if (section === "operations") {
-          await expect(page.getByText("Approval preview", { exact: false }).first()).toBeVisible();
+          await expect(page.getByRole("heading", { name: "Requests", exact: true })).toBeVisible();
           if (incidentId !== "IR-2041") {
-            await expect(page.getByText("No sample requests are linked to this incident.")).toBeVisible();
+            await expect(page.getByText("No requests recorded.")).toBeVisible();
             await expect(page.getByText("Recovery hardware", { exact: true })).toHaveCount(0);
           } else {
-            await expect(page.getByText("1 awaiting approval", { exact: false })).toBeVisible();
+            await expect(page.getByRole("button", { name: /Recovery hardware/ })).toBeVisible();
             await expect(page.getByText(/EV-011|Blocked by compromised SSO/)).toHaveCount(0);
           }
         }

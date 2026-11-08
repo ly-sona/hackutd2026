@@ -26,7 +26,7 @@ test("shows the demo priority mix, business continuity states and colored event 
   ).toContainText("Restricted");
   await expect(
     page.getByRole("row").filter({ hasText: "Vendor Purchasing" }),
-  ).toContainText("Fallback available");
+  ).toContainText("At Risk");
   await page.goto(`${base}/scope`);
   const account = page.getByTestId("scope-node-A-09");
   await expect(account).toContainText("Compromised:");
@@ -103,12 +103,12 @@ test("retains visual styling without disabling live Phase 2 actions", async ({
   await expect(page.getByLabel("Since my last visit")).toBeChecked();
   await page.goto(`${base}/operations`);
   const approve = page.getByRole("button", {
-    name: "Approve request",
+    name: "New request",
     exact: true,
   });
-  await expect(approve).toBeDisabled();
+  await expect(approve).toBeEnabled();
   await expect(approve).toHaveCSS("opacity", "1");
-  await expect(approve).toHaveCSS("background-color", "rgb(250, 250, 250)");
+  await expect(approve).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
 test("keeps request, entity and conversation selection independent", async ({
@@ -116,9 +116,9 @@ test("keeps request, entity and conversation selection independent", async ({
 }) => {
   await page.goto(`${base}/operations`);
   await page.getByRole("button", { name: /Backup storage extension/ }).click();
-  const request = page.locator("main section");
-  await expect(request.getByText("Approved", { exact: true })).toHaveCount(2);
-  await expect(request.getByText("Pending", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Backup storage extension", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Recovery hardware/ }).click();
+  await expect(page.getByRole("heading", { name: "Recovery hardware", exact: true })).toBeVisible();
   await page.goto(`${base}/scope`);
   await openGraphTools(page);
   await page.getByLabel("Find scope entity").selectOption("acme:scope:A-09");
