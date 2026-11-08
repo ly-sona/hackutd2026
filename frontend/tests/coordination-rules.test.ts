@@ -44,10 +44,10 @@ describe("coordination rules", () => {
     for (const invalid of ["0", "-10", "Infinity", "abc", "2.5", "301"])
       expect(pageAckSeconds(true, invalid)).toBe(300);
   });
-  it("does not grant incident chat or paging to a platform administrator", () => {
-    expect(matrix.administrator).not.toContain("messages:view");
-    expect(matrix.administrator).not.toContain("tasks:view");
-    expect(matrix.administrator).not.toContain("pages:create");
+  it("grants administrators incident chat, tasks and paging", () => {
+    expect(matrix.administrator).toContain("messages:view");
+    expect(matrix.administrator).toContain("tasks:view");
+    expect(matrix.administrator).toContain("pages:create");
     expect(matrix.commander).toContain("pages:create");
     expect(matrix.legal).toContain("pages:acknowledge");
     expect(matrix.operations).not.toContain("tasks:assign");

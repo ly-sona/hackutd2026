@@ -122,7 +122,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     expect((await context.request.get("/api/session")).status()).toBe(401);
   });
 
-  test("renders all five pages, preserves navigation and keeps later-phase actions disabled", async ({
+  test("renders all five pages, preserves navigation and exposes authorized recovery actions", async ({
     page,
     context,
   }) => {
@@ -148,8 +148,8 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     }
     await openWorkspace(page, "operations");
     await expect(
-      page.getByRole("button", { name: "Approve request", exact: true }),
-    ).toBeDisabled();
+      page.getByRole("button", { name: "New request", exact: true }),
+    ).toBeEnabled();
     await page.setViewportSize({ width: 390, height: 844 });
     await openWorkspace(page);
     expect(
@@ -373,13 +373,25 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     expect(reuse.status()).toBe(400);
     expect((await reuse.json()).code).toBe("INVITATION_USED");
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.getByRole("link", { name: "Manage organization members", exact: true }).click();
-    const membership = page.getByRole("row").filter({ hasText: "Taylor Morgan" });
+    await page
+      .getByRole("link", { name: "Manage organization members", exact: true })
+      .click();
+    const membership = page
+      .getByRole("row")
+      .filter({ hasText: "Taylor Morgan" });
     await expect(membership).toContainText("Security Analyst");
     await expect(membership).toContainText("Temporary");
     await command("test_expire_membership", "", { id: "acme:taylor" });
-    await expect(guestPage.getByRole("heading", { name: "Access revoked", exact: true })).toBeVisible();
-    expect((await guest.request.get("/api/workspace?organizationId=acme&incidentId=IR-2041")).status()).toBe(403);
+    await expect(
+      guestPage.getByRole("heading", { name: "Access revoked", exact: true }),
+    ).toBeVisible();
+    expect(
+      (
+        await guest.request.get(
+          "/api/workspace?organizationId=acme&incidentId=IR-2041",
+        )
+      ).status(),
+    ).toBe(403);
 
     await guest.close();
     await command("test_restore_memberships", "", {});
@@ -541,7 +553,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     ).toBe(200);
     await openWorkspace(page);
     await page
-      .getByRole("link", { name: "Manage members", exact: true })
+      .getByRole("link", { name: "Manage organization members", exact: true })
       .click();
     await page
       .getByRole("button", { name: "Edit Alex Rivera", exact: true })
@@ -574,7 +586,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
           "/api/workspace?organizationId=acme&incidentId=IR-2041&permission=operations:approve",
         )
       ).status(),
-    ).toBe(403);
+    ).toBe(200);
     await analyst.close();
     await command("test_restore_memberships", "", {});
   });
