@@ -1,0 +1,33 @@
+{
+  "schema": "aegis-snapshot-v1",
+  "connectorId": "network",
+  "revision": 1,
+  "coverage": "full",
+  "collectedAt": "2026-11-07T09:30:00Z",
+  "records": [
+    {
+      "key": "NET-001",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "accountId": "A-09",
+        "source": "192.0.2.10",
+        "destination": "192.0.2.20",
+        "bytes": 512,
+        "isolationReportedAt": "",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "NET-002",
+      "observedAt": "2026-11-07T09:21:00Z",
+      "fields": {
+        "accountId": "A-09",
+        "source": "198.51.100.87",
+        "destination": "203.0.113.24",
+        "bytes": 42000,
+        "isolationReportedAt": "2026-11-07T09:18:00Z",
+        "approvedChange": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "aegis-snapshot-v1",
+  "connectorId": "services",
+  "revision": 2,
+  "coverage": "full",
+  "collectedAt": "2026-11-07T10:00:00Z",
+  "records": [
+    {
+      "key": "CUSTOMER-SUPPORT",
+      "observedAt": "2026-11-07T09:22:00Z",
+      "fields": {
+        "name": "Customer Support",
+        "state": "unavailable",
+        "dependsOn": "customers",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "CUSTOMER-PORTAL",
+      "observedAt": "2026-11-07T09:41:00Z",
+      "fields": {
+        "name": "Customer Portal",
+        "state": "unavailable",
+        "dependsOn": "identity",
+        "approvedChange": ""
+      }
+    }
+  ]
+}

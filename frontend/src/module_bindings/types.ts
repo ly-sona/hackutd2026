@@ -34,6 +34,95 @@ export const AccessTimer = __t.object("AccessTimer", {
 });
 export type AccessTimer = __Infer<typeof AccessTimer>;
 
+export const AgentRuns = __t.object("AgentRuns", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  collectionRunId: __t.string(),
+  operationKey: __t.string(),
+  fingerprint: __t.string(),
+  actorId: __t.string(),
+  membershipRevision: __t.string(),
+  assignmentRevision: __t.string(),
+  deadline: __t.u64(),
+  manifest: __t.string(),
+  context: __t.string(),
+  status: __t.string(),
+  error: __t.string(),
+  model: __t.string(),
+  modelEndpoint: __t.string(),
+  promptVersion: __t.string(),
+  requests: __t.u32(),
+  attempts: __t.u32(),
+  trace: __t.string(),
+  leaseToken: __t.string(),
+  leaseUntil: __t.u64(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+});
+export type AgentRuns = __Infer<typeof AgentRuns>;
+
+export const AnalysisObservations = __t.object("AnalysisObservations", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  runId: __t.string(),
+  sourceId: __t.string(),
+  key: __t.string(),
+  rule: __t.string(),
+  ruleVersion: __t.string(),
+  description: __t.string(),
+  provenance: __t.string(),
+});
+export type AnalysisObservations = __Infer<typeof AnalysisObservations>;
+
+export const AnalysisProposals = __t.object("AnalysisProposals", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  agentRunId: __t.string(),
+  content: __t.string(),
+  status: __t.string(),
+  reviewerId: __t.string(),
+  justification: __t.string(),
+  decisionFingerprint: __t.string(),
+  findingId: __t.string(),
+  relationshipId: __t.string(),
+  createdAt: __t.u64(),
+  reviewedAt: __t.u64(),
+});
+export type AnalysisProposals = __Infer<typeof AnalysisProposals>;
+
+export const AnalysisRuns = __t.object("AnalysisRuns", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  operationKey: __t.string(),
+  fingerprint: __t.string(),
+  actorId: __t.string(),
+  membershipRevision: __t.string(),
+  assignmentRevision: __t.string(),
+  sourceIds: __t.string(),
+  status: __t.string(),
+  collectionStatus: __t.string(),
+  deterministicStatus: __t.string(),
+  agentStatus: __t.string(),
+  completedSnapshots: __t.u32(),
+  expectedSnapshots: __t.u32(),
+  analyzedSources: __t.u32(),
+  leaseToken: __t.string(),
+  leaseUntil: __t.u64(),
+  deadline: __t.u64(),
+  error: __t.string(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+});
+export type AnalysisRuns = __Infer<typeof AnalysisRuns>;
+
 export const ApprovalDecisions = __t.object("ApprovalDecisions", {
   id: __t.string(),
   requestId: __t.string(),
@@ -292,6 +381,18 @@ export const IncidentEvents = __t.object("IncidentEvents", {
 });
 export type IncidentEvents = __Infer<typeof IncidentEvents>;
 
+export const IncidentInvestigations = __t.object("IncidentInvestigations", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  mode: __t.string(),
+  referenceVersion: __t.string(),
+  retired: __t.bool(),
+  scenario: __t.string(),
+});
+export type IncidentInvestigations = __Infer<typeof IncidentInvestigations>;
+
 export const IncidentMemberships = __t.object("IncidentMemberships", {
   id: __t.string(),
   incidentId: __t.string(),
@@ -382,6 +483,18 @@ export const Incidents = __t.object("Incidents", {
   commanderId: __t.string(),
 });
 export type Incidents = __Infer<typeof Incidents>;
+
+export const InvestigationSources = __t.object("InvestigationSources", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  connectorId: __t.string(),
+  version: __t.string(),
+  status: __t.string(),
+  latestSnapshotId: __t.string(),
+});
+export type InvestigationSources = __Infer<typeof InvestigationSources>;
 
 export const Invitations = __t.object("Invitations", {
   id: __t.string(),
@@ -745,6 +858,38 @@ export const Sessions = __t.object("Sessions", {
 });
 export type Sessions = __Infer<typeof Sessions>;
 
+export const SnapshotRecordVersions = __t.object("SnapshotRecordVersions", {
+  id: __t.string(),
+  snapshotId: __t.string(),
+  key: __t.string(),
+  sha256: __t.string(),
+  body: __t.string(),
+  location: __t.string(),
+});
+export type SnapshotRecordVersions = __Infer<typeof SnapshotRecordVersions>;
+
+export const SourceSnapshots = __t.object("SourceSnapshots", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  runId: __t.string(),
+  sourceId: __t.string(),
+  role: __t.string(),
+  revision: __t.u32(),
+  evidenceId: __t.string(),
+  storageReference: __t.string(),
+  sha256: __t.string(),
+  size: __t.u32(),
+  collectedAt: __t.string(),
+  ingestedAt: __t.u64(),
+  coverage: __t.string(),
+  recordCount: __t.u32(),
+  stagedCount: __t.u32(),
+  status: __t.string(),
+});
+export type SourceSnapshots = __Infer<typeof SourceSnapshots>;
+
 export const TaskUpdates = __t.object("TaskUpdates", {
   id: __t.u64(),
   organizationId: __t.string(),
@@ -844,6 +989,9 @@ export type VisibleCoordinationData = __Infer<typeof VisibleCoordinationData>;
 
 export const VisibleIncidentData = __t.object("VisibleIncidentData", {});
 export type VisibleIncidentData = __Infer<typeof VisibleIncidentData>;
+
+export const VisibleInvestigationData = __t.object("VisibleInvestigationData", {});
+export type VisibleInvestigationData = __Infer<typeof VisibleInvestigationData>;
 
 export const VisibleInvitation = __t.object("VisibleInvitation", {
   id: __t.string(),

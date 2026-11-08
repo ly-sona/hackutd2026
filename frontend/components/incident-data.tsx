@@ -21,6 +21,7 @@ const visits = new Map<
 function useData() {
   const access = useAccess();
   const [rows, ready] = useTable(tables.visibleIncidentData);
+  const [investigationRows] = useTable(tables.visibleInvestigationData);
   const [members] = useTable(tables.visibleMembers);
   const [window, setWindow] = useState<{
     key: string;
@@ -70,7 +71,15 @@ function useData() {
       incidents: rows
         .filter(
           (r) =>
-            r.kind === "incident" && r.organizationId === access.organizationId,
+            r.kind === "incident" &&
+            r.organizationId === access.organizationId &&
+            !investigationRows.some(
+              (m) =>
+                m.incidentId === r.incidentId &&
+                m.organizationId === r.organizationId &&
+                m.kind === "metadata" &&
+                (JSON.parse(m.body) as { retired: boolean }).retired,
+            ),
         )
         .map((r) => JSON.parse(r.body) as Incident),
       findings: get<Finding>("finding"),
@@ -89,6 +98,7 @@ function useData() {
     };
   }, [
     rows,
+    investigationRows,
     ready,
     members,
     access.organizationId,

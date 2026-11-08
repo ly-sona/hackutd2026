@@ -4,7 +4,9 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: process.env.AEGIS_E2E_SUITE === "restart"
-    ? "coordination-restart.spec.ts"
+    ? ["coordination-restart.spec.ts", "investigation-restart.spec.ts"]
+    : process.env.AEGIS_E2E_SUITE === "investigation"
+      ? ["investigation.spec.ts", "agent-investigation.spec.ts", "investigation-impact.spec.ts", "investigation-monitoring.spec.ts"]
     : process.env.AEGIS_E2E_SUITE === "extended"
       ? ["recovery.spec.ts", "administrator.spec.ts", "team-pending-invitations.spec.ts"]
       : "critical.spec.ts",
@@ -24,6 +26,8 @@ export default defineConfig({
     env: {
       AEGIS_FRONTEND_PORT: "3100",
       AEGIS_E2E: "1",
+      // Investigation tests drive the real narrow worker at explicit checkpoints.
+      AEGIS_E2E_MANUAL_WORKER: "1",
       AEGIS_NEXT_DIST_DIR: ".next-e2e",
       NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
       NEXT_PUBLIC_SPACETIMEDB_HOST: "http://127.0.0.1:3101",

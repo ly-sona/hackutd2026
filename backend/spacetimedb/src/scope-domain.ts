@@ -178,7 +178,11 @@ function validateEvidence(
         "Supporting evidence must be from this incident.",
       );
 }
-function compatibility(type: string, source: Ref, target: Ref) {
+export function compatibility(
+  type: string,
+  source: Pick<Ref, "kind">,
+  target: Pick<Ref, "kind">,
+) {
   if (type === "RELATED_TO") return true;
   if (type === "CAN_ACCESS")
     return (

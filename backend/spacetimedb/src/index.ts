@@ -1,4 +1,18 @@
+import {
+  agentCommand,
+  agentWorker,
+  agentProjection,
+  processAgentJobs,
+} from "./agent-domain";
 import { recoveryTables } from "./recovery-schema";
+import { investigationTables } from "./investigation-schema";
+import {
+  investigationCommand,
+  investigationProjection,
+  investigationWorker,
+  processInvestigations,
+  InvestigationInputError,
+} from "./investigation-domain";
 import { renameDemoCompany } from "./demo-consistency";
 import {
   recoveryCommand,
@@ -180,6 +194,7 @@ const db = schema(
     ...scopeTables,
     ...coordinationTables,
     ...recoveryTables,
+    ...investigationTables,
     organizations,
     users,
     credentials,
@@ -199,6 +214,7 @@ const db = schema(
   {
     env: {
       AEGIS_GATEWAY_IDENTITY: t.option(t.string()),
+      AEGIS_WORKER_IDENTITY: t.option(t.string()),
       AEGIS_TEST_MODE: t.option(t.string()),
       AEGIS_DEVELOPMENT_MODE: t.option(t.string()),
       AEGIS_PAGE_ACK_SECONDS: t.option(t.string()),
@@ -448,7 +464,11 @@ export const access_command = db.reducer(
         result: serialize({ ok: true, data: result }),
         createdAt: ctx.timestamp,
       });
-    } catch (error) {
+    } catch (caught) {
+      const error =
+        caught instanceof InvestigationInputError
+          ? new Denied("INVALID_INPUT", caught.message)
+          : caught;
       if (!(error instanceof Denied)) throw error; // Unexpected failures roll back the entire transaction.
       const actor = ctx.db.sessions.hash.find(args.sessionHash)?.userId ?? "";
       const org =
@@ -484,6 +504,22 @@ function execute(
   data: Record<string, unknown>,
 ): unknown {
   const at = now(ctx);
+  if (action.startsWith("investigation.agent."))
+    return agentCommand(ctx, action, hash, data, {
+      authorize,
+      activeMember,
+      fail: (code, message): never => {
+        throw new Denied(code, message);
+      },
+    });
+  if (action.startsWith("investigation."))
+    return investigationCommand(ctx, action, hash, data, {
+      authorize,
+      activeMember,
+      fail: (code, message): never => {
+        throw new Denied(code, message);
+      },
+    });
   if (action.startsWith("recovery."))
     return recoveryCommand(ctx, action, hash, data, {
       authorize,
@@ -1075,22 +1111,29 @@ export const access_snapshot = db.procedure(
               m.organizationId,
               actor.userId,
               m.role,
-            ).map((i) => ({
-              id: i.incidentId,
-              severity:
-                tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
-                  ?.severity ?? "",
-              status:
-                tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
-                  ?.status ?? "",
-              title:
-                tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
-                  ?.title ??
-                tx.db.incidentStubs.id.find(
-                  `${i.organizationId}:${i.incidentId}`,
-                )?.title ??
-                "",
-            })),
+            )
+              .filter(
+                (i) =>
+                  !tx.db.incidentInvestigations.id.find(
+                    `${i.organizationId}:${i.incidentId}`,
+                  )?.retired,
+              )
+              .map((i) => ({
+                id: i.incidentId,
+                severity:
+                  tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
+                    ?.severity ?? "",
+                status:
+                  tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
+                    ?.status ?? "",
+                title:
+                  tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
+                    ?.title ??
+                  tx.db.incidentStubs.id.find(
+                    `${i.organizationId}:${i.incidentId}`,
+                  )?.title ??
+                  "",
+              })),
           }));
         return serialize({
           ok: true,
@@ -1367,6 +1410,8 @@ export const expire_access = db.reducer(
       }
     processPages(ctx);
     processRecovery(ctx);
+    processInvestigations(ctx);
+    processAgentJobs(ctx);
     for (const row of ctx.db.commandResults.iter())
       if (row.createdAt.microsSinceUnixEpoch / 1000n + 60000n < at)
         ctx.db.commandResults.id.delete(row.id);
@@ -1507,6 +1552,78 @@ export const visible_recovery_data = db.view(
   { public: true },
   t.array(incidentDataRow),
   (ctx) => recoveryProjection(ctx, browserAccess(ctx)),
+);
+
+export const visible_investigation_data = db.view(
+  { public: true },
+  t.array(incidentDataRow),
+  (ctx) => {
+    const access = browserAccess(ctx);
+    return [
+      ...investigationProjection(ctx, access),
+      ...access.flatMap((a) => agentProjection(ctx, a)),
+    ];
+  },
+);
+// Separate identity: it cannot use access_command, credentials, sessions or approval reducers.
+export const investigation_worker = db.procedure(
+  { action: t.string(), payload: t.string() },
+  t.string(),
+  (ctx, args) =>
+    ctx.withTx((tx) => {
+      if (
+        !tx.env.AEGIS_WORKER_IDENTITY ||
+        tx.sender.toHexString() !== tx.env.AEGIS_WORKER_IDENTITY
+      )
+        throw new SenderError("Investigation worker identity required.");
+      let data: Record<string, unknown> = {};
+      try {
+        if (args.payload.length > 32_000)
+          throw new Denied(
+            "INVALID_INPUT",
+            "Worker payload exceeds batch limit.",
+          );
+        const parsed: unknown = JSON.parse(args.payload);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+          throw new Denied("INVALID_INPUT", "Invalid worker payload.");
+        data = parsed as Record<string, unknown>;
+        return serialize({
+          ok: true,
+          data: (args.action.startsWith("agent.")
+            ? agentWorker
+            : investigationWorker)(tx, args.action, data, {
+            authorize,
+            activeMember,
+            fail: (code, message): never => {
+              throw new Denied(code, message);
+            },
+          }),
+        });
+      } catch (caught) {
+        const error =
+          caught instanceof InvestigationInputError ||
+          caught instanceof SyntaxError
+            ? new Denied("INVALID_INPUT", "Invalid worker input.")
+            : caught;
+        if (!(error instanceof Denied)) throw error;
+        const run =
+          typeof data.agentRunId === "string"
+            ? tx.db.agentRuns.id.find(data.agentRunId)
+            : typeof data.runId === "string"
+              ? tx.db.analysisRuns.id.find(data.runId)
+              : undefined;
+        audit(
+          tx,
+          run?.organizationId ?? "",
+          run?.actorId ?? "",
+          "",
+          `investigation.worker.${args.action}`,
+          "denied",
+          error.code,
+        );
+        return serialize({ ok: false, code: error.code, error: error.message });
+      }
+    }),
 );
 export const recovery_read = db.procedure(
   { sessionHash: t.string(), payload: t.string() },
