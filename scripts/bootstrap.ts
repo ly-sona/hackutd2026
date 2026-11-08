@@ -66,3 +66,6 @@ if (result.seeded) {
 
 const { seedIncidents } = await import('./seed-incidents');
 await seedIncidents();
+
+console.log(await command("scope.seed", "", {}));
+console.log(await command("coord.seed", "", {}));

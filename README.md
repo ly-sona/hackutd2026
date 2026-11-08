@@ -2,7 +2,7 @@
 
 Independent Cyber Incident Response Platform for the **Winstead PC challenge at HackUTD 2026**. AEGIS uses its own accounts, permissions and database instead of the fictional affected organization's SSO, email, directory, VPN, DNS or messaging systems.
 
-**Implemented: Phases 0–2 — foundation, independent access, and Incident Command & Documentation.** Overview and Timeline use authorized live SpacetimeDB data. Incident creation, findings, evidence, immutable history, personal read/visit state and in-app notifications are functional. Scope, Operations and Team retain labeled synthetic previews; graph analysis, chat, approvals, recovery and automatic reporting remain planned. This hackathon prototype demonstrates trust boundaries; it is not production-hardened or safe to use from a compromised workstation.
+**Implemented: Phases 0–4 — foundation, independent access, incident documentation, connected scope, and real-time communication/coordination.** Overview, Scope, Team and Timeline use authorized live SpacetimeDB data. Incident rooms, private direct messages, shared tasks, manual availability, urgent in-app pages and server-controlled escalation are functional. Operations retains its labeled approval preview; recovery approvals, trust warnings and automatic reporting remain Phase 5 work. This hackathon prototype demonstrates trust boundaries; it is not production-hardened or safe to use from a compromised workstation.
 
 ## Stack and structure
 
@@ -27,7 +27,10 @@ backend/spacetimedb/src/
   incident-schema.ts       Private incident, finding, evidence, event and read-state tables
   incident-domain.ts       Fresh authorization, mutations, notifications and safe projections
   incident-seed.ts         Stable versioned fixture; never resets user records
+  scope-*.ts               Private inventory, relationships, assessments, projection and seed
+  coord-*.ts               Private conversations/tasks/pages, authorization, scheduler and seed
   permissions.ts           Authoritative role/permission matrix
+shared/                    Pure cross-runtime scope and coordination rules
 backend/seed/              Versioned evidence manifest with stable scenario references
 mock-evidence/             Synthetic source artifacts; originals copied to private storage
 scripts/                   Local orchestration, service identity and trusted bootstrap
@@ -109,7 +112,7 @@ All six accounts require their real locally generated passwords. `corporate-admi
 
 ## Synthetic content and limitations
 
-The initial scenarios and original evidence are synthetic. Once seeded, Overview, findings, evidence metadata/links, events, notifications and read state come from the private database through authorized subscriptions. New user actions are real writes. Scope graph, purchasing requests, conversations and presence remain labeled previews. Live messaging, approval execution, automatic contradiction detection and graph propagation are not implemented.
+The initial scenarios and original evidence are synthetic. Once seeded, Overview, findings, evidence metadata/links, events, notifications and read state come from the private database through authorized subscriptions. New user actions are real writes. Purchasing approvals remain a labeled preview. Conversations, tasks, manual availability and in-app paging are functional. Availability is not inferred presence. Approval execution, automatic contradiction detection and autonomous impact confirmation are not implemented.
 
 Delivery uses a typed adapter with **demo mode first**. No verified Photon SMS API contract was provided, so Photon credentials are unused. Selecting external mode falls back explicitly to simulated delivery. For a new phone recipient, possession of the invitation link is the demo enrollment proof; administrator phone-verification attestation is not carrier verification, MFA or proof that SMS was delivered. Passkeys, password recovery, production-wide rate limiting, device trust and production identity assurance are not implemented.
 
@@ -124,7 +127,7 @@ npm run dev             # Full local environment; preferred
 npm run dev:db          # Standalone DB only; reuses an existing instance
 npm run db:publish      # Publish with the configured local service identity
 npm run db:generate     # Generate frontend bindings
-npm run db:seed         # Idempotent access + Phase 2 seed; DB/module must be running
+npm run db:seed         # Idempotent access + Phases 2–4 seeds; DB/module must be running
 npm run demo:reset -- --confirm-disposable-demo # ONLY IR-2043 personal read/visit state
 npm run dev:frontend    # Frontend only, with local service credentials inherited
 npm run env:check       # Installed versions and local configuration
@@ -132,7 +135,7 @@ npm run env:check       # Installed versions and local configuration
 npm run build           # Backend type-check/bundle + production Next.js build
 npm run lint
 npm run typecheck       # Both workspaces, including generated bindings
-npm run test            # Password/redirect/permission tests + Phase 0 unit/component tests
+npm run test            # Unit/component and shared domain-rule tests
 npm run test:e2e        # Real SpacetimeDB + Chromium security/integration flows
 ```
 
@@ -156,6 +159,7 @@ Root `.env.local` is optional; frontend `.env.local` is generated from its templ
 | `AEGIS_DEMO_PASSWORD` | Optional **private** first-bootstrap password; random per account otherwise |
 | `EVIDENCE_STORAGE_DIR` | Server-only absolute private directory; local runner defaults to `<SPACETIMEDB_DATA_DIR>/evidence`. Required for separately hosted evidence uploads/downloads. Never put it under `public/`. |
 | `AEGIS_DEVELOPMENT_MODE` | Module publication flag for narrowly scoped read-state reset. Local runner sets `true`; explicitly set `false` for non-development publication. |
+| `AEGIS_PAGE_ACK_SECONDS` | Server/module-only development acknowledgment timeout, integer 5–300 seconds; default 300. Ignored outside development/test. Set before publishing/restarting. |
 | `SMS_DELIVERY_MODE` | `demo`; `external` currently falls back explicitly to simulation |
 | `AEGIS_TEST_MODE` | Database fixture flag; `false` outside isolated browser tests |
 | `PHOTON_API_KEY`, `PHOTON_SENDER` | Reserved **server-only**, unused until a provider contract is verified |
@@ -190,9 +194,10 @@ The module declares `AEGIS_GATEWAY_IDENTITY`, `AEGIS_TEST_MODE` and `AEGIS_DEVEL
 | Missing/stale bindings | Run `npm run db:generate` and `npm run typecheck`; never edit generated files. |
 | Publish denied | Preserve `.spacetime/<state>/cli.toml` owner credentials and `gateway.json` service credentials. Check compiler output and module environment. No automatic data deletion occurs. |
 | Install/TypeScript failures | Use the pinned Node version and root `npm ci`. The postinstall restores the backend compiler link. Keep one lockfile and npm. If sync software duplicated files (for example `routes.d 2.ts`), stop Next.js and remove only generated `.next*`/`node_modules` caches before reinstalling. Prefer a local, non-synced checkout for database/cache files. |
+| Cloud-synced files stall reads/builds | On macOS, keep active source/dependency folders downloaded in Finder, or use a local checkout outside iCloud Desktop/Documents. Preserve database state and private credentials; cloud placeholders are not evidence of a failed schema or a reason to reset the DB. |
 | Browser missing | Install Playwright Chromium with the command above. |
 
-Future phases: **3** Compromise Scope & Context Graph; **4** Real-Time Communication & Coordination; **5** Trust Warnings, Recovery & Reporting. See [architecture](docs/architecture.md) and [AGENTS.md](AGENTS.md) before extending the system.
+Next phase: **5** Trust Warnings, Recovery & Reporting. See [architecture](docs/architecture.md) and [AGENTS.md](AGENTS.md) before extending the system.
 
 ## Phase 2 incident documentation
 
@@ -201,7 +206,7 @@ Use the header incident selector or the organization list. Commander/Administrat
 - **Overview:** live severity/status, commander, discovery/report time, unresolved and personal new counts, findings, business impact, evidence and recent events. Add Finding records observed time, category, priority, investigation status, system, optional assignee and evidence. Open a finding to mark only that finding read. Reading never resolves it. Confirmed/Resolved findings require same-incident evidence and a verifier justification; the backend records verifier/time. Evidence links are additive; an update never silently removes prior supporting links.
 - **Timeline:** newest first, UTC storage with America/Chicago display and deterministic ID tie-breaking. Filter Findings/Evidence/Status Changes/Decisions/Access Changes; select an event for source/actor, observed versus recorded times, prior/new values and evidence. Document observations, reported actions, decisions and corrections. Corrections append an event referencing the original and a justification; no normal update/delete-history endpoint exists. Recording an action does not execute it. Replay stays disabled.
 - **Since your last visit:** the backend captures the prior last-viewed timestamp before updating it. A per-document visit UUID holds the cutoff stable through App Router navigation and Strict Mode remounts. Reload/opening a new document starts another visit. First visit shows current summary. Finding reads and notification reads are independent from visits and investigation status. This MVP does not infer browser inactivity as a new visit.
-- **Bell:** live, recipient-specific notifications for assigned responders, critical/status changes, high-priority findings, and evidence attached to findings they reported or own (the MVP follower rule). Marking a notification read changes only its read timestamp. No SMS/calls/paging is sent.
+- **Bell:** live, recipient-specific notifications for assigned responders, critical/status changes, high-priority findings, and evidence attached to findings they reported or own (the MVP follower rule). Marking a notification read changes only its read timestamp. No SMS or calls are sent; Phase 4 adds separate urgent in-app paging.
 
 ### Private evidence
 
@@ -222,3 +227,48 @@ Data model: incidents retain current lifecycle/metadata; findings retain investi
 Documentation follows capture and review principles from [NIST SP 800-61 Rev. 3](https://csrc.nist.gov/pubs/sp/800/61/r3/final): observations, actors, timestamps, affected systems, assessments, supporting evidence, response decisions and recovery status. This MVP makes no NIST compliance claim.
 
 Phase 2 tests add real incident/finding writes, two-session updates, status history/corrections, unread/visit behavior, evidence integrity/safe previews/size/type/permission checks, recipient privacy, seed preservation and reset guards. Run the unchanged root build, lint, typecheck, unit and browser commands above.
+
+## Phase 3 compromise scope and Context Graph
+
+The Scope page preserves the dotted React Flow canvas, directional labeled relationships and selected-entity panel. On small screens, details open in a dialog. Pan, zoom and Fit View are built in. Select a node or use Find scope entity; Expand/Collapse related reveals a bounded neighborhood, and Reset focus restores the incident focus. The graph shows at most 50 nodes and never renders all customer records. Filters support entity type, investigation state, impact dimension, sensitivity and evidence availability. Dashed links indicate uncertainty; solid inventory links establish structure, not compromise.
+
+Inventory supports Account, System, Dataset, Record Group and Business Operation entities, with shared asset subtypes (user/administrator accounts, server, database, application, identity/storage/business service). Incident, Finding and Evidence nodes project existing Phase 2 records: they are not duplicate stores. In particular **EV-018 opens the same privately stored, hash-checked Phase 2 artifact**. Relationships support CAN_ACCESS, STORED_IN, CONTAINS, DEPENDS_ON, SUPPORTS, RELATED_TO and POTENTIALLY_AFFECTS. The backend validates both endpoints, type compatibility, current incident association, organization, evidence provenance and duplicates.
+
+**Investigation workflow:** select an entity → review each impact dimension → Add impact assessment or Update assessment → enter description/justification and existing evidence → save. Compromise states are Unassessed, Investigating, Suspected Compromise, Confirmed Compromise and Ruled Out. Encryption, Exfiltration, Alteration, Deletion and Availability each have independent Unassessed/Suspected/Confirmed/Ruled Out assessments. Confirmation requires supporting evidence and an authorized verifier; actor/time and prior assessment are preserved in an append-only Phase 2 scope event. Challenged evidence is documented through a new assessment and justification; old events and originals remain intact.
+
+Link Evidence adds an annotation/excerpt to the existing original. Upload through the existing Phase 2 Attach Evidence action, then link the resulting artifact. Add Finding creates a real Phase 2 finding and a persisted relationship to the selected scope entity. Scope events in Timeline offer Open scope entity links. No graph action executes infrastructure changes, recovery or approvals.
+
+**Record browsing and counts:** Customer Database → Customer Records → October Customers → C-1044 is persisted data. Browse the group, search a stable synthetic record ID and select it to return to the graph. Reads are authorized, paginated (25 by default, maximum 50), and can filter impact/status. Record metadata contains synthetic references/category/sensitivity, not real personal data. Only an anchor and selected records appear as graph nodes; the full record table is never subscribed to the browser.
+
+The seed contains **1,240 inventory records, zero initially individually confirmed affected records**, and preliminary assessments. Overlapping review/region groups are deduplicated using actual memberships. Dataset/group confirmation does not promote every member record to individually confirmed. Potential records exclude individually confirmed records across any impact; this aggregate does not imply all dimensions are confirmed. Not individually assessed is a separate coverage measure and may overlap potential exposure. For example, one verified Encryption assessment can increase individually confirmed count to one while Exfiltration remains Suspected. Datasets whose contents are not enumerated show unknown inventory counts rather than invented compromised totals.
+
+Deterministic traversal follows documented access, containment, storage and dependency relationships, skips ruled-out links and terminates cycles. It provides potential investigation leads and explanations only. It never writes downstream assessments or converts access capability into proof of access/exfiltration. Scope summary counts are backend-derived; record details require an additional permission.
+
+**Authorization:** Commander and Analyst can edit/verify scope and inspect records. Legal can review records/evidence but cannot edit scope. Administrator can review inventory/graph/evidence, but receives neither scope editing nor individual-record access. Business Operations receives assigned incident summary counts, not technical scope or record contents. All reads/writes recheck session, organization, incident and role. Per-incident assessments are independent even when two incidents share one inventory asset; revocation clears subscribed graph data and blocks subsequent record/evidence reads.
+
+**Seed:** `npm run dev` / `npm run db:seed` extend the existing bootstrap with `acme-phase3-v1`. Stable IDs add 8 systems, 5 accounts, 3 datasets, 5 record groups, 2 business operations, 1,240 minimal customer records, explicit overlapping memberships, relationships and preliminary assessments. Reruns preserve existing/user-created records, original evidence, memberships and history. IR-2042 demonstrates an independent assessment on the same account. The existing opt-in IR-2043 reset remains deliberately limited to personal read/visit state; it does not erase Phase 3 inventory. Use a separately named disposable local database for a clean scenario. The existing test-only ground-truth oracle remains outside application imports, APIs and subscriptions.
+
+New private tables: `scope_entities`, `scope_associations`, `scope_relationships`, `scope_assessments`, `scope_records`, `scope_record_memberships` and `scope_evidence_links`. `scope.*` actions extend the existing service-gated command reducer; `scope_read` provides fresh authorized record/inventory queries, and `visible_scope_data` provides caller-restricted live graph projections. `shared/scope.ts` contains pure counting/traversal rules used by the backend and unit tests. No additional service, dependency or graph database was introduced.
+
+Run the same build/lint/typecheck/unit/browser commands above. Phase 3 tests exercise real graph/record mutations, two-session synchronization, evidence reuse, independent impacts, unique counts, corrections, seed preservation and access revocation. Optional baseline/record comparison, anomaly detection, automated cleaning, approval execution and recovery remain unimplemented. Phase 4 communication follows below.
+
+
+## Phase 4 communication and coordination
+
+**Team:** Incident creation atomically creates a response room. Its membership follows current, unexpired incident access; there is no separate chat entitlement that can bypass membership. Commander, Analyst, Legal and Operations responders participate. Administrator alone grants no chat/task access. Taylor participates only after activation while temporary access remains valid. The left column searches conversations/responders, starts incident-scoped one-to-one DMs, shows roles/declared availability, and preserves access-management links.
+
+Messages are safe plain multiline text, append-only, ordered by server time/ID and persisted in SpacetimeDB. A correction is a new message referencing the sender's original. A stable client operation UUID prevents duplicate writes/events/notifications on retries; reusing it with changed content is rejected. Conversation read positions and bell reads are personal and never update task/finding state. Late eligible incident members can read room history; private DM history is limited to its two currently authorized participants. Revoking either participant disables further sends; the remaining authorized participant retains history.
+
+**References and conversion:** The reference selector points to existing evidence, findings, scope entities/individual records/assessments and tasks. EV-018 opens the original Phase 2 viewer and authenticated bytes; Customer Database opens the original Phase 3 entity. No evidence or graph copies are created. Operations users can open minimal business-operation reference details without receiving technical graph, individual record or evidence access. Every reference is checked for organization, incident and viewer permissions. Use Create task or Add finding beside a message to prefill editable work and preserve its source ID. Tasks/findings derived from a private DM, their notifications and events remain restricted to that conversation; they cannot be forwarded as references into a broader conversation. Conversation-derived findings remain real Phase 2 rows. They are not attachable to a broader Scope association without a future explicit privacy-preserving review workflow.
+
+**Tasks:** Shared tasks are available from Team, Overview, finding details, original evidence, scope entities and assessments. Track assignee, backup, priority, optional due date, references and append-only work notes. Commander/Analyst can assign others, change due dates/reassign and explicitly page. Other responders create/update their own work. States are Open → In Progress → Awaiting Verification → Completed, with explicit cancellation/reopening. Completion requires a different authorized reviewer; Investigation tasks additionally require technical verification authority and supporting evidence. Coordination tasks cover reviewed business handoffs without granting technical evidence access. A completed task never resolves its finding or confirms a scope assessment. Overview shows assigned tasks, overdue state and urgent pages; combined work counts deduplicate tasks and linked unresolved critical findings.
+
+**Paging:** Open a High/Critical task → Page responder, or explicitly select paging during task creation. High priority alone sends nothing. The recipient is the current task assignee; the dialog shows availability, backup/commander fallback and the server-selected acknowledgment period. Busy/Unavailable requires explicit confirmation and never overrides membership. A page persists as Awaiting Acknowledgment, Acknowledged, Escalated or Canceled. Only the addressed responder can acknowledge receipt; bell read state is separate. Urgent banners persist across pages until handled. There is no SMS, phone call, Photon delivery or browser notification permission requirement.
+
+The existing private one-second SpacetimeDB scheduled reducer owns deadlines. Default policy is **five minutes**, then **one eligible backup or Incident Commander** (prefer Available); a deterministic child page and terminal parent prevent repeated escalation. Recheck organization/incident/reference access at delivery. Revoked targets escalate; absent eligible fallbacks cancel with an explicit reason for the requester. Backup pages require explicit handling and do not escalate further. Acknowledgment before the deadline stops escalation. Canceled/completed/reassigned tasks cancel pending pages while preserving history. Stored pages and the scheduled interval survive database restart; closing every browser does not stop escalation. Service downtime delays delivery until the database resumes; this local MVP is not a highly available pager service.
+
+**Seed and tests:** `acme-phase4-v1` adds 3 incident rooms, 3 DMs, 37 synthetic messages, 11 tasks, 4 terminal historical page records, manual availability and 12 notifications. Repeated `npm run db:seed` preserves user work and original evidence; the existing disposable IR-2043 read-state reset remains unchanged. New actions use `coord.*` through the existing service-gated command boundary and `/api/coordination`; `visible_coordination_data` is a caller-filtered SDK subscription. References are validated structured JSON within message/task rows; no replacement incident/event/notification tables or external service were added.
+
+Run `npm run test:e2e` for real-backend chat, privacy, conversion, task verification, availability, urgent notifications and paging tests alongside all previous phases. A separate disposable restart test temporarily owns **3201** and verifies durable pending pages, messages and one-time escalation across a real standalone restart; it cleans up only its own temporary state. The trusted `coord.test.page_due` fixture can move a pending original deadline into the past only in the isolated test module and is excluded from HTTP routes. No normal client can choose or accelerate a page deadline. For a local visual demo only, set `AEGIS_PAGE_ACK_SECONDS=15` in root `.env.local`, restart `npm run dev`, and use Page responder. Remove the override to restore five minutes.
+
+Deployment requires independent HTTPS/WSS hosting, private service credentials and backed-up database/evidence state. Chat is access-controlled and transport-protected by TLS when deployed; **end-to-end encryption is not implemented**. Phase 5 approvals, recovery execution, trust warnings and report generation remain unimplemented.

@@ -1,4 +1,11 @@
 "use client";
+import {
+  TaskForm,
+  CoordinationAttention,
+  TaskButton,
+} from "./coordination-tasks";
+import { useCoordination } from "./coordination-data";
+import { ScopeSummaryStrip } from "./scope-summary";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -41,7 +48,8 @@ const tone = (v: string) =>
 function FindingDetail({ id, close }: { id: string; close: () => void }) {
   const d = useIncident(),
     a = useAccess(),
-    f = d.findings.find((f) => f.id === id);
+    f = d.findings.find((f) => f.id === id),
+    coordination = useCoordination();
   const [error, setError] = useState("");
   useEffect(() => {
     api("incident/read", {
@@ -101,10 +109,28 @@ function FindingDetail({ id, close }: { id: string; close: () => void }) {
         </p>
         {error && <p role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2">
+          <TaskForm
+            title={`Investigate: ${f.title}`}
+            description={f.description}
+            references={[
+              { kind: "finding", id },
+              ...evidenceIds
+                .filter((e) => d.evidence.some((v) => v.id === e))
+                .map((e) => ({ kind: "evidence" as const, id: e })),
+            ]}
+          />
           {a.can("findings:edit") && <FindingForm finding={f} />}{" "}
           {a.can("evidence:upload") && <AttachEvidence findingId={id} />}{" "}
           {a.can("notes:create") && <AddNote findingId={id} />}
         </div>
+        {coordination.findingSources.find((s) => s.id === id) && (
+          <Link
+            className="text-xs underline"
+            href={`${incidentBase(a.organizationId, a.incidentId)}/team?conversation=${encodeURIComponent(coordination.findingSources.find((s) => s.id === id)!.conversationId)}&message=${coordination.findingSources.find((s) => s.id === id)!.sourceMessageId}`}
+          >
+            Open original message
+          </Link>
+        )}
         <h3 className="text-sm font-medium">Supporting evidence</h3>
         <div className="flex flex-wrap gap-2">
           {d.evidence
@@ -273,6 +299,7 @@ export function LiveOverview() {
           </div>
         ))}
       </div>
+      <ScopeSummaryStrip summary={d.scopeSummary} />
       <div className="mb-7 flex flex-wrap gap-3">
         {a.can("incident:manage") && <UpdateIncident />}
         {a.can("notes:create") && <AddNote />}
@@ -326,6 +353,7 @@ export function LiveOverview() {
         <div>
           <h2 className="mb-4 text-xl font-semibold">Needs your attention</h2>
           <div className="divide-y divide-border rounded-lg border border-border">
+            <CoordinationAttention />
             {sorted.map((f) => (
               <FindingRow
                 key={f.id}
@@ -414,6 +442,9 @@ export function LiveTimeline() {
     "Status Changes": ["status"],
     Decisions: ["decision"],
     "Access Changes": ["access"],
+    "Scope Changes": ["scope"],
+    Tasks: ["task"],
+    Paging: ["page"],
   };
   const events = d.events.filter(
     (e) =>
@@ -516,6 +547,43 @@ export function LiveTimeline() {
               <p className="mt-3 text-xs text-muted-foreground">
                 {a.incidentId} · {incidentTime(current.createdAt)}
               </p>
+              {current.type === "scope" &&
+                a.can("scope:view") &&
+                (() => {
+                  try {
+                    const target = JSON.parse(current.newValue)
+                      .scopeEntityId as unknown;
+                    return typeof target === "string" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4"
+                        asChild
+                      >
+                        <Link
+                          href={`${incidentBase(a.organizationId, a.incidentId)}/scope?entity=${encodeURIComponent(target)}`}
+                        >
+                          Open scope entity
+                        </Link>
+                      </Button>
+                    ) : null;
+                  } catch {
+                    return null;
+                  }
+                })()}
+              {["task", "page"].includes(current.type) &&
+                (() => {
+                  try {
+                    const id = JSON.parse(current.newValue).taskId;
+                    return typeof id === "string" ? (
+                      <div className="mt-4">
+                        <TaskButton id={id} />
+                      </div>
+                    ) : null;
+                  } catch {
+                    return null;
+                  }
+                })()}
               <h3 className="mt-8 mb-3 font-semibold">Investigation details</h3>
               <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                 {current.description}

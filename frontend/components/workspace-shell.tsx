@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronRight, Search, Command, ArrowUpRight } from "lucide-react";
+import { UrgentPages } from "./urgent-pages";
 import { IncidentSelector, NotificationCenter } from "./incident-header";
 import { Brand } from "./brand";
 import { AccountMenu } from "./account-menu";
@@ -92,6 +93,7 @@ export function WorkspaceShell({
         </nav>
       </header>
       <main className="mx-auto max-w-[1680px] px-5 py-7 lg:px-12 lg:py-8">
+        <UrgentPages />
         {children}
         <div
           data-testid="access-summary"

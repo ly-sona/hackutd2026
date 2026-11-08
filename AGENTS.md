@@ -4,7 +4,7 @@
 
 AEGIS is a HackUTD 2026 Cyber Incident Response Dashboard for the Winstead PC challenge. It must function independently of compromised corporate infrastructure. Prioritize ease of use under stress, real-time incident coordination, evidence-backed scope tracking and human-approved recovery actions.
 
-Phases 0–2 establish the development foundation, independent access controls, and live incident documentation. Overview/Timeline are database-backed; graph, approvals, chat, paging and recovery remain later-phase previews. Implement only the phase requested by the user; never preempt later phases. The planned feature phases are:
+Phases 0–4 establish the development foundation, independent access, live incident documentation, evidence-backed scope tracking and real-time communication/coordination. Overview/Scope/Team/Timeline are database-backed; approvals, trust warnings, recovery and report generation remain Phase 5 work. Implement only the phase requested by the user; never preempt later phases. The planned feature phases are:
 
 1. Independent Security & Access
 2. Incident Command & Documentation
@@ -81,4 +81,30 @@ Prefer minimal viable changes. Do not refactor unrelated code. Reuse existing co
 - Store evidence originals outside public assets using `EVIDENCE_STORAGE_DIR`, random UUID names, 5 MiB size limits and restrictive file permissions. Preserve original bytes; append annotations separately. Recheck authorization before serving, verify SHA-256, render text as escaped text and use authorized blob previews. No filesystem paths in public metadata.
 - `backend/seed/evidence-manifest.json`, `mock-evidence/`, and the versioned backend fixture define one consistent synthetic story. Routine seed runs preserve existing/user-created rows and original files. Never import the test-only ground-truth oracle into application or seed code.
 - The only demo reset clears disposable IR-2043 read/visit state with explicit opt-in and module `AEGIS_DEVELOPMENT_MODE=true`. Never broaden it to erase shared Acme data or Phase 1 users. Publish development mode false outside local/test.
-- Keep the five reference layouts and mark remaining Scope/Operations/Team story content as previews. Do not implement graph traversal, record generation, contradiction detection, paging, chat, approvals, recovery or automatic reporting before the requested later phase.
+- Keep the five reference layouts; Operations retains its labeled approval preview. Phase 3 implements constrained graph traversal and synthetic record inventory; Phase 4 adds real Team communication/tasks/paging. Do not implement Phase 5 approvals, recovery or reporting until requested.
+
+## Phase 3 scope conventions
+
+- Scope inventory is shared within an organization; explicit incident associations and incident-specific assessments control visibility and certainty. Never make compromise a permanent global asset flag.
+- Graph Evidence/Finding/Incident nodes must reference existing Phase 2 rows. Reuse the existing evidence viewer, private file store and append-only event table. A scope change must write a real event in the same reducer transaction; preserve prior assessments/justifications.
+- Validate both relationship endpoints, organization/incident association, type compatibility, evidence provenance and duplicate keys before mutation. No cross-incident evidence reuse is currently supported; do not infer authorization from an ID.
+- Keep separate impact dimensions. Confirmation requires evidence, backend scope:verify and recorded verifier/time. Group or dataset certainty never automatically confirms individual records.
+- Count inventory, potential exposure and individually confirmed impact separately. Use actual membership sets and `shared/scope.ts` to avoid double-counting overlapping groups. An aggregate confirmed record may still have unverified impacts in other dimensions.
+- Deterministic potential-path traversal supplies leads only. Never automatically mutate downstream statuses or equate CAN_ACCESS with observed use. Preserve uncertain relationships and explain the path.
+- Keep private records out of full browser subscriptions. Use fresh service-gated paginated queries (maximum 50); load only an anchor/selected record into the graph. scope:records is separate from scope:view; Administrators and Operations do not inherit record access.
+- `shared/` contains only pure cross-runtime rules/types, never credentials, filesystem code, React or database side effects. Keep frontend UI in frontend/ and schema/reducers in backend/spacetimedb/.
+- Extend `acme-phase3-v1` fixtures idempotently; preserve user work, all Phase 2 originals and access controls. Keep hidden ground truth test-only. Do not broaden the existing narrow read-state reset into destructive inventory deletion.
+- Optional integrity comparison is deferred. No ML detection, sanitization, live network scans, graph database, approvals, recovery or reporting automation is part of Phase 3; Phase 4 communication is documented below.
+
+
+## Phase 4 coordination conventions
+
+- Keep messages/tasks/pages private and use the existing service-gated `coord.*` command boundary plus caller-scoped `visible_coordination_data`. Administrator alone grants no conversation/task authority. DM participants also need current organization and incident access; participant rows cannot grant access independently.
+- Generate new coordination IDs server-side with the installed SDK's sortable UUID API and check uniqueness against persisted rows; do not assume a random ID is absent after repeated development runs.
+- Messages are append-only safe text. Corrections reference originals. Preserve backend timestamps/IDs, personal read positions and stable client operation UUIDs; changed content cannot reuse a successful request ID. Validate all references before writes and never copy evidence or graph entities.
+- A task/finding converted from a private message retains its conversation access boundary. Propagate this to references, projections, notifications, events and annotations. Never leak private sources by posting a derived reference into a broader conversation or graph. Existing Phase 2 finding rows remain authoritative; source provenance is separate. Broader Scope associations of conversation-derived findings are deliberately rejected.
+- Acknowledgment confirms page receipt only. It never completes a task, resolves a finding or confirms an assessment. Investigation task completion requires a different authorized reviewer, evidence and technical verification permission. Coordination work requires independent review of its work note. Preserve append-only work/event history.
+- The existing internal one-second SpacetimeDB scheduler owns page deadlines/escalation, never a browser timer or extra worker service. Default timeout is 300 seconds, one backup/commander escalation, current membership/reference checks and availability preference. Deterministic child IDs prevent duplicate escalation. Cancel pending pages on task cancellation/completion/reassignment; never erase history. Test durable behavior across a real DB restart.
+- Availability is a manual organization-scoped declaration, not inferred presence and never an access grant. Busy/Unavailable paging requires explicit warning/confirmation. No SMS/phone delivery or end-to-end encryption is implemented.
+- Keep `AEGIS_PAGE_ACK_SECONDS` server/module-only and bounded to 5–300 in development/test; force 300 otherwise. The service-only `coord.test.page_due` fixture requires `AEGIS_TEST_MODE=true` and must remain absent from HTTP routes. Normal clients never supply deadlines.
+- Extend `acme-phase4-v1` idempotently. Preserve users, membership expiry, original EV-018, Customer Database, all user work and the narrow IR-2043 read-state reset. Browser tests use 3100/3101; the separate restart test owns disposable port 3201 and only its own temporary state.

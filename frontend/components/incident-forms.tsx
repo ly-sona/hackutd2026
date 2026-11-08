@@ -1,6 +1,8 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useCoordinationCommand } from "./coordination-data";
+import type { Message, Reference } from "@/lib/coordination";
 import { api } from "@/lib/api";
 import { incidentBase } from "@/lib/roles";
 import {
@@ -233,9 +235,20 @@ export function NewIncident({
     </Editor>
   );
 }
-export function FindingForm({ finding }: { finding?: Finding }) {
+export function FindingForm({
+  finding,
+  scopeEntityId,
+  relatedSystem,
+  sourceMessage,
+}: {
+  sourceMessage?: Message;
+  finding?: Finding;
+  scopeEntityId?: string;
+  relatedSystem?: string;
+}) {
   const a = useAccess(),
-    d = useIncident();
+    d = useIncident(),
+    coordinationCommand = useCoordinationCommand();
   const [observedDefault] = useState(() =>
     localDateValue(finding ? Number(finding.observedAt) : undefined),
   );
@@ -243,33 +256,57 @@ export function FindingForm({ finding }: { finding?: Finding }) {
   const linked = d.links
     .filter((l) => l.findingId === finding?.id)
     .map((l) => l.evidenceId);
+  const sourceReferences = sourceMessage
+    ? (JSON.parse(sourceMessage.references) as Reference[])
+    : [];
   return (
     <Editor
       title={finding ? "Update finding" : "Add finding"}
       description="Separate observed facts from assessments. Confirmation and resolution require evidence and a verification justification."
       trigger={finding ? "Update finding" : "Add finding"}
-      onSubmit={(f) =>
-        api(`incident/findings${finding ? "/update" : ""}`, {
-          ...scope,
-          findingId: finding?.id,
-          title: val(f, "title"),
-          description: val(f, "description"),
-          category: val(f, "category"),
-          priority: val(f, "priority"),
-          status: val(f, "status"),
-          observedAt: new Date(val(f, "observedAt")).getTime(),
-          assignedTo: val(f, "assignedTo"),
-          relatedSystem: val(f, "relatedSystem"),
-          evidenceIds: f.getAll("evidenceIds"),
-          reason: val(f, "reason"),
-        })
-      }
+      onSubmit={(f) => {
+        const send = (path: string, data: object) =>
+          sourceMessage
+            ? coordinationCommand("finding.create", {
+                ...data,
+                sourceMessageId: sourceMessage.id,
+                references: [
+                  ...sourceReferences.filter((r) => r.kind !== "evidence"),
+                  ...f
+                    .getAll("evidenceIds")
+                    .map((id) => ({ kind: "evidence", id: String(id) })),
+                ],
+              })
+            : api(path, data);
+        return send(
+          scopeEntityId
+            ? "scope"
+            : `incident/findings${finding ? "/update" : ""}`,
+          {
+            ...scope,
+            findingId: finding?.id,
+            ...(scopeEntityId
+              ? { action: "finding", entityId: scopeEntityId }
+              : {}),
+            title: val(f, "title"),
+            description: val(f, "description"),
+            category: val(f, "category"),
+            priority: val(f, "priority"),
+            status: val(f, "status"),
+            observedAt: new Date(val(f, "observedAt")).getTime(),
+            assignedTo: val(f, "assignedTo"),
+            relatedSystem: val(f, "relatedSystem"),
+            evidenceIds: f.getAll("evidenceIds"),
+            reason: val(f, "reason"),
+          },
+        );
+      }}
     >
       <Field label="Finding title">
         <Input
           required
           name="title"
-          defaultValue={finding?.title}
+          defaultValue={finding?.title ?? sourceMessage?.content.slice(0, 160)}
           maxLength={200}
         />
       </Field>
@@ -278,7 +315,7 @@ export function FindingForm({ finding }: { finding?: Finding }) {
           className={fieldClass}
           name="description"
           required
-          defaultValue={finding?.description}
+          defaultValue={finding?.description ?? sourceMessage?.content}
           maxLength={6000}
         />
       </Field>
@@ -322,7 +359,7 @@ export function FindingForm({ finding }: { finding?: Finding }) {
       <Field label="Related system or dataset (optional)">
         <Input
           name="relatedSystem"
-          defaultValue={finding?.relatedSystem}
+          defaultValue={finding?.relatedSystem ?? relatedSystem}
           maxLength={1000}
         />
       </Field>
@@ -349,7 +386,12 @@ export function FindingForm({ finding }: { finding?: Finding }) {
                 type="checkbox"
                 name="evidenceIds"
                 value={e.id}
-                defaultChecked={linked.includes(e.id)}
+                defaultChecked={
+                  linked.includes(e.id) ||
+                  sourceReferences.some(
+                    (r) => r.kind === "evidence" && r.id === e.id,
+                  )
+                }
               />
               {e.id} · {e.filename}
             </label>

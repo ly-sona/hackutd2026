@@ -47,6 +47,63 @@ export const ConnectionGrants = __t.object("ConnectionGrants", {
 });
 export type ConnectionGrants = __Infer<typeof ConnectionGrants>;
 
+export const ConversationParticipants = __t.object("ConversationParticipants", {
+  id: __t.string(),
+  conversationId: __t.string(),
+  userId: __t.string(),
+});
+export type ConversationParticipants = __Infer<typeof ConversationParticipants>;
+
+export const ConversationReads = __t.object("ConversationReads", {
+  id: __t.string(),
+  conversationId: __t.string(),
+  userId: __t.string(),
+  lastReadMessageId: __t.u64(),
+});
+export type ConversationReads = __Infer<typeof ConversationReads>;
+
+export const Conversations = __t.object("Conversations", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  type: __t.string(),
+  title: __t.string(),
+  createdBy: __t.string(),
+  createdAt: __t.u64(),
+});
+export type Conversations = __Infer<typeof Conversations>;
+
+export const CoordinationEventVisibility = __t.object("CoordinationEventVisibility", {
+  id: __t.u64(),
+  conversationId: __t.string(),
+});
+export type CoordinationEventVisibility = __Infer<typeof CoordinationEventVisibility>;
+
+export const CoordinationFindings = __t.object("CoordinationFindings", {
+  id: __t.string(),
+  conversationId: __t.string(),
+  sourceMessageId: __t.u64(),
+});
+export type CoordinationFindings = __Infer<typeof CoordinationFindings>;
+
+export const CoordinationNotificationTargets = __t.object("CoordinationNotificationTargets", {
+  id: __t.u64(),
+  conversationId: __t.string(),
+  taskId: __t.string(),
+  pageId: __t.string(),
+});
+export type CoordinationNotificationTargets = __Infer<typeof CoordinationNotificationTargets>;
+
+export const CoordinationOperations = __t.object("CoordinationOperations", {
+  id: __t.string(),
+  action: __t.string(),
+  fingerprint: __t.string(),
+  result: __t.string(),
+  createdAt: __t.u64(),
+});
+export type CoordinationOperations = __Infer<typeof CoordinationOperations>;
+
 export const Credentials = __t.object("Credentials", {
   login: __t.string(),
   userId: __t.string(),
@@ -246,6 +303,20 @@ export const Memberships = __t.object("Memberships", {
 });
 export type Memberships = __Infer<typeof Memberships>;
 
+export const Messages = __t.object("Messages", {
+  id: __t.u64(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  conversationId: __t.string(),
+  senderId: __t.string(),
+  content: __t.string(),
+  references: __t.string(),
+  createdAt: __t.u64(),
+  correctionOf: __t.u64(),
+});
+export type Messages = __Infer<typeof Messages>;
+
 export const MyAccess = __t.object("MyAccess", {});
 export type MyAccess = __Infer<typeof MyAccess>;
 
@@ -275,11 +346,143 @@ export const Organizations = __t.object("Organizations", {
 });
 export type Organizations = __Infer<typeof Organizations>;
 
+export const Pages = __t.object("Pages", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  taskId: __t.string(),
+  requestedBy: __t.string(),
+  pagedUserId: __t.string(),
+  backupUserId: __t.string(),
+  status: __t.string(),
+  createdAt: __t.u64(),
+  acknowledgmentDeadline: __t.u64(),
+  acknowledgedBy: __t.string(),
+  acknowledgedAt: __t.u64(),
+  escalatedAt: __t.u64(),
+  parentPageId: __t.string(),
+  reason: __t.string(),
+});
+export type Pages = __Infer<typeof Pages>;
+
+export const ResponderAvailability = __t.object("ResponderAvailability", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  userId: __t.string(),
+  status: __t.string(),
+  updatedAt: __t.u64(),
+});
+export type ResponderAvailability = __Infer<typeof ResponderAvailability>;
+
 export const ScenarioSeeds = __t.object("ScenarioSeeds", {
   id: __t.string(),
   createdAt: __t.u64(),
 });
 export type ScenarioSeeds = __Infer<typeof ScenarioSeeds>;
+
+export const ScopeAssessments = __t.object("ScopeAssessments", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  entityId: __t.string(),
+  dimension: __t.string(),
+  status: __t.string(),
+  description: __t.string(),
+  findingId: __t.string(),
+  assessedBy: __t.string(),
+  verifiedBy: __t.string(),
+  verifiedAt: __t.u64(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+});
+export type ScopeAssessments = __Infer<typeof ScopeAssessments>;
+
+export const ScopeAssociations = __t.object("ScopeAssociations", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  entityId: __t.string(),
+  createdBy: __t.string(),
+  createdAt: __t.u64(),
+});
+export type ScopeAssociations = __Infer<typeof ScopeAssociations>;
+
+export const ScopeEntities = __t.object("ScopeEntities", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  kind: __t.string(),
+  reference: __t.string(),
+  name: __t.string(),
+  description: __t.string(),
+  owner: __t.string(),
+  assetType: __t.string(),
+  parentId: __t.string(),
+  datasetId: __t.string(),
+  groupId: __t.string(),
+  dataCategory: __t.string(),
+  sensitivity: __t.string(),
+  recordCount: __t.u32(),
+  countKnown: __t.bool(),
+  defaultVisible: __t.bool(),
+  createdBy: __t.string(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+});
+export type ScopeEntities = __Infer<typeof ScopeEntities>;
+
+export const ScopeEvidenceLinks = __t.object("ScopeEvidenceLinks", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  entityId: __t.string(),
+  assessmentId: __t.string(),
+  evidenceId: __t.string(),
+  annotation: __t.string(),
+  excerpt: __t.string(),
+  createdBy: __t.string(),
+  createdAt: __t.u64(),
+});
+export type ScopeEvidenceLinks = __Infer<typeof ScopeEvidenceLinks>;
+
+export const ScopeRecordMemberships = __t.object("ScopeRecordMemberships", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  groupId: __t.string(),
+  recordId: __t.string(),
+});
+export type ScopeRecordMemberships = __Infer<typeof ScopeRecordMemberships>;
+
+export const ScopeRecords = __t.object("ScopeRecords", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  datasetId: __t.string(),
+  groupId: __t.string(),
+  reference: __t.string(),
+  dataCategory: __t.string(),
+  sensitivity: __t.string(),
+  syntheticMetadata: __t.string(),
+});
+export type ScopeRecords = __Infer<typeof ScopeRecords>;
+
+export const ScopeRelationships = __t.object("ScopeRelationships", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  sourceId: __t.string(),
+  targetId: __t.string(),
+  type: __t.string(),
+  status: __t.string(),
+  justification: __t.string(),
+  evidenceIds: __t.string(),
+  createdBy: __t.string(),
+  createdAt: __t.u64(),
+});
+export type ScopeRelationships = __Infer<typeof ScopeRelationships>;
 
 export const Sessions = __t.object("Sessions", {
   hash: __t.string(),
@@ -288,6 +491,45 @@ export const Sessions = __t.object("Sessions", {
   createdAt: __t.timestamp(),
 });
 export type Sessions = __Infer<typeof Sessions>;
+
+export const TaskUpdates = __t.object("TaskUpdates", {
+  id: __t.u64(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  taskId: __t.string(),
+  actorId: __t.string(),
+  previousStatus: __t.string(),
+  newStatus: __t.string(),
+  comment: __t.string(),
+  createdAt: __t.u64(),
+});
+export type TaskUpdates = __Infer<typeof TaskUpdates>;
+
+export const Tasks = __t.object("Tasks", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  title: __t.string(),
+  description: __t.string(),
+  kind: __t.string(),
+  priority: __t.string(),
+  status: __t.string(),
+  assignedUserId: __t.string(),
+  backupUserId: __t.string(),
+  createdBy: __t.string(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+  dueAt: __t.u64(),
+  verifiedBy: __t.string(),
+  verifiedAt: __t.u64(),
+  relatedFindingId: __t.string(),
+  sourceMessageId: __t.u64(),
+  sourceConversationId: __t.string(),
+  references: __t.string(),
+});
+export type Tasks = __Infer<typeof Tasks>;
 
 export const Users = __t.object("Users", {
   id: __t.string(),
@@ -328,6 +570,9 @@ export const VisibleAuditEvent = __t.object("VisibleAuditEvent", {
 });
 export type VisibleAuditEvent = __Infer<typeof VisibleAuditEvent>;
 
+export const VisibleCoordinationData = __t.object("VisibleCoordinationData", {});
+export type VisibleCoordinationData = __Infer<typeof VisibleCoordinationData>;
+
 export const VisibleIncidentData = __t.object("VisibleIncidentData", {});
 export type VisibleIncidentData = __Infer<typeof VisibleIncidentData>;
 
@@ -361,6 +606,9 @@ export type VisibleMember = __Infer<typeof VisibleMember>;
 
 export const VisibleMembers = __t.object("VisibleMembers", {});
 export type VisibleMembers = __Infer<typeof VisibleMembers>;
+
+export const VisibleScopeData = __t.object("VisibleScopeData", {});
+export type VisibleScopeData = __Infer<typeof VisibleScopeData>;
 
 export const VisibleSession = __t.object("VisibleSession", {
   userId: __t.string(),

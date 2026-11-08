@@ -80,6 +80,7 @@ export interface FindingRead {
   readAt: string;
 }
 export interface Notification {
+  conversationId?: string; taskId?: string; pageId?: string;
   id: string;
   organizationId: string;
   incidentId: string;

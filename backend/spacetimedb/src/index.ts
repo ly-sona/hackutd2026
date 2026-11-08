@@ -7,6 +7,19 @@ import {
   type ReducerCtx,
   type ViewCtx,
 } from "spacetimedb/server";
+import { coordinationTables } from "./coord-schema";
+import {
+  coordinationCommand,
+  coordinationProjection,
+  processPages,
+} from "./coord-domain";
+import { scopeTables } from "./scope-schema";
+import {
+  scopeCommand,
+  scopeProjection,
+  scopeRead,
+  scopeSnapshot,
+} from "./scope-domain";
 import { incidentTables } from "./incident-schema";
 import {
   incidentCommand,
@@ -156,6 +169,8 @@ const healthCheck = table(
 const db = schema(
   {
     ...incidentTables,
+    ...scopeTables,
+    ...coordinationTables,
     organizations,
     users,
     credentials,
@@ -177,6 +192,7 @@ const db = schema(
       AEGIS_GATEWAY_IDENTITY: t.option(t.string()),
       AEGIS_TEST_MODE: t.option(t.string()),
       AEGIS_DEVELOPMENT_MODE: t.option(t.string()),
+      AEGIS_PAGE_ACK_SECONDS: t.option(t.string()),
     },
   },
 );
@@ -449,6 +465,22 @@ function execute(
   data: Record<string, unknown>,
 ): unknown {
   const at = now(ctx);
+  if (action.startsWith("coord."))
+    return coordinationCommand(ctx, action, hash, data, {
+      authorize,
+      activeMember,
+      fail: (code, message): never => {
+        throw new Denied(code, message);
+      },
+    });
+  if (action.startsWith("scope."))
+    return scopeCommand(ctx, action, hash, data, {
+      authorize,
+      activeMember,
+      fail: (code, message): never => {
+        throw new Denied(code, message);
+      },
+    });
   if (action.startsWith("incident."))
     return incidentCommand(ctx, action, hash, data, {
       authorize,
@@ -1283,6 +1315,7 @@ export const expire_access = db.reducer(
         });
         audit(ctx, row.organizationId, "", row.userId, "membership.expired");
       }
+    processPages(ctx);
     for (const row of ctx.db.commandResults.iter())
       if (row.createdAt.microsSinceUnixEpoch / 1000n + 60000n < at)
         ctx.db.commandResults.id.delete(row.id);
@@ -1317,7 +1350,25 @@ const incidentDataRow = t.object("IncidentDataRow", {
 export const visible_incident_data = db.view(
   { public: true },
   t.array(incidentDataRow),
-  (ctx) => incidentProjection(ctx, browserAccess(ctx)),
+  (ctx) => {
+    const access = browserAccess(ctx);
+    return [
+      ...incidentProjection(ctx, access),
+      ...access
+        .filter((a) =>
+          (JSON.parse(a.permissions) as string[]).includes("scope:summary"),
+        )
+        .map((a) => ({
+          id: `scopeSummary:${a.id}`,
+          kind: "scopeSummary",
+          organizationId: a.organizationId,
+          incidentId: a.incidentId,
+          body: serialize(
+            scopeSnapshot(ctx, a.organizationId, a.incidentId).summary,
+          ),
+        })),
+    ];
+  },
 );
 export const evidence_descriptor = db.procedure(
   { sessionHash: t.string(), evidenceId: t.string() },
@@ -1347,4 +1398,56 @@ export const evidence_descriptor = db.procedure(
         return serialize({ ok: false, code: error.code, error: error.message });
       }
     }),
+);
+
+export const visible_scope_data = db.view(
+  { public: true },
+  t.array(incidentDataRow),
+  (ctx) => scopeProjection(ctx, browserAccess(ctx)),
+);
+export const scope_read = db.procedure(
+  { sessionHash: t.string(), payload: t.string() },
+  t.string(),
+  (ctx, args) =>
+    ctx.withTx((tx) => {
+      gateway(tx);
+      try {
+        if (args.payload.length > 10000)
+          throw new Denied("INVALID_INPUT", "Query too large.");
+        const data = JSON.parse(args.payload) as Record<string, unknown>;
+        if (!data || typeof data !== "object" || Array.isArray(data))
+          throw new Denied("INVALID_INPUT", "Invalid scope query.");
+        return serialize({
+          ok: true,
+          data: scopeRead(
+            tx,
+            args.sessionHash,
+            data,
+            {
+              authorize,
+              activeMember,
+              fail: (code, message): never => {
+                throw new Denied(code, message);
+              },
+            },
+            now(tx),
+          ),
+        });
+      } catch (error) {
+        if (error instanceof SyntaxError)
+          return serialize({
+            ok: false,
+            code: "INVALID_INPUT",
+            error: "Invalid scope query.",
+          });
+        if (!(error instanceof Denied)) throw error;
+        return serialize({ ok: false, code: error.code, error: error.message });
+      }
+    }),
+);
+
+export const visible_coordination_data = db.view(
+  { public: true },
+  t.array(incidentDataRow),
+  (ctx) => coordinationProjection(ctx, browserAccess(ctx)),
 );

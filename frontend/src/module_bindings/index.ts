@@ -42,6 +42,7 @@ import * as AccessSnapshotProcedure from "./access_snapshot_procedure";
 import * as EvidenceDescriptorProcedure from "./evidence_descriptor_procedure";
 import * as InvitationPreviewProcedure from "./invitation_preview_procedure";
 import * as LookupCredentialsProcedure from "./lookup_credentials_procedure";
+import * as ScopeReadProcedure from "./scope_read_procedure";
 import * as TakeCommandResultProcedure from "./take_command_result_procedure";
 
 // Import all table schema definitions
@@ -49,9 +50,11 @@ import HealthCheckRow from "./health_check_table";
 import MyAccessRow from "./my_access_table";
 import MySessionRow from "./my_session_table";
 import VisibleAuditRow from "./visible_audit_table";
+import VisibleCoordinationDataRow from "./visible_coordination_data_table";
 import VisibleIncidentDataRow from "./visible_incident_data_table";
 import VisibleInvitationsRow from "./visible_invitations_table";
 import VisibleMembersRow from "./visible_members_table";
+import VisibleScopeDataRow from "./visible_scope_data_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -89,6 +92,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, VisibleAuditRow),
+  visibleCoordinationData: __table({
+    name: 'visible_coordination_data',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, VisibleCoordinationDataRow),
   visibleIncidentData: __table({
     name: 'visible_incident_data',
     indexes: [
@@ -110,6 +120,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, VisibleMembersRow),
+  visibleScopeData: __table({
+    name: 'visible_scope_data',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, VisibleScopeDataRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
@@ -124,6 +141,7 @@ const proceduresSchema = __procedures(
   __procedureSchema("evidence_descriptor", EvidenceDescriptorProcedure.params, EvidenceDescriptorProcedure.returnType),
   __procedureSchema("invitation_preview", InvitationPreviewProcedure.params, InvitationPreviewProcedure.returnType),
   __procedureSchema("lookup_credentials", LookupCredentialsProcedure.params, LookupCredentialsProcedure.returnType),
+  __procedureSchema("scope_read", ScopeReadProcedure.params, ScopeReadProcedure.returnType),
   __procedureSchema("take_command_result", TakeCommandResultProcedure.params, TakeCommandResultProcedure.returnType),
 );
 
@@ -135,12 +153,16 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_session": Omit<typeof tablesSchema.schemaType.tables["mySession"], "accessorName"> & { readonly accessorName: "my_session" };
     /** @deprecated Use `visibleAudit` instead. This alias will be removed in the next major version. */
     readonly "visible_audit": Omit<typeof tablesSchema.schemaType.tables["visibleAudit"], "accessorName"> & { readonly accessorName: "visible_audit" };
+    /** @deprecated Use `visibleCoordinationData` instead. This alias will be removed in the next major version. */
+    readonly "visible_coordination_data": Omit<typeof tablesSchema.schemaType.tables["visibleCoordinationData"], "accessorName"> & { readonly accessorName: "visible_coordination_data" };
     /** @deprecated Use `visibleIncidentData` instead. This alias will be removed in the next major version. */
     readonly "visible_incident_data": Omit<typeof tablesSchema.schemaType.tables["visibleIncidentData"], "accessorName"> & { readonly accessorName: "visible_incident_data" };
     /** @deprecated Use `visibleInvitations` instead. This alias will be removed in the next major version. */
     readonly "visible_invitations": Omit<typeof tablesSchema.schemaType.tables["visibleInvitations"], "accessorName"> & { readonly accessorName: "visible_invitations" };
     /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
     readonly "visible_members": Omit<typeof tablesSchema.schemaType.tables["visibleMembers"], "accessorName"> & { readonly accessorName: "visible_members" };
+    /** @deprecated Use `visibleScopeData` instead. This alias will be removed in the next major version. */
+    readonly "visible_scope_data": Omit<typeof tablesSchema.schemaType.tables["visibleScopeData"], "accessorName"> & { readonly accessorName: "visible_scope_data" };
   };
 };
 
@@ -162,9 +184,11 @@ const tableAccessorAliases = {
   "my_access": "myAccess",
   "my_session": "mySession",
   "visible_audit": "visibleAudit",
+  "visible_coordination_data": "visibleCoordinationData",
   "visible_incident_data": "visibleIncidentData",
   "visible_invitations": "visibleInvitations",
   "visible_members": "visibleMembers",
+  "visible_scope_data": "visibleScopeData",
 } as const;
 
 function __withTableAccessorAliases<T extends object>(target: T, freeze = false): T {
@@ -191,12 +215,16 @@ export type DbView = __DbViewBase & {
   readonly "my_session": __DbViewBase["mySession"];
   /** @deprecated Use `visibleAudit` instead. This alias will be removed in the next major version. */
   readonly "visible_audit": __DbViewBase["visibleAudit"];
+  /** @deprecated Use `visibleCoordinationData` instead. This alias will be removed in the next major version. */
+  readonly "visible_coordination_data": __DbViewBase["visibleCoordinationData"];
   /** @deprecated Use `visibleIncidentData` instead. This alias will be removed in the next major version. */
   readonly "visible_incident_data": __DbViewBase["visibleIncidentData"];
   /** @deprecated Use `visibleInvitations` instead. This alias will be removed in the next major version. */
   readonly "visible_invitations": __DbViewBase["visibleInvitations"];
   /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
   readonly "visible_members": __DbViewBase["visibleMembers"];
+  /** @deprecated Use `visibleScopeData` instead. This alias will be removed in the next major version. */
+  readonly "visible_scope_data": __DbViewBase["visibleScopeData"];
 };
 
 type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
@@ -207,12 +235,16 @@ export type Tables = __TablesBase & {
   readonly "my_session": __TablesBase["mySession"];
   /** @deprecated Use `visibleAudit` instead. This alias will be removed in the next major version. */
   readonly "visible_audit": __TablesBase["visibleAudit"];
+  /** @deprecated Use `visibleCoordinationData` instead. This alias will be removed in the next major version. */
+  readonly "visible_coordination_data": __TablesBase["visibleCoordinationData"];
   /** @deprecated Use `visibleIncidentData` instead. This alias will be removed in the next major version. */
   readonly "visible_incident_data": __TablesBase["visibleIncidentData"];
   /** @deprecated Use `visibleInvitations` instead. This alias will be removed in the next major version. */
   readonly "visible_invitations": __TablesBase["visibleInvitations"];
   /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
   readonly "visible_members": __TablesBase["visibleMembers"];
+  /** @deprecated Use `visibleScopeData` instead. This alias will be removed in the next major version. */
+  readonly "visible_scope_data": __TablesBase["visibleScopeData"];
 };
 
 /** The tables available in this remote SpacetimeDB module. Each table reference doubles as a query builder. */

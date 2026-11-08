@@ -1,4 +1,5 @@
 "use client";
+import { TaskForm } from "./coordination-tasks";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useAccess } from "./workspace-provider";
@@ -95,9 +96,11 @@ export function AttachEvidence({ findingId = "" }: { findingId?: string }) {
 export function EvidenceButton({
   evidence,
   findingId = "",
+  annotations = [],
 }: {
   evidence: Evidence;
   findingId?: string;
+  annotations?: { id: string; annotation: string; excerpt: string }[];
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -114,7 +117,13 @@ export function EvidenceButton({
               {evidence.id} · {evidence.status}
             </DialogDescription>
           </DialogHeader>
-          {open && <EvidenceViewer evidence={evidence} findingId={findingId} />}
+          {open && (
+            <EvidenceViewer
+              evidence={evidence}
+              findingId={findingId}
+              annotations={annotations}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>
@@ -123,9 +132,11 @@ export function EvidenceButton({
 function EvidenceViewer({
   evidence: e,
   findingId,
+  annotations,
 }: {
   evidence: Evidence;
   findingId: string;
+  annotations: { id: string; annotation: string; excerpt: string }[];
 }) {
   const d = useIncident(),
     a = useAccess();
@@ -135,9 +146,12 @@ function EvidenceViewer({
     error?: string;
   }>({});
   const url = `/api/evidence/${encodeURIComponent(e.id)}`;
-  const links = d.links.filter(
-    (l) => l.evidenceId === e.id && (!findingId || l.findingId === findingId),
-  );
+  const links = [
+    ...annotations.map((l) => ({ ...l, findingId: "" })),
+    ...d.links.filter(
+      (l) => l.evidenceId === e.id && (!findingId || l.findingId === findingId),
+    ),
+  ];
   const excerpt = links.find((l) => l.excerpt)?.excerpt ?? "";
   useEffect(() => {
     let active = true;
@@ -169,6 +183,7 @@ function EvidenceViewer({
   return (
     <div className="min-w-0 space-y-4 text-sm">
       <p>{e.description}</p>
+      <TaskForm title={`Review ${e.id}: ${e.filename}`} description={e.description} references={[{kind:"evidence",id:e.id}]} />
       <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 text-xs">
         <dt>Source</dt>
         <dd>{e.source}</dd>

@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useMemo, useEffect, useState } from "react";
 import { useTable } from "spacetimedb/react";
+import type { ScopeSummary } from "@/lib/scope";
 import { tables } from "@/src/module_bindings";
 import { useAccess } from "./workspace-provider";
 import { api } from "@/lib/api";
@@ -65,6 +66,7 @@ function useData() {
       scoped.filter((r) => r.kind === kind).map((r) => JSON.parse(r.body) as T);
     return {
       ready,
+      scopeSummary: get<ScopeSummary>("scopeSummary")[0],
       incident: get<Incident>("incident")[0],
       incidents: rows
         .filter(

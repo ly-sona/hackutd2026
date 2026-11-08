@@ -33,6 +33,17 @@ export async function seedIncidents() {
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
   }
+  // Verify existing fixture originals concurrently; cold private storage should not
+  // serialize ten independent reads. Originals are never overwritten or repaired.
+  await Promise.all(
+    manifest.evidence.map(async (item) => {
+      const reference = mapping[item.id];
+      if (reference) {
+        const bytes = await readFile(resolve("mock-evidence", item.filename));
+        await readEvidence(reference, evidenceDigest(bytes));
+      }
+    }),
+  );
   const artifacts = [];
   for (const item of manifest.evidence) {
     const bytes = await readFile(resolve("mock-evidence", item.filename));

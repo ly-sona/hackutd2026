@@ -1,3 +1,9 @@
+import {
+  canReadFinding,
+  canReadConversation,
+  canReadCoordinationEvent,
+  ensureRoom,
+} from "./coord-access";
 import type { Ctx, Reader } from "./index";
 import type { Permission } from "./permissions";
 import { matrix, isRole } from "./permissions";
@@ -276,7 +282,20 @@ function execute(
               : action === "incident.note"
                 ? "notes:create"
                 : "incident:view";
-  const { actor } = p.authorize(ctx, hash, org, inc, permission, time(ctx));
+  const { actor, member: membership } = p.authorize(
+    ctx,
+    hash,
+    org,
+    inc,
+    permission,
+    time(ctx),
+  );
+  const access = {
+    userId: actor.userId,
+    organizationId: org,
+    incidentId: inc,
+    permissions: json(isRole(membership.role) ? matrix[membership.role] : []),
+  };
   const who = actor.userId,
     k = key(org, inc),
     at = time(ctx);
@@ -304,7 +323,7 @@ function execute(
   }
   function finding(id: string) {
     const f = ctx.db.findings.id.find(id);
-    if (!f || f.incidentKey !== k)
+    if (!f || f.incidentKey !== k || !canReadFinding(ctx, access, id))
       return p.fail("NOT_FOUND", "Finding is unavailable in this incident.");
     return f;
   }
@@ -379,6 +398,7 @@ function execute(
         membershipStatus: "active",
         createdAt: ctx.timestamp,
       });
+    ensureRoom(ctx, org, id, who);
     appendEvent(ctx, org, id, who, "incident", "Incident opened", description, {
       status: "Open",
       observedAt: discoveredAt,
@@ -459,6 +479,21 @@ function execute(
       reason = str(d, "reason", 2000, true),
       evidenceIds = ids(d, "evidenceIds");
     member(assignedTo);
+    if (old && assignedTo) {
+      const source = ctx.db.coordinationFindings.id.find(old.id);
+      if (
+        source &&
+        !ctx.db.conversationParticipants.id.find(
+          `${source.conversationId}:${assignedTo}`,
+        ) &&
+        ctx.db.conversations.id.find(source.conversationId)?.type ===
+          "Direct Message"
+      )
+        return p.fail(
+          "ACCESS_DENIED",
+          "The assignee must be a participant in the source conversation.",
+        );
+    }
     checkedEvidence(evidenceIds);
     const verification = status === "Confirmed" || status === "Resolved";
     if (verification) {
@@ -709,15 +744,46 @@ function execute(
         "INVALID_INPUT",
         "Only corrections may reference an original event.",
       );
-    appendEvent(ctx, org, inc, who, type, title, description, {
-      findingId,
-      evidenceIds: json(evidenceIds),
-      correctsEventId,
-      status:
-        type === "action"
-          ? "Reported action; outcome unverified"
-          : "Documented",
-    });
+    const corrected = correctsEventId
+      ? ctx.db.incidentEvents.id.find(BigInt(correctsEventId))
+      : undefined;
+    if (
+      corrected &&
+      (!canReadCoordinationEvent(ctx, access, corrected.id) ||
+        (corrected.findingId &&
+          !canReadFinding(ctx, access, corrected.findingId)))
+    )
+      return p.fail("NOT_FOUND", "Original event unavailable.");
+    const noteEvent = appendEvent(
+      ctx,
+      org,
+      inc,
+      who,
+      type,
+      title,
+      description,
+      {
+        findingId,
+        evidenceIds: json(evidenceIds),
+        correctsEventId,
+        status:
+          type === "action"
+            ? "Reported action; outcome unverified"
+            : "Documented",
+      },
+    );
+    const sourceVisibility =
+      corrected &&
+      (ctx.db.coordinationEventVisibility.id.find(corrected.id)
+        ?.conversationId ||
+        (corrected.findingId &&
+          ctx.db.coordinationFindings.id.find(corrected.findingId)
+            ?.conversationId));
+    if (sourceVisibility)
+      ctx.db.coordinationEventVisibility.insert({
+        id: noteEvent.id,
+        conversationId: sourceVisibility,
+      });
     return { added: true };
   }
   if (action === "incident.read") {
@@ -804,13 +870,41 @@ export function incidentProjection(ctx: Reader, access: Access[]) {
     if (!i) continue;
     emit("incident", i.id, i);
     for (const f of ctx.db.findings.incidentKey.filter(k))
-      emit("finding", f.id, f);
-    for (const e of ctx.db.incidentEvents.incidentKey.filter(k))
+      if (canReadFinding(ctx, a, f.id)) emit("finding", f.id, f);
+    for (const e of ctx.db.incidentEvents.incidentKey.filter(k)) {
+      if (
+        !canReadCoordinationEvent(ctx, a, e.id) ||
+        (e.findingId && !canReadFinding(ctx, a, e.findingId))
+      )
+        continue;
+      let safe = e;
+      if (e.type === "scope" && !allowed.includes("scope:records")) {
+        let target = "";
+        try {
+          target = JSON.parse(e.newValue).scopeEntityId ?? "";
+        } catch {
+          /* Old events may not contain structured metadata. */
+        }
+        if (ctx.db.scopeRecords.id.find(target))
+          safe = {
+            ...e,
+            title: "Record scope updated",
+            description:
+              "Individual investigation changed. Record details require an authorized investigation role.",
+            previousValue: "",
+            newValue: "{}",
+            evidenceIds: "[]",
+            findingId: "",
+          };
+      }
       emit(
         "event",
         e.id,
-        allowed.includes("evidence:view") ? e : { ...e, evidenceIds: "[]" },
+        allowed.includes("evidence:view")
+          ? safe
+          : { ...safe, evidenceIds: "[]" },
       );
+    }
     if (allowed.includes("evidence:view")) {
       for (const e of ctx.db.evidence.incidentKey.filter(k)) {
         const { storageReference: _private, ...safe } = e;
@@ -818,12 +912,37 @@ export function incidentProjection(ctx: Reader, access: Access[]) {
         emit("evidence", e.id, safe);
       }
       for (const l of ctx.db.evidenceLinks.incidentKey.filter(k))
-        emit("link", l.id, l);
+        if (!l.findingId || canReadFinding(ctx, a, l.findingId))
+          emit("link", l.id, l);
     }
     for (const r of ctx.db.findingReads.incidentKey.filter(k))
       if (r.userId === a.userId) emit("read", r.id, r);
     for (const n of ctx.db.notifications.recipientId.filter(a.userId))
-      if (n.incidentKey === k) emit("notification", n.id, n);
+      if (
+        n.incidentKey === k &&
+        (!n.findingId || canReadFinding(ctx, a, n.findingId))
+      ) {
+        const target = ctx.db.coordinationNotificationTargets.id.find(n.id);
+        if (
+          target?.conversationId &&
+          !canReadConversation(ctx, a, target.conversationId)
+        )
+          continue;
+        const targetTask = target?.taskId
+          ? ctx.db.tasks.id.find(target.taskId)
+          : undefined;
+        if (
+          targetTask?.sourceConversationId &&
+          !canReadConversation(ctx, a, targetTask.sourceConversationId)
+        )
+          continue;
+        emit("notification", n.id, {
+          ...n,
+          conversationId: target?.conversationId ?? "",
+          taskId: target?.taskId ?? "",
+          pageId: target?.pageId ?? "",
+        });
+      }
   }
   return rows;
 }

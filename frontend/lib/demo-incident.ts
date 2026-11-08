@@ -108,29 +108,6 @@ export const demoIncident: IncidentFixture = {
     },
   ],
 };
-export const simulatedConversation = [
-  {
-    name: "Alex Rivera",
-    time: "09:24",
-    message: "Traffic continued after the reported isolation time.",
-  },
-  {
-    name: "Maya Chen",
-    time: "09:25",
-    message:
-      "Alex, verify the source. Priya, review potential customer impact.",
-  },
-  {
-    name: "Priya Shah",
-    time: "09:26",
-    message: "I’m reviewing the customer information assessment.",
-  },
-  {
-    name: "Jordan Davis",
-    time: "09:27",
-    message: "I’ll coordinate the temporary purchasing process.",
-  },
-];
 export const demoRequests = [
   {
     id: "OP-008",
