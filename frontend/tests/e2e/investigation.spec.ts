@@ -111,6 +111,44 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
         (r) => r.incidentId === incidentId && r.kind === "assessment",
       ),
     ).toHaveLength(0);
+    const graph = [...live.conn.db.visibleScopeData.iter()].filter(
+      (row) => row.incidentId === incidentId,
+    );
+    const entities = new Map(
+      graph
+        .filter((row) => row.kind === "entity")
+        .map((row) => {
+          const e = JSON.parse(row.body) as { id: string; kind: string };
+          return [e.id, e];
+        }),
+    );
+    const edges = graph
+      .filter((row) => row.kind === "relationship")
+      .map(
+        (row) =>
+          JSON.parse(row.body) as {
+            sourceId: string;
+            targetId: string;
+            type: string;
+          },
+      );
+    expect(
+      edges.some(
+        (edge) =>
+          edge.type === "CONTAINS" &&
+          entities.get(edge.sourceId)?.kind === "Dataset" &&
+          entities.get(edge.targetId)?.kind === "Record Group",
+      ),
+    ).toBe(true);
+    expect(
+      edges
+        .filter((edge) => edge.type === "STORED_IN")
+        .every(
+          (edge) =>
+            entities.get(edge.sourceId)?.kind === "Dataset" &&
+            entities.get(edge.targetId)?.kind === "System",
+        ),
+    ).toBe(true);
     await page
       .getByRole("link", { name: "Open Investigation", exact: true })
       .click();

@@ -3,6 +3,7 @@ import { appendEvent, json, key, time, type Ports } from "./incident-domain";
 import { ensureRoom } from "./coord-access";
 import { investigationMetadata } from "./investigation-metadata";
 import { referenceDescriptor } from "./investigation-reference";
+import { compatibility } from "./scope-domain";
 import { moduleId } from "./module-id";
 import { matrix, isRole, type Permission } from "./permissions";
 import {
@@ -946,12 +947,25 @@ function registerInventory(
       });
   }
   for (const [source, target, type] of [
-    [groupId, datasetId, "STORED_IN"],
-    [datasetId, systemId, "STORED_IN"],
+    [datasetId, groupId, "CONTAINS"],
+    [
+      datasetId,
+      systemId,
+      connectorId === "services" ? "RELATED_TO" : "STORED_IN",
+    ],
     [`incident:${run.incidentId}`, systemId, "RELATED_TO"],
     [`incident:${run.incidentId}`, datasetId, "RELATED_TO"],
     [`incident:${run.incidentId}`, groupId, "RELATED_TO"],
   ]) {
+    const sourceRef =
+      source === `incident:${run.incidentId}`
+        ? { id: source, kind: "Incident" }
+        : ctx.db.scopeEntities.id.find(source);
+    const targetRef = ctx.db.scopeEntities.id.find(target);
+    if (!sourceRef || !targetRef || !compatibility(type, sourceRef, targetRef))
+      throw new Error(
+        "Generated inventory relationship violates Scope type policy.",
+      );
     const id = `${run.incidentKey}:inventory:${source}:${target}`;
     if (!ctx.db.scopeRelationships.id.find(id))
       ctx.db.scopeRelationships.insert({
