@@ -224,7 +224,7 @@ html {
 .timeline-track > button::before {
   content: "";
   position: absolute;
-  left: 141px;
+  left: 165px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -239,7 +239,7 @@ html {
 }
 @media (max-width: 639px) {
   .timeline-track > button::before {
-    left: 85px;
+    left: 101px;
   }
 }
 .message-actions[open] {

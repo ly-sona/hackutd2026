@@ -5,6 +5,7 @@ import { useReducer, useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { ArrowUpRight, Radio } from 'lucide-react';
 import { tables, reducers } from '@/src/module_bindings';
 import { connectionStatus } from '@/lib/connection-status';
+import { incidentTime } from '@/lib/incident-model';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +54,7 @@ export function HealthCheck() {
         <p className="text-xs text-muted-foreground">Recent records · {connected && isReady ? 'Live' : 'Waiting for connection'}</p>
         <ul aria-label="Health-check records" className="space-y-3">
           {recent.map(row => <li key={row.id.toString()} className="flex flex-wrap justify-between gap-2 text-sm">
-            <span className="break-all">{row.message}</span><time className="text-xs text-muted-foreground" dateTime={row.createdAt.toDate().toISOString()}>{row.createdAt.toDate().toLocaleTimeString()}</time>
+            <span className="break-all">{row.message}</span><time className="text-xs text-muted-foreground" dateTime={row.createdAt.toDate().toISOString()}>{incidentTime(row.createdAt.toDate().getTime(), false)}</time>
           </li>)}
         </ul>
         {recent.length === 0 && <p className="text-sm text-muted-foreground">No health checks received yet.</p>}

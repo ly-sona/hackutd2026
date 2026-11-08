@@ -656,7 +656,7 @@ export function LiveTimeline() {
               onClick={() => setSelected(e.id)}
               className={`relative flex w-full items-start gap-4 border-b border-border border-l-4 px-4 py-4 text-left sm:gap-8 sm:px-8 ${current?.id === e.id ? (urgent(e) ? "rounded-md border-l-red-400 bg-[#281516]" : "rounded-md border-l-white bg-[#1b1b1b]") : "border-l-transparent hover:bg-muted/20"}`}
             >
-              <time className="mt-0.5 w-12 shrink-0 font-mono text-base tracking-wide sm:w-[72px] sm:text-lg">
+              <time className="mt-0.5 w-16 shrink-0 whitespace-nowrap text-sm tabular-nums sm:w-24 sm:text-base">
                 {shortTime(e.createdAt)}
               </time>
               <span

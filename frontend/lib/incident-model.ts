@@ -121,18 +121,25 @@ export function sortEvents(events: readonly IncidentEvent[]) {
       (BigInt(b.id) > BigInt(a.id) ? 1 : -1),
   );
 }
-export function incidentTime(ms: string, full = true) {
-  if (!Number(ms)) return "Not provided";
-  return new Intl.DateTimeFormat("en-US", {
+export function incidentTime(ms: string | number, full = true) {
+  const timestamp = Number(ms);
+  if (!timestamp || !Number.isFinite(new Date(timestamp).getTime()))
+    return "Not provided";
+  const time = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
-    ...(full
-      ? ({ month: "short", day: "numeric", year: "numeric" } as const)
-      : {}),
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
-    hour12: false,
+    hour12: true,
     timeZoneName: "short",
-  }).format(Number(ms));
+  }).format(timestamp);
+  if (!full) return time;
+  const date = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(timestamp);
+  return `${date} at ${time}`;
 }
 export function businessContinuityStatus(events: IncidentEvent[], entityId: string) {
   for (const event of sortEvents(events)) {

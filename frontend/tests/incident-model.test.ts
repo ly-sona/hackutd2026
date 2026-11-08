@@ -4,10 +4,28 @@ import {
   unresolved,
   sortEvents,
   highlightExcerpt,
+  incidentTime,
   type Finding,
   type IncidentEvent,
 } from "../lib/incident-model";
 const finding = { id: "f", status: "Suspected", updatedAt: "200" } as Finding;
+describe("readable incident times", () => {
+  it("uses a named date and 12-hour clock in the incident time zone", () => {
+    const timestamp = Date.parse("2026-11-08T20:30:00Z");
+    expect(incidentTime(String(timestamp))).toBe("Nov 8, 2026 at 2:30 PM CST");
+    expect(incidentTime(timestamp, false)).toBe("2:30 PM CST");
+    expect(incidentTime(Date.parse("2026-07-08T19:30:00Z"), false)).toBe("2:30 PM CDT");
+  });
+  it("distinguishes midnight from noon", () => {
+    expect(incidentTime(Date.parse("2026-01-15T06:00:00Z"), false)).toBe("12:00 AM CST");
+    expect(incidentTime(Date.parse("2026-01-15T18:00:00Z"), false)).toBe("12:00 PM CST");
+  });
+  it("handles missing and invalid timestamps without breaking the page", () => {
+    for (const timestamp of ["", "0", "invalid", Infinity, 1e20])
+      expect(incidentTime(timestamp)).toBe("Not provided");
+  });
+});
+
 describe("incident investigation and personal attention", () => {
   it("reading a finding changes new state without resolving its investigation", () => {
     expect(isUnread(finding, [])).toBe(true);
