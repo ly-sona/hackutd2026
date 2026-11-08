@@ -9,6 +9,7 @@ import { DbConnection } from "../../src/module_bindings";
 import { hashPassword, newToken, tokenHash } from "../../lib/server/password";
 import { seedIncidents } from "../../../scripts/seed-incidents";
 import { seedRecovery } from "../../../scripts/seed-recovery";
+import { localSigningKeyArgs } from "../../../scripts/local-signing-keys.mjs";
 import type {
   RecoveryExecution,
   RecoveryStep,
@@ -43,6 +44,7 @@ test("persists pending pages, recovery approvals and scheduled execution through
         "127.0.0.1:3201",
         "--data-dir",
         state,
+        ...localSigningKeyArgs(state),
         "--non-interactive",
       ],
       { cwd: root, stdio: ["ignore", "pipe", "pipe"] },

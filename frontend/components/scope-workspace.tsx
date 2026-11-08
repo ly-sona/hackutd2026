@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import {
   ReactFlow,
   Background,
+  BaseEdge,
+  getSmoothStepPath,
   Controls,
   Handle,
   Position,
@@ -14,6 +16,7 @@ import {
   type Node,
   type NodeProps,
   type Edge,
+  type EdgeProps,
 } from "@xyflow/react";
 import {
   Database,
@@ -56,6 +59,39 @@ type GraphNode = Node<
   "scope"
 >;
 const nodeTypes = { scope: EntityNode };
+const edgeTypes = { scope: RelationshipEdge };
+const columnGap = 144;
+const columnWidths = [250, 250, 192, 250, 160];
+const columnOffsets = columnWidths.map((_, index) =>
+  columnWidths.slice(0, index).reduce((x, width) => x + width + columnGap, 0),
+);
+function RelationshipEdge(props: EdgeProps) {
+  const vertical = props.sourcePosition === Position.Top;
+  // Labels stay in the gaps between cards, including links that skip columns.
+  const centerX =
+    props.targetX +
+    (props.targetPosition === Position.Right ? columnGap / 2 : -columnGap / 2);
+  const centerY = props.sourceY - columnGap / 2;
+  const [path, labelX, labelY] = getSmoothStepPath({
+    ...props,
+    ...(vertical ? { centerY } : { centerX }),
+    offset: columnGap / 2,
+  });
+  return (
+    <BaseEdge
+      id={props.id}
+      path={path}
+      markerEnd={props.markerEnd}
+      style={props.style}
+      label={props.label}
+      labelX={vertical ? labelX : centerX}
+      labelY={vertical ? centerY : labelY}
+      labelStyle={props.labelStyle}
+      labelBgStyle={props.labelBgStyle}
+      labelBgPadding={[6, 4]}
+    />
+  );
+}
 function EntityNode({ data, selected }: NodeProps<GraphNode>) {
   const e = data.entity,
     Icon =
@@ -75,41 +111,57 @@ function EntityNode({ data, selected }: NodeProps<GraphNode>) {
       className={`${e.kind === "Record" ? "w-40" : e.kind === "Dataset" ? "w-48" : "w-[250px]"} rounded-md border bg-[#0d0d0d] p-4 ${selected ? "border-2 border-white" : "border-neutral-600"}`}
     >
       <Handle
+        id="target-left"
         type="target"
         position={Position.Left}
-        id="left"
+        style={{ top: "30%" }}
         className="opacity-0"
       />
       <Handle
+        id="source-right"
+        type="source"
+        position={Position.Right}
+        style={{ top: "30%" }}
+        className="opacity-0"
+      />
+      <Handle
+        id="source-left"
+        type="source"
+        position={Position.Left}
+        style={{ top: "70%" }}
+        className="opacity-0"
+      />
+      <Handle
+        id="target-right"
+        type="target"
+        position={Position.Right}
+        style={{ top: "70%" }}
+        className="opacity-0"
+      />
+      <Handle
+        id="top"
+        type="source"
+        position={Position.Top}
+        className="opacity-0"
+      />
+      <Handle
+        id="bottom-left"
         type="target"
         position={Position.Bottom}
-        id="bottom-left"
         style={{ left: "35%" }}
         className="opacity-0"
       />
       <Handle
+        id="bottom-right"
         type="target"
         position={Position.Bottom}
-        id="bottom-right"
         style={{ left: "65%" }}
-        className="opacity-0"
-      />
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="top"
-        className="opacity-0"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
         className="opacity-0"
       />
       <div className="flex items-start gap-2">
         <Icon size={19} className="shrink-0" />
-        <div>
-          <p className="text-lg font-semibold">
+        <div className="min-w-0 flex-1 break-words">
+          <p className="line-clamp-2 text-lg font-semibold" title={e.name}>
             {e.kind === "Evidence" ? e.reference : e.name}
           </p>
           <p className="mt-1 text-[13px] uppercase text-muted-foreground">
@@ -120,7 +172,7 @@ function EntityNode({ data, selected }: NodeProps<GraphNode>) {
               {e.recordCount.toLocaleString("en-US")} records · inventory
             </p>
           )}
-          <p className="mt-2 text-[13px] text-muted-foreground">
+          <p className="mt-2 line-clamp-2 text-[13px] text-muted-foreground" title={e.name}>
             {e.kind !== "Evidence" && data.status !== "Unassessed" && (
               <span
                 aria-hidden="true"
@@ -279,6 +331,18 @@ function ScopeCanvas() {
       "Business Operation": 1,
       Finding: 3,
     };
+    const lowerKinds = ["Evidence", "Business Operation"];
+    const assetCounts = new Map<number, number>();
+    for (const entity of limited) {
+      if (lowerKinds.includes(entity.kind)) continue;
+      const column = positions[entity.kind] ?? 0;
+      assetCounts.set(column, (assetCounts.get(column) ?? 0) + 1);
+    }
+    const lowerY = 160 + Math.max(1, ...assetCounts.values()) * 280;
+    const evidenceX = Math.max(
+      columnOffsets[1] + 80,
+      120 + limited.filter((e) => e.kind === "Business Operation").length * (250 + columnGap),
+    );
     const counts = new Map<string, number>();
     const nodes: GraphNode[] = limited.map((e) => {
       const col = positions[e.kind] ?? 0;
@@ -292,12 +356,12 @@ function ScopeCanvas() {
         type: "scope",
         position:
           e.kind === "Business Operation"
-            ? { x: 120 + row * 280, y: 350 }
+            ? { x: 120 + row * (250 + columnGap), y: lowerY }
             : e.kind === "Evidence"
-              ? { x: 480 + row * 280, y: 350 }
+              ? { x: evidenceX + row * (250 + columnGap), y: lowerY }
               : {
-                  x: [0, 310, 620, 865, 1170][col] ?? col * 300,
-                  y: 80 + row * 180,
+                  x: columnOffsets[col] ?? col * 394,
+                  y: 80 + row * 280,
                 },
         selected: e.id === selected?.id,
         data: {
@@ -311,42 +375,36 @@ function ScopeCanvas() {
         },
       };
     });
+    const byId = new Map(nodes.map((node) => [node.id, node]));
     const edges: Edge[] = d.relationships
       .filter((r) => ids.has(r.sourceId) && ids.has(r.targetId))
-      .map((r) => ({
-        id: r.id,
-        source: r.sourceId,
-        target: r.targetId,
-        sourceHandle:
-          ["Evidence", "Business Operation"].includes(
-            d.entities.find((entity) => entity.id === r.sourceId)?.kind ?? "",
-          ) &&
-          d.entities.find((entity) => entity.id === r.targetId)?.kind ===
-            "System"
+      .map((r) => {
+        const source = byId.get(r.sourceId)!;
+        const target = byId.get(r.targetId)!;
+        const vertical = lowerKinds.includes(source.data.entity.kind) &&
+          target.data.entity.kind === "System";
+        return {
+          id: r.id,
+          source: r.sourceId,
+          target: r.targetId,
+          sourceHandle: vertical
             ? "top"
-            : "right",
-        targetHandle:
-          ["Evidence", "Business Operation"].includes(
-            d.entities.find((entity) => entity.id === r.sourceId)?.kind ?? "",
-          ) &&
-          d.entities.find((entity) => entity.id === r.targetId)?.kind ===
-            "System"
-            ? d.entities.find((entity) => entity.id === r.sourceId)?.kind ===
-              "Evidence"
-              ? "bottom-right"
-              : "bottom-left"
-            : "left",
-        type: "smoothstep",
-        label: r.type.toLowerCase().replaceAll("_", " "),
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#a1a1aa" },
-        style: {
-          stroke: r.status === "Confirmed" ? "#a1a1aa" : "#8a8a8a",
-          strokeDasharray: r.status === "Confirmed" ? undefined : "5 4",
-        },
-        labelStyle: { fill: "#ddd", fontSize: 14 },
-        labelBgStyle: { fill: "#0b0b0d" },
-        data: { status: r.status },
-      }));
+            : source.position.x > target.position.x ? "source-left" : "source-right",
+          targetHandle: vertical
+            ? source.data.entity.kind === "Evidence" ? "bottom-right" : "bottom-left"
+            : source.position.x >= target.position.x ? "target-right" : "target-left",
+          type: "scope",
+          label: r.type.toLowerCase().replaceAll("_", " "),
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#a1a1aa" },
+          style: {
+            stroke: r.status === "Confirmed" ? "#a1a1aa" : "#8a8a8a",
+            strokeDasharray: r.status === "Confirmed" ? undefined : "5 4",
+          },
+          labelStyle: { fill: "#ddd", fontSize: 14 },
+          labelBgStyle: { fill: "#0b0b0d" },
+          data: { status: r.status },
+        };
+      });
     return { nodes, edges };
   }, [
     d.entities,
@@ -503,6 +561,7 @@ function ScopeCanvas() {
             nodes={graph.nodes}
             edges={graph.edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             colorMode="dark"
             style={{ background: "#090909" }}
             fitView

@@ -171,10 +171,23 @@ test("server paging escalates once after requester closes and acknowledgment lea
 });
 
 test("desktop demo opens all five live pages and essential controls", async ({ context, page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await login(context, "maya");
   await page.goto(`${base}/overview`);
   const navigation = page.getByRole("navigation", { name: "Incident navigation" });
   await expect(page.getByRole("heading", { name: "Ransomware response", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Search workspace", exact: true })).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(page.getByRole("dialog", { name: "Search workspace", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Generate report", exact: true })).toHaveCount(0);
+  const metadata = page.getByLabel("Incident severity and status", { exact: true });
+  await expect(metadata).toBeVisible();
+  await expect(metadata).toContainText("Severity:");
+  await expect(metadata).toContainText("Status:");
+  await expect(metadata.getByRole("button")).toHaveCount(0);
+  const titleBox = await page.getByRole("heading", { name: "Ransomware response", exact: true }).boundingBox();
+  const metadataBox = await metadata.boundingBox();
+  expect(metadataBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height);
   await page.getByRole("button", { name: "Add finding", exact: true }).click();
   await expect(page.getByRole("dialog").getByLabel("Finding title")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -186,6 +199,50 @@ test("desktop demo opens all five live pages and essential controls", async ({ c
       await expect(page.getByRole("dialog")).toContainText("Restore Customer Support Capability");
       await page.getByRole("button", { name: "Close", exact: true }).click();
     }
-    if (section === "Team") await expect(page.getByRole("textbox", { name: "Message", exact: true })).toBeEnabled();
+    if (section === "Scope") {
+      await expect(page.getByTestId("scope-node-EV-018")).toBeVisible();
+      for (const expanded of [false, true]) {
+        if (expanded) {
+          await page.getByRole("button", { name: "Graph tools", exact: true }).click();
+          await page.getByLabel("Find scope entity").selectOption("acme:scope:A-09");
+          await page.getByRole("button", { name: "Expand related", exact: true }).click();
+          await expect(page.getByTestId("scope-node-APP-PORTAL")).toBeAttached();
+        }
+        await page.getByTestId("scope-graph").screenshot({ path: `/tmp/aegis-merged-scope-${expanded ? "expanded" : "default"}.png` });
+        await expect.poll(() => page.getByTestId("scope-graph").evaluate((graph) => {
+          const nodes = [...graph.querySelectorAll(".react-flow__node")].map((node) => node.getBoundingClientRect());
+          return [...graph.querySelectorAll(".react-flow__edge-textwrapper")].flatMap((label) => {
+            const r = label.getBoundingClientRect();
+            return nodes.filter((n) => r.left < n.right && r.right > n.left && r.top < n.bottom && r.bottom > n.top)
+              .map(() => label.textContent);
+          });
+        })).toEqual([]);
+      }
+    }
+    if (section === "Team") {
+      await expect(page.getByRole("textbox", { name: "Message", exact: true })).toBeEnabled();
+      const addReferences = page.getByRole("button", { name: "Add references", exact: true });
+      const referenceBox = await addReferences.boundingBox();
+      const sendBox = await page.getByRole("button", { name: "Send", exact: true }).boundingBox();
+      expect(referenceBox?.width).toBe(sendBox?.width);
+      expect(referenceBox?.height).toBe(sendBox?.height);
+      await addReferences.click();
+      await expect(addReferences).toHaveAttribute("aria-expanded", "true");
+      await addReferences.click();
+      const actionsMenu = page.getByLabel("Message actions", { exact: true }).last();
+      await actionsMenu.click();
+      const actions = page.getByTestId("message-actions").last();
+      await expect(actions).toBeVisible();
+      const sizes = await actions.locator("button").evaluateAll((buttons) => buttons.map((button) => ({
+        width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height,
+      })));
+      expect(sizes.length).toBeGreaterThan(1);
+      for (const size of sizes) expect(size).toEqual(sizes[0]);
+      await actionsMenu.click();
+    }
+    if (section === "Timeline") {
+      await expect(page.getByRole("button", { name: "Generate report", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Incident report history", exact: true })).toHaveCount(1);
+    }
   }
 });

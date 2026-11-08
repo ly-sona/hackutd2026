@@ -1,3 +1,4 @@
+import { roleLabels } from "../../../shared/roles";
 import type { Ctx, Reader } from "./index";
 import { appendEvent, type Ports } from "./incident-domain";
 import {
@@ -380,7 +381,7 @@ export function recoveryCommand(
     if (!fixture || !assigned)
       return p.fail(
         "UNAVAILABLE",
-        "A trusted synthetic verification fixture and active analyst are required.",
+        "A trusted synthetic verification fixture and active Security Engineer are required.",
       );
     const evidenceIds = [
       ...new Set(
@@ -961,7 +962,7 @@ export function processRecovery(ctx: Ctx) {
             status: "Executed",
             completedAt: at,
             result:
-              "Incident closed after separate analyst and commander approval. Findings and scope history preserved.",
+              "Incident closed after separate Security Engineer and Incident Manager approval. Findings and scope history preserved.",
           });
           continue;
         }
@@ -1085,7 +1086,7 @@ export function processRecovery(ctx: Ctx) {
         "system",
         "recovery",
         "Recovery awaiting approval",
-        `${e.id}: independent ${approvalPolicies[template.policy as ApprovalPolicy].roles.join(" + ")} decision required.`,
+        `${e.id}: independent ${approvalPolicies[template.policy as ApprovalPolicy].roles.map((role) => roleLabels[role]).join(" + ")} decision required.`,
       );
       continue;
     }

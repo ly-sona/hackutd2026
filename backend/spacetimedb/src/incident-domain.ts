@@ -272,7 +272,7 @@ function execute(
       return p.fail(
         "INVALID_INPUT",
         commander
-          ? "Select an active Incident Commander in this organization."
+          ? "Select an active Incident Manager in this organization."
           : "Select an active responder.",
       );
     if (
@@ -402,7 +402,7 @@ function execute(
         inc,
         who,
         field === "status" || field === "severity" ? "status" : "incident",
-        `${field === "commanderId" ? "Commander" : field} changed`,
+        `${field === "commanderId" ? "Incident Manager" : field} changed`,
         reason,
         { previousValue: existing![field], newValue: next[field], status },
       );

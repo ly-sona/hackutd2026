@@ -156,7 +156,7 @@ export function processPages(ctx: Ctx) {
         ctx,
         page,
         "",
-        "No eligible backup or Incident Commander remains. Requester must reassign the task.",
+        "No eligible backup or Incident Manager remains. Requester must reassign the task.",
       );
       continue;
     }
@@ -423,7 +423,7 @@ export function coordinationCommand(
     if (!backup)
       return p.fail(
         "INVALID_INPUT",
-        "Select an eligible backup or Incident Commander distinct from the recipient.",
+        "Select an eligible backup or Incident Manager distinct from the recipient.",
       );
     return backup;
   };
@@ -673,7 +673,7 @@ export function coordinationCommand(
     )
       return p.fail(
         "ACCESS_DENIED",
-        "Only the assignee, creator or Incident Commander may change this task.",
+        "Only the assignee, creator or Incident Manager may change this task.",
       );
     if (!canTransition(task.status, status))
       return p.fail("INVALID_INPUT", "Invalid task status transition.");
@@ -819,7 +819,7 @@ export function coordinationCommand(
       )
         return p.fail(
           "ACCESS_DENIED",
-          "Only the requester or Incident Commander can cancel this page.",
+          "Only the requester or Incident Manager can cancel this page.",
         );
       const reason = text("reason", 2000);
       cancelPage(ctx, page, who, reason);

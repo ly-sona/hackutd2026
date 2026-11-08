@@ -55,7 +55,7 @@ test("Team pending invitations share page details and actions and update their l
   const invite = page
     .getByTestId("pending-invitation")
     .filter({ hasText: phone });
-  await expect(invite).toContainText("Security Analyst");
+  await expect(invite).toContainText("Security Engineer");
   await expect(invite).toContainText("IR-2041");
   await expect(invite).toContainText("pending");
   const expiry = await invite.getByTestId("invitation-expiry").innerText();
@@ -63,7 +63,7 @@ test("Team pending invitations share page details and actions and update their l
   await management.goto("/org/acme/invitations");
   const pageRow = management.getByRole("row").filter({ hasText: phone });
   await expect(pageRow).toContainText(expiry);
-  await expect(pageRow).toContainText("Security Analyst");
+  await expect(pageRow).toContainText("Security Engineer");
   await invite.scrollIntoViewIfNeeded();
   await invite
     .getByRole("button", { name: "Generate replacement", exact: true })
