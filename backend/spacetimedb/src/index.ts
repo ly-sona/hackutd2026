@@ -554,7 +554,24 @@ function execute(
     });
   if (action === "bootstrap") {
     renameDemoCompany(ctx);
-    if (ctx.db.users.count() > 0n) return { seeded: false };
+    if (ctx.db.users.count() > 0n) {
+      // Keep one known synthetic invitation useful for the demo on existing DBs.
+      const demoInvite = ctx.db.invitations.id.find("seed-invitation-1");
+      if (
+        demoInvite?.organizationId === "acme" &&
+        demoInvite.intendedUserId === "taylor" &&
+        demoInvite.status === "expired" &&
+        demoInvite.revokedAt === 0n &&
+        demoInvite.acceptedAt === 0n
+      ) {
+        ctx.db.invitations.id.update({
+          ...demoInvite,
+          status: "pending",
+          expiresAt: at + 3600000n,
+        });
+      }
+      return { seeded: false };
+    }
     const seed = data.users;
     if (!Array.isArray(seed) || seed.length !== 6)
       throw new Denied("INVALID_INPUT", "Expected six seed profiles.");

@@ -98,10 +98,12 @@ export function EvidenceButton({
   evidence,
   findingId = "",
   annotations = [],
+  compact = false,
 }: {
   evidence: Evidence;
   findingId?: string;
   annotations?: { id: string; annotation: string; excerpt: string }[];
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -109,7 +111,11 @@ export function EvidenceButton({
       <Button
         variant="outline"
         size="sm"
-        className="max-w-full"
+        className={
+          compact
+            ? "max-w-full h-auto min-h-7 gap-1 px-2 py-1 text-xs sm:text-xs font-normal"
+            : "max-w-full"
+        }
         onClick={() => setOpen(true)}
       >
         <span className="truncate">

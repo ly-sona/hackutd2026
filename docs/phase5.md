@@ -1,6 +1,6 @@
 # Phase 5: trust, recovery and defensible reports
 
-AEGIS retains the five reference screens. Overview adds operation status; Scope shows an entity's trust basis and links to Operations. Operations uses persisted request, decision and workflow records. Team reuses the existing investigation tasks. Timeline includes trust, approval, recovery, classification, legal-review and report events plus historical artifacts. Replay remains deferred.
+AEGIS retains the five reference screens. Overview adds operation status; Scope shows an entity's trust basis and links to Operations. Operations uses persisted request, decision and workflow records. Team reuses the existing investigation tasks. Timeline includes trust, approval, recovery, classification, legal-review and report events plus historical artifacts.
 
 ## Three demonstration flows
 

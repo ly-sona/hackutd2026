@@ -38,6 +38,7 @@ export interface IncidentEvent {
   originalRecordedAt?: string;
   timingCorrectionId?: string;
   timingCorrectedAt?: string;
+  timingCorrectedBy?: string;
   id: string;
   organizationId: string;
   incidentId: string;
@@ -110,6 +111,13 @@ export const incidentTypes = [
 export function unresolved(f: Finding) {
   return !["Resolved", "Ruled Out"].includes(f.status);
 }
+export function findingsNeedingTasks(
+  findings: readonly Finding[],
+  tasks: readonly { relatedFindingId: string }[],
+) {
+  const tracked = new Set(tasks.map((task) => task.relatedFindingId));
+  return findings.filter((finding) => unresolved(finding) && !tracked.has(finding.id));
+}
 export function isUnread(f: Finding, reads: readonly FindingRead[]) {
   const r = reads.find((r) => r.findingId === f.id);
   return !r || BigInt(r.readAt) < BigInt(f.updatedAt);
@@ -121,18 +129,30 @@ export function sortEvents(events: readonly IncidentEvent[]) {
       (BigInt(b.id) > BigInt(a.id) ? 1 : -1),
   );
 }
-export function incidentTime(ms: string, full = true) {
-  if (!Number(ms)) return "Not provided";
-  return new Intl.DateTimeFormat("en-US", {
+export function isRecordedEvent(event: Pick<IncidentEvent, "type" | "status" | "title">) {
+  return ["Resolved", "Completed", "Acknowledged", "Ruled Out"].includes(event.status) ||
+    event.type === "decision" ||
+    (event.type === "report" && /^Report v\d+ generated$/.test(event.title));
+}
+export function incidentTime(ms: string | number, full = true) {
+  const timestamp = Number(ms);
+  if (!timestamp || !Number.isFinite(new Date(timestamp).getTime()))
+    return "Not provided";
+  const time = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
-    ...(full
-      ? ({ month: "short", day: "numeric", year: "numeric" } as const)
-      : {}),
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
-    hour12: false,
+    hour12: true,
     timeZoneName: "short",
-  }).format(Number(ms));
+  }).format(timestamp);
+  if (!full) return time;
+  const date = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(timestamp);
+  return `${date} at ${time}`;
 }
 export function businessContinuityStatus(events: IncidentEvent[], entityId: string) {
   for (const event of sortEvents(events)) {

@@ -3,7 +3,7 @@ import { InvestigationStatus } from "./investigation-status";
 import { useInvestigationData } from "./investigation-data";
 import {
   TaskForm,
-  CoordinationAttention,
+  TaskList,
   TaskButton,
 } from "./coordination-tasks";
 import { useCoordination } from "./coordination-data";
@@ -13,7 +13,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
-  Play,
   ChevronRight,
   MoreHorizontal,
   Check,
@@ -44,6 +43,8 @@ import { api } from "@/lib/api";
 import { incidentBase } from "@/lib/roles";
 import {
   unresolved,
+  findingsNeedingTasks,
+  isRecordedEvent,
   isUnread,
   incidentTime,
   type Finding,
@@ -56,7 +57,7 @@ const tone = (v: string) =>
       : v === "Resolved" || v === "Confirmed"
         ? "text-emerald-400"
         : "text-muted-foreground";
-function FindingDetail({ id, close }: { id: string; close: () => void }) {
+function FindingDetail({ id, close, taskOnly = false }: { id: string; close: () => void; taskOnly?: boolean }) {
   const d = useIncident(),
     a = useAccess(),
     f = d.findings.find((f) => f.id === id),
@@ -121,6 +122,7 @@ function FindingDetail({ id, close }: { id: string; close: () => void }) {
         {error && <p role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <TaskForm
+            onCreated={taskOnly ? close : undefined}
             title={`Investigate: ${f.title}`}
             description={f.description}
             references={[
@@ -130,11 +132,11 @@ function FindingDetail({ id, close }: { id: string; close: () => void }) {
                 .map((e) => ({ kind: "evidence" as const, id: e })),
             ]}
           />
-          {a.can("findings:edit") && <FindingForm finding={f} />}{" "}
-          {a.can("evidence:upload") && <AttachEvidence findingId={id} />}{" "}
-          {a.can("notes:create") && <AddNote findingId={id} />}
+          {!taskOnly && a.can("findings:edit") && <FindingForm finding={f} />}{" "}
+          {!taskOnly && a.can("evidence:upload") && <AttachEvidence findingId={id} />}{" "}
+          {!taskOnly && a.can("notes:create") && <AddNote findingId={id} />}
         </div>
-        {coordination.findingSources.find((s) => s.id === id) && (
+        {!taskOnly && coordination.findingSources.find((s) => s.id === id) && (
           <Link
             className="text-xs underline"
             href={`${incidentBase(a.organizationId, a.incidentId)}/team?conversation=${encodeURIComponent(coordination.findingSources.find((s) => s.id === id)!.conversationId)}&message=${coordination.findingSources.find((s) => s.id === id)!.sourceMessageId}`}
@@ -147,7 +149,9 @@ function FindingDetail({ id, close }: { id: string; close: () => void }) {
           {d.evidence
             .filter((e) => evidenceIds.includes(e.id))
             .map((e) => (
-              <EvidenceButton key={e.id} evidence={e} findingId={id} />
+              taskOnly
+                ? <span key={e.id} className="text-sm text-muted-foreground">{e.id} · {e.filename}</span>
+                : <EvidenceButton key={e.id} evidence={e} findingId={id} />
             ))}
           {!evidenceIds.length && (
             <p className="text-xs text-muted-foreground">
@@ -280,15 +284,16 @@ export function LiveOverview() {
       Number(unresolved(right)) - Number(unresolved(left)) ||
       Number(right.updatedAt) - Number(left.updatedAt),
   );
-  // Show one urgent, one watch and one routine item before the complete work list.
+  const needsTasks = coordination.ready ? findingsNeedingTasks(sorted, coordination.tasks) : [];
+  // Prioritize untracked work; linked findings stay in All work independently of task status.
   const attention: Finding[] = [];
   for (const priorities of [["Critical"], ["High"], ["Medium", "Low"]]) {
-    const item = sorted.find(
-      (finding) => unresolved(finding) && priorities.includes(finding.priority),
+    const item = needsTasks.find(
+      (finding) => priorities.includes(finding.priority),
     );
     if (item) attention.push(item);
   }
-  for (const item of sorted) {
+  for (const item of needsTasks) {
     if (attention.length === 3) break;
     if (!attention.includes(item)) attention.push(item);
   }
@@ -453,7 +458,7 @@ export function LiveOverview() {
       <div className="grid min-w-0 grid-cols-1 items-start gap-12 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="relative min-w-0">
           <h2 className="mb-4 text-2xl font-semibold">Needs your attention</h2>
-          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+          <div data-testid="needs-attention" className="divide-y divide-border overflow-hidden rounded-lg border border-border">
             {attention.map((f) => (
               <FindingRow
                 key={f.id}
@@ -461,18 +466,18 @@ export function LiveOverview() {
                 open={() => openFinding(f.id)}
               />
             ))}
-            {!sorted.length && (
+            {!attention.length && (
               <p className="p-5 text-muted-foreground">
-                No findings recorded. Add the first observation.
+                {coordination.ready ? "No findings waiting for a task. Review tracked work below." : "Loading tracked work…"}
               </p>
             )}
           </div>
           <Disclosure
-            title={`View all work (${d.findings.length + openTasks.length})`}
+            title={`View all work (${remaining.length + coordination.tasks.length})`}
             className="attention-overflow !border-0 !p-0"
           >
-            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-              <CoordinationAttention />
+            <div data-testid="all-work" className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              <TaskList embedded />
               {remaining.map((f) => (
                 <FindingRow
                   key={f.id}
@@ -528,6 +533,7 @@ export function LiveOverview() {
         <FindingDetail
           key={shown}
           id={shown}
+          taskOnly
           close={() => {
             setSelected(null);
             setDismissed(shown);
@@ -577,9 +583,7 @@ export function LiveTimeline() {
         unresolved(f))
     );
   };
-  const recorded = (e: (typeof d.events)[number]) =>
-    ["Resolved", "Completed", "Acknowledged", "Ruled Out"].includes(e.status) ||
-    e.type === "decision";
+  const recorded = isRecordedEvent;
   const current =
     events.find((e) => e.id === (selected ?? params.get("event"))) || events[0];
   const currentId = current?.id;
@@ -628,16 +632,6 @@ export function LiveTimeline() {
         className="mb-4"
         title="Timeline"
         description="What happened, what matters, and what comes next."
-        actions={
-          <Button
-            variant="outline"
-            disabled
-            title="Timeline replay is not implemented"
-          >
-            <Play size={18} />
-            Replay
-          </Button>
-        }
       />
       <div className="mb-4">
         <IncidentReports />
@@ -681,7 +675,7 @@ export function LiveTimeline() {
               onClick={() => setSelected(e.id)}
               className={`relative flex w-full items-start gap-4 border-b border-border border-l-4 px-4 py-4 text-left sm:gap-8 sm:px-8 ${current?.id === e.id ? (urgent(e) ? "rounded-md border-l-red-400 bg-[#281516]" : "rounded-md border-l-white bg-[#1b1b1b]") : "border-l-transparent hover:bg-muted/20"}`}
             >
-              <time className="mt-0.5 w-12 shrink-0 font-mono text-base tracking-wide sm:w-[72px] sm:text-lg">
+              <time className="mt-0.5 w-16 shrink-0 whitespace-nowrap text-sm tabular-nums sm:w-24 sm:text-base">
                 {shortTime(e.createdAt)}
               </time>
               <span
@@ -690,7 +684,7 @@ export function LiveTimeline() {
               <span className="min-w-0 flex-1">
                 <span
                   data-event-title={e.title}
-                  className="block text-lg font-semibold leading-7 sm:text-xl"
+                  className={`block text-lg font-semibold leading-7 sm:text-xl ${e.type === "report" && recorded(e) ? "text-emerald-400" : ""}`}
                 >
                   {urgent(e) && <span className="text-red-400">Urgent · </span>}
                   {e.type === "decision" && (

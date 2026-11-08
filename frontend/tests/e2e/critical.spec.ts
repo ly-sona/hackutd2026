@@ -173,7 +173,26 @@ test("server paging escalates once after requester closes and acknowledgment lea
 test("desktop demo opens all five live pages and essential controls", async ({ context, page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await login(context, "maya");
+  const title = `Attention handoff ${randomUUID()}`;
+  const created = await ok(context.request, "incident/findings", { ...scope, ...findingData(title) });
   await page.goto(`${base}/overview`);
+  const attention = page.getByTestId("needs-attention");
+  await attention.getByTestId(`finding-${created.findingId}`).click();
+  const detail = page.getByRole("dialog", { name: title, exact: true });
+  await expect(detail.getByRole("button")).toHaveCount(2); // Create task + close.
+  await detail.getByRole("button", { name: "Create task", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Create task", exact: true });
+  await form.getByRole("combobox", { name: "Assignee", exact: true }).selectOption("alex");
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(attention.getByTestId(`finding-${created.findingId}`)).toHaveCount(0);
+  await page.reload();
+  await expect(attention).toBeVisible();
+  await expect(attention.getByTestId(`finding-${created.findingId}`)).toHaveCount(0);
+  await page.locator("summary").filter({ hasText: "View all work" }).click();
+  const work = page.getByTestId("all-work");
+  await expect(work.getByRole("button", { name: `Investigate: ${title}`, exact: true })).toBeVisible();
+  await expect(work.getByTestId(`finding-${created.findingId}`)).toContainText("Suspected");
   const navigation = page.getByRole("navigation", { name: "Incident navigation" });
   await expect(page.getByRole("heading", { name: "Ransomware response", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Search workspace", exact: true })).toHaveCount(0);
@@ -195,6 +214,10 @@ test("desktop demo opens all five live pages and essential controls", async ({ c
     await navigation.getByRole("link", { name: section, exact: true }).click();
     await expect(page.getByRole("heading", { name: heading, exact: true }).first()).toBeVisible();
     if (section === "Operations") {
+      const requests = page.getByRole("heading", { name: "Requests", exact: true }).locator("..");
+      await expect(requests.getByRole("button", { name: /Recovery hardware/ })).toContainText("Pending");
+      await expect(requests.getByRole("button", { name: /Temporary support access/ })).toContainText("Rejected");
+      await expect(requests.getByRole("button", { name: /Backup storage extension/ })).toContainText("Recorded");
       await page.getByRole("button", { name: "New request", exact: true }).click();
       await expect(page.getByRole("dialog")).toContainText("Restore Customer Support Capability");
       await page.getByRole("button", { name: "Close", exact: true }).click();
@@ -243,6 +266,10 @@ test("desktop demo opens all five live pages and essential controls", async ({ c
     if (section === "Timeline") {
       await expect(page.getByRole("button", { name: "Generate report", exact: true })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Incident report history", exact: true })).toHaveCount(1);
+      const events = page.getByTestId("timeline-events");
+      await expect(events.getByRole("button").filter({ hasText: "Conflicting isolation reports" }).locator(".bg-red-400")).toBeVisible();
+      await expect(events.getByRole("button").filter({ hasText: "Independent purchasing route documented" }).locator(".bg-emerald-400")).toBeVisible();
+      await expect(events.getByRole("button").filter({ hasText: "Vendor approval depends on affected SSO" }).locator(".bg-amber-400")).toBeVisible();
     }
   }
 });

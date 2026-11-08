@@ -2,6 +2,29 @@ import type { Ctx } from "./index";
 import { appendEvent, json, time } from "./incident-domain";
 import { isInitialFixtureEvent } from "./incident-seed";
 
+export function seedDemoHighlightTimings(ctx: Ctx) {
+  if (ctx.env.AEGIS_DEVELOPMENT_MODE !== "true" && ctx.env.AEGIS_TEST_MODE !== "true") return;
+  const marker = "acme-demo-highlight-timing-v1";
+  if (ctx.db.scenarioSeeds.id.find(marker)) return;
+  const now = time(ctx);
+  for (const event of [...ctx.db.incidentEvents.incidentKey.filter("acme:IR-2041")]) {
+    if (event.correctsEventId || event.actorId !== "maya") continue;
+    const minutes = event.type === "finding" && event.findingId === "IR-2041:UI-01" && event.title === "Conflicting isolation reports" ? 1n
+      : event.type === "decision" && event.title === "Independent purchasing route documented" && event.description.startsWith("Synthetic business continuity update:") ? 2n
+      : event.type === "finding" && event.findingId === "IR-2041:UI-02" && event.title === "Vendor approval depends on affected SSO" ? 3n : 0n;
+    if (!minutes) continue;
+    const createdAt = now - minutes * 60_000n;
+    appendEvent(ctx, "acme", "IR-2041", "system", "fixture_timing",
+      "Synthetic timeline example moved to recent demo time",
+      "Demo presentation correction only: shift these synthetic examples to recent observation/recording times. Original events and evidence bytes remain unchanged.", {
+        correctsEventId: event.id.toString(), findingId: event.findingId,
+        previousValue: json({ observedAt: event.observedAt, createdAt: event.createdAt }),
+        newValue: json({ observedAt: createdAt - 180_000n, createdAt }),
+      });
+  }
+  ctx.db.scenarioSeeds.insert({ id: marker, createdAt: now });
+}
+
 // A one-time demo migration: keep original history and append explicit corrections.
 export function seedDemoEventTimings(ctx: Ctx) {
   if (ctx.env.AEGIS_DEVELOPMENT_MODE !== "true" && ctx.env.AEGIS_TEST_MODE !== "true") return;

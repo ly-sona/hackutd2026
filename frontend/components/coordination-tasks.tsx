@@ -62,7 +62,13 @@ export function formReferences(f: FormData): Reference[] {
     return { kind: kind as Reference["kind"], id: id.join("|") };
   });
 }
-export function ReferenceLinks({ references }: { references: Reference[] }) {
+export function ReferenceLinks({
+  references,
+  compact = false,
+}: {
+  references: Reference[];
+  compact?: boolean;
+}) {
   const a = useAccess(),
     d = useCoordination(),
     incident = useIncident(),
@@ -76,15 +82,18 @@ export function ReferenceLinks({ references }: { references: Reference[] }) {
           label = option?.label ?? `${r.kind} · ${r.id}`;
         if (r.kind === "evidence") {
           const e = incident.evidence.find((e) => e.id === r.id);
-          return e ? <EvidenceButton key={r.id} evidence={e} /> : null;
+          return e ? (
+            <EvidenceButton key={r.id} evidence={e} compact={compact} />
+          ) : null;
         }
-        if (r.kind === "task") return <TaskButton key={r.id} id={r.id} />;
+        if (r.kind === "task")
+          return <TaskButton key={r.id} id={r.id} compact={compact} />;
         if (r.kind === "scope" && !a.can("scope:view"))
           return <BusinessOperationReference key={r.id} id={r.id} />;
         return (
           <Link
             key={`${r.kind}:${r.id}`}
-            className="max-w-full break-words rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
+            className={`max-w-full break-words rounded-md border border-border px-2 py-1 text-xs hover:bg-muted ${compact ? "min-h-7" : ""}`}
             href={
               r.kind === "finding"
                 ? `${base}/overview?finding=${encodeURIComponent(r.id)}`
@@ -105,6 +114,7 @@ export function TaskForm({
   description = "",
   trigger = "Create task",
   primary = false,
+  onCreated,
 }: {
   source?: Message;
   references?: Reference[];
@@ -112,6 +122,7 @@ export function TaskForm({
   description?: string;
   trigger?: string;
   primary?: boolean;
+  onCreated?: () => void;
 }) {
   const a = useAccess(),
     d = useCoordination(),
@@ -130,8 +141,8 @@ export function TaskForm({
           : "Assign work and record evidence-backed progress. Completing a task never resolves a finding automatically."
       }
       trigger={trigger}
-      onSubmit={async (f) =>
-        command("task.create", {
+      onSubmit={async (f) => {
+        const result = await command("task.create", {
           sourceMessageId: source?.id,
           title: value(f, "title"),
           description: value(f, "description"),
@@ -143,8 +154,10 @@ export function TaskForm({
           references: formReferences(f),
           page: f.get("page") === "on",
           confirmAvailability: f.get("confirmAvailability") === "on",
-        })
-      }
+        });
+        onCreated?.();
+        return result;
+      }}
     >
       <Field label="Task title">
         <Input
@@ -250,7 +263,15 @@ function ResponderSelect({
     </Field>
   );
 }
-export function TaskButton({ id, plain = false }: { id: string; plain?: boolean }) {
+export function TaskButton({
+  id,
+  plain = false,
+  compact = false,
+}: {
+  id: string;
+  plain?: boolean;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false),
     d = useCoordination(),
     task = d.tasks.find((t) => t.id === id);
@@ -258,7 +279,7 @@ export function TaskButton({ id, plain = false }: { id: string; plain?: boolean 
   return (
     <>
       <button
-        className={`max-w-full whitespace-normal [overflow-wrap:anywhere] ${plain ? "text-left text-base font-semibold hover:underline underline-offset-4" : "rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted"}`}
+        className={`max-w-full whitespace-normal [overflow-wrap:anywhere] ${plain ? "text-left text-base font-semibold hover:underline underline-offset-4" : `rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted ${compact ? "min-h-7" : ""}`}`}
         onClick={() => setOpen(true)}
       >
         {task.title}
@@ -592,71 +613,6 @@ export function TaskList({ assignedOnly = false, embedded = false }: { assignedO
         ))}
       </div>
     </section>
-  );
-}
-
-export function CoordinationAttention() {
-  const a = useAccess(),
-    d = useCoordination(),
-    incident = useIncident();
-  if (!a.can("tasks:view")) return null;
-  const tasks = d.tasks.filter(
-    (t) =>
-      t.assignedUserId === a.userId &&
-      !["Completed", "Canceled"].includes(t.status),
-  );
-  const pages = d.pages.filter(
-    (p) => p.pagedUserId === a.userId && p.status === "Awaiting Acknowledgment",
-  );
-  const count = attentionCount(
-    tasks,
-    incident.findings.filter((f) => f.priority === "Critical"),
-  );
-  return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <p
-          className="text-xs text-muted-foreground"
-          data-testid="coordination-attention-count"
-        >
-          {count} work items · assigned tasks + unresolved critical findings,
-          linked items counted once · {pages.length} urgent pages
-        </p>
-        <TaskForm />
-      </div>
-      {pages.map((p) => (
-        <Link
-          key={p.id}
-          href={`${incidentBase(a.organizationId, a.incidentId)}/team?task=${encodeURIComponent(p.taskId)}&page=${encodeURIComponent(p.id)}`}
-          className="block border-l-2 border-red-400 px-4 py-3 text-sm text-red-300"
-        >
-          Urgent receipt requested ·{" "}
-          {d.tasks.find((t) => t.id === p.taskId)?.title ?? "Open paged task"}
-        </Link>
-      ))}
-      {tasks.map((t) => (
-        <div
-          key={t.id}
-          className="flex flex-wrap justify-between gap-3 p-4"
-          data-testid="attention-task"
-        >
-          <div>
-            <TaskButton id={t.id} />
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t.priority} · {t.status} · {d.name(t.assignedUserId)}
-            </p>
-          </div>
-          {t.dueAt !== "0" && (
-            <span
-              className={`text-xs ${Number(t.dueAt) < Number(d.policy?.now ?? 0) ? "text-red-400" : "text-muted-foreground"}`}
-            >
-              {Number(t.dueAt) < Number(d.policy?.now ?? 0) ? "Overdue" : "Due"}{" "}
-              · {incidentTime(t.dueAt)}
-            </span>
-          )}
-        </div>
-      ))}
-    </>
   );
 }
 

@@ -14,6 +14,7 @@ import { tables } from "@/src/module_bindings";
 import { useAccess } from "./workspace-provider";
 import { roleLabels, incidentBase } from "@/lib/roles";
 import { api } from "@/lib/api";
+import { incidentTime } from "@/lib/incident-model";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
@@ -58,7 +59,7 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <Badge
       variant="outline"
-      className={`font-normal capitalize ${["active", "accepted"].includes(status) ? "border-emerald-400/20 text-emerald-400" : ["pending", "expired"].includes(status) ? "border-amber-400/20 text-amber-300" : "text-muted-foreground"}`}
+      className={`font-normal capitalize ${["active", "accepted"].includes(status) ? "border-emerald-400/20 text-emerald-400" : status === "revoked" ? "border-red-400/20 text-red-400" : ["pending", "expired"].includes(status) ? "border-amber-400/20 text-amber-300" : "text-muted-foreground"}`}
     >
       {status}
     </Badge>
@@ -116,7 +117,7 @@ function DeliveryPanel({ result }: { result: Delivery }) {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Expires {new Date(Number(result.expiresAt)).toLocaleTimeString()}. Keep
+        Expires {incidentTime(result.expiresAt)}. Keep
         this link private.
       </p>
     </div>
@@ -546,7 +547,7 @@ export function MembersPage() {
                 {access.organizationName} ·{" "}
                 {selected.incidentId || "No incident assignment"}
                 {selected.expiresAt !== 0n &&
-                  ` · Access expires ${new Date(Number(selected.expiresAt)).toLocaleString()}`}
+                  ` · Access expires ${incidentTime(String(selected.expiresAt))}`}
               </p>
               <label htmlFor="member-role" className="text-sm">
                 Assigned role
@@ -743,7 +744,7 @@ export function InvitationsPage({
                   </dd>
                   <dt className="text-muted-foreground">Expires</dt>
                   <dd data-testid="invitation-expiry" className="break-words">
-                    {new Date(Number(invite.expiresAt)).toLocaleString()}
+                    {incidentTime(String(invite.expiresAt))}
                   </dd>
                 </dl>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -825,7 +826,7 @@ export function InvitationsPage({
                       <StatusBadge status={invite.status} />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(Number(invite.expiresAt)).toLocaleString()}
+                      {incidentTime(String(invite.expiresAt))}
                     </TableCell>
                     <TableCell className="space-x-2 text-right pr-5">
                       {invitationActions(invite)}
@@ -971,7 +972,7 @@ function AuditPanel() {
                   {event.outcome}
                 </span>
                 <time className="text-muted-foreground">
-                  {event.timestamp.toDate().toLocaleTimeString()}
+                  {incidentTime(event.timestamp.toDate().getTime())}
                 </time>
               </span>
             </div>

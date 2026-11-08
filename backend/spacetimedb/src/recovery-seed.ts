@@ -1,6 +1,36 @@
 import type { Ctx } from "./index";
 import { appendEvent, type Ports } from "./incident-domain";
 import { scoped, key, time, json } from "./recovery-access";
+function seedOperationStatusExamples(ctx: Ctx) {
+  if (ctx.env.AEGIS_DEVELOPMENT_MODE !== "true" && ctx.env.AEGIS_TEST_MODE !== "true") return;
+  const marker = "acme-operation-status-examples-v1";
+  if (ctx.db.scenarioSeeds.id.find(marker)) return;
+  const seed = ctx.db.scenarioSeeds.id.find("acme-phase5-v1");
+  if (!seed) return;
+  const now = time(ctx);
+  for (const [reference, status] of [["OP-008", "Pending"], ["OP-009", "Rejected"], ["OP-007", "Recorded"]]) {
+    const request = ctx.db.approvalRequests.id.find(`acme:IR-2041:${reference}`);
+    // Change only untouched predefined examples, never a responder's decision or workflow.
+    if (!request || request.executionId || request.requestedBy !== "alex" ||
+        request.createdAt !== seed.createdAt || request.parameters !== "{}" ||
+        request.justification !== "Synthetic continuity request. Approval records authorize no external transaction." ||
+        !["Pending", "Draft", "Expired", "Invalidated"].includes(request.status) ||
+        [...ctx.db.approvalDecisions.requestId.filter(request.id)].length) continue;
+    const next = {
+      ...request, status,
+      parameters: json({ syntheticExample: true }),
+      expiresAt: status === "Pending" && request.expiresAt < now + 3_600_000n ? now + 3_600_000n : request.expiresAt,
+      completedAt: status === "Pending" ? 0n : now,
+      result: status === "Pending" ? "" : `Synthetic ${status.toLowerCase()} example for the demo. No human decision, export, access grant or live action was performed.`,
+    };
+    ctx.db.approvalRequests.id.update(next);
+    appendEvent(ctx, "acme", "IR-2041", "system", "fixture_context", "Synthetic Operations status example initialized",
+      `${reference}: labeled ${status} demo example; existing responder decisions and real recovery requests are preserved.`,
+      { previousValue: json(request), newValue: json(next) });
+  }
+  ctx.db.scenarioSeeds.insert({ id: marker, createdAt: now });
+}
+
 function seedSsoPrecaution(ctx: Ctx) {
   const marker = "acme-phase5-sso-trust-v1";
   if (ctx.db.scenarioSeeds.id.find(marker)) return;
@@ -66,6 +96,7 @@ export function seedRecovery(
         ctx.db.incidentReports.id.update({ ...report, snapshot: "" });
       }
     seedSsoPrecaution(ctx);
+    seedOperationStatusExamples(ctx);
     return { seeded: false };
   }
   if (!ctx.db.scenarioSeeds.id.find("acme-phase4-v1"))
@@ -395,5 +426,6 @@ export function seedRecovery(
   });
   seedSsoPrecaution(ctx);
   ctx.db.scenarioSeeds.insert({ id: marker, createdAt: at });
+  seedOperationStatusExamples(ctx);
   return { seeded: true };
 }

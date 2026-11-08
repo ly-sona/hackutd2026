@@ -861,6 +861,7 @@ export function incidentProjection(ctx: Reader, access: Access[]) {
         originalRecordedAt: e.createdAt,
         timingCorrectionId: correction.id.toString(),
         timingCorrectedAt: correction.createdAt,
+        timingCorrectedBy: correction.actorId,
       } : safe;
       emit(
         "event",
