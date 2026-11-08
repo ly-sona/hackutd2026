@@ -1,3 +1,10 @@
+import { recoveryTables } from "./recovery-schema";
+import {
+  recoveryCommand,
+  recoveryProjection,
+  recoveryRead,
+  processRecovery,
+} from "./recovery-domain";
 import {
   schema,
   table,
@@ -171,6 +178,7 @@ const db = schema(
     ...incidentTables,
     ...scopeTables,
     ...coordinationTables,
+    ...recoveryTables,
     organizations,
     users,
     credentials,
@@ -465,6 +473,14 @@ function execute(
   data: Record<string, unknown>,
 ): unknown {
   const at = now(ctx);
+  if (action.startsWith("recovery."))
+    return recoveryCommand(ctx, action, hash, data, {
+      authorize,
+      activeMember,
+      fail: (code, message): never => {
+        throw new Denied(code, message);
+      },
+    });
   if (action.startsWith("coord."))
     return coordinationCommand(ctx, action, hash, data, {
       authorize,
@@ -1316,6 +1332,7 @@ export const expire_access = db.reducer(
         audit(ctx, row.organizationId, "", row.userId, "membership.expired");
       }
     processPages(ctx);
+    processRecovery(ctx);
     for (const row of ctx.db.commandResults.iter())
       if (row.createdAt.microsSinceUnixEpoch / 1000n + 60000n < at)
         ctx.db.commandResults.id.delete(row.id);
@@ -1450,4 +1467,50 @@ export const visible_coordination_data = db.view(
   { public: true },
   t.array(incidentDataRow),
   (ctx) => coordinationProjection(ctx, browserAccess(ctx)),
+);
+
+export const visible_recovery_data = db.view(
+  { public: true },
+  t.array(incidentDataRow),
+  (ctx) => recoveryProjection(ctx, browserAccess(ctx)),
+);
+export const recovery_read = db.procedure(
+  { sessionHash: t.string(), payload: t.string() },
+  t.string(),
+  (ctx, args) =>
+    ctx.withTx((tx) => {
+      gateway(tx);
+      try {
+        if (args.payload.length > 12000)
+          throw new Denied("INVALID_INPUT", "Query too large.");
+        const payload = JSON.parse(args.payload) as Record<string, unknown>;
+        if (!payload || typeof payload !== "object" || Array.isArray(payload))
+          throw new Denied("INVALID_INPUT", "Invalid recovery query.");
+        return serialize({
+          ok: true,
+          data: recoveryRead(
+            tx,
+            args.sessionHash,
+            payload,
+            {
+              authorize,
+              activeMember,
+              fail: (code, message): never => {
+                throw new Denied(code, message);
+              },
+            },
+            now(tx),
+          ),
+        });
+      } catch (error) {
+        if (error instanceof SyntaxError)
+          return serialize({
+            ok: false,
+            code: "INVALID_INPUT",
+            error: "Invalid recovery query.",
+          });
+        if (!(error instanceof Denied)) throw error;
+        return serialize({ ok: false, code: error.code, error: error.message });
+      }
+    }),
 );

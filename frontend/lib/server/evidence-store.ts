@@ -110,7 +110,7 @@ function location(reference: string) {
 }
 export async function storeEvidence(
   bytes: Uint8Array,
-  reference = randomUUID(),
+  reference: string = randomUUID(),
 ) {
   await mkdir(directory(), { recursive: true, mode: 0o700 });
   await writeFile(location(reference), bytes, { flag: "wx", mode: 0o600 });

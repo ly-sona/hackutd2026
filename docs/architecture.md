@@ -1,4 +1,4 @@
-# AEGIS Phases 0–4 architecture
+# AEGIS Phases 0–5 architecture
 
 Two runtime services remain: Next.js (:3000) and a local SpacetimeDB TypeScript module (:3001). There is no extra API service, database, identity provider, corporate dependency or AI integration. This demonstrates independent trust boundaries in a hackathon environment, not production isolation.
 
@@ -42,7 +42,7 @@ Existing synthetic responders authenticate with their independent passwords befo
 
 The trusted, idempotent bootstrap creates Acme, six independent accounts, role associations, three invitation examples, minimal incident stubs and an audit event. A separate Northstar stub has no Acme memberships and demonstrates tenant isolation. User passwords are randomly generated in an ignored 0600 local file, not public endpoints or source. No unauthenticated administrator-creation path exists.
 
-Phase 1 incident stubs remain for access compatibility. Phase 2 adds current incidents, findings, immutable events, evidence metadata/links and per-user read/visit/notification state. Overview, Scope and Timeline now read caller-scoped live data; purchasing approvals remain an explicit later-phase preview; Phase 4 implements conversations and coordination. The supplied references stay under `docs/design-references/`.
+Phase 1 incident stubs remain for access compatibility. Phase 2 adds current incidents, findings, immutable events, evidence metadata/links and per-user read/visit/notification state. Overview, Scope and Timeline now read caller-scoped live data; purchasing authorizations and predefined recovery now use Phase 5 approval records; Phase 4 implements conversations and coordination. The supplied references stay under `docs/design-references/`.
 
 ## Local workflow, configuration and deployment
 
@@ -50,7 +50,7 @@ The root npm workspace retains one lockfile. `scripts/dev.mjs` starts/reuses the
 
 Public values in frontend `.env.local` configure canonical app origin and database endpoint/name. Root `.env.local` optionally configures scripts and private values. Shell values win, then root, then frontend values in script loading. Service secrets are inherited only by the trusted server process. Public Next.js values require a rebuild after deployment changes. `.env.production.example` documents independent HTTPS hosting; no hosting deployment is performed by setup.
 
-Browser tests use 3100/3101, `.next-e2e`, `aegis-e2e` and separate state. Test-only expiry/restoration operations require both the service identity and `AEGIS_TEST_MODE=true`; no HTTP endpoint exposes them. Keep the database flag false outside isolated tests. The suite tests actual reducers/views, cookie sessions, private reads and cross-browser revocation; it does not substitute mock security success responses.
+Browser tests use 3100/3101, `.next-e2e`, `aegis-e2e` and fresh per-run OS temporary state, reached through the ignored `.spacetime/e2e` symlink. The runner retains old states and a private run manifest, and refuses an occupied test database port instead of reusing another run. Test-only expiry/restoration operations require both the service identity and `AEGIS_TEST_MODE=true`; no HTTP endpoint exposes them. Keep the database flag false outside isolated tests. The suite tests actual reducers/views, cookie sessions, private reads and cross-browser revocation; it does not substitute mock security success responses.
 
 ## Phase 2 records and file boundary
 
@@ -74,7 +74,7 @@ The browser receives `visible_scope_data` through the supported SDK React subscr
 
 Pure deterministic traversal and counting live in `shared/scope.ts`. Traversal respects direction/type, skips ruled-out links, bounds expansion and preserves uncertainty. It emits leads without modifying assessments. Summary counting unions explicit record/group memberships and direct assessments, counts individual verification only at record level, and does not infer damage from dataset sizes or access paths. Encryption, exfiltration, alteration, deletion and availability remain independent. Unknown inventory counts remain unknown. Authorized summary-only roles receive aggregate counts without private record subscriptions.
 
-React Flow renders a focused subset and supports selection, neighborhood expansion/collapse and filters. A separate paginated record dialog loads a selected record into the graph; the same data powers its detail panel. Scope events link back from Timeline. EV-018 resolves to its existing Phase 2 evidence ID and original authorized bytes. No additional service/database was added. Optional integrity comparison and Phase 5 workflows remain outside this implementation.
+React Flow renders a focused subset and supports selection, neighborhood expansion/collapse and filters. A separate paginated record dialog loads a selected record into the graph; the same data powers its detail panel. Scope events link back from Timeline. EV-018 resolves to its existing Phase 2 evidence ID and original authorized bytes. No additional service/database was added. Optional general integrity comparison remains deferred. Phase 5 recovery/report boundaries are described below.
 
 The `acme-phase3-v1` seed adds a stable synthetic inventory and 1,240 customer references with overlapping group memberships, bounded preliminary claims and zero initial individually verified affected records. Re-seeding can reconcile missing fixed fixture inventory associations, and never overwrites user actions, assessments or prior originals. The narrow IR-2043 read-state reset does not touch graph inventory. Source-repository test oracles are not application data or secrets from repository readers.
 
@@ -93,4 +93,15 @@ Tasks model work separately from finding investigation and scope certainty. Assi
 
 The existing persistent `access_timer` interval invokes the internal-only scheduled reducer once per second. After expiring access it processes pending pages using transaction time. Server policy selects a 300-second deadline (bounded development-only `AEGIS_PAGE_ACK_SECONDS` override). At deadline or target revocation, the transaction revalidates fallback access/availability, marks the original Escalated, creates one deterministic `original:backup` child and writes recipient notification/event. No eligible fallback produces an explicit cancellation instead. A terminal parent plus child key prevents duplicate ticks from generating extra pages. Backup pages do not cascade. Acknowledgment is restricted to the target before its deadline; task reassignment/completion/cancellation ends pending pages. All records and the scheduled interval survive standalone restart without republishing or a browser. Database downtime postpones delivery until restart; no production availability guarantee is claimed.
 
-The client displays subscribed status/deadlines and persistent urgent banners; it never executes escalation from a JavaScript timer. Manual Available/Busy/Unavailable values describe responder intent, not online presence or authorization. There is no external pager, SMS transport or end-to-end encryption implementation. Deploy over HTTPS/WSS independently of the affected organization. Phase 5 recovery approvals/reporting remain deferred.
+The client displays subscribed status/deadlines and persistent urgent banners; it never executes escalation from a JavaScript timer. Manual Available/Busy/Unavailable values describe responder intent, not online presence or authorization. There is no external pager, SMS transport or end-to-end encryption implementation. Deploy over HTTPS/WSS independently of the affected organization. Phase 5 recovery approvals and reporting reuse these boundaries.
+
+
+## Phase 5 trust, recovery and report snapshots
+
+`recovery-schema.ts` adds private incident-specific restrictions/business-operation sidecars, fixed versioned procedure templates, durable executions/steps, requests/decisions, limited fallback grants, independently stored synthetic support records, private simulation fixtures, retry records, classification/legal extensions and immutable report snapshots (separate from the lightweight report metadata table). `recovery-domain.ts` reuses service-gated commands, caller-scoped subscriptions, Phase 4 tasks/notifications and existing incident events. The existing one-second scheduled reducer advances recovery and expires fallback grants. No browser controls progression or escalation.
+
+The workflow validates current membership, policy, independent approvers, bound parameters, expiry and conservative trust context before execution. Verification uses explicit private synthetic fixtures; original graph assessments and findings are never auto-cleared. Fallback reads validate exact per-user authorization and return only the independently stored safe subset. Closure requires a separate approved human decision.
+
+Reports reserve a version and consistent structured snapshot within a database transaction. Next.js renders escaped, script-free printable HTML into the existing private byte store and commits SHA-256/size with one event. Stable operation UUIDs make retries resume the same reservation. Artifact download verifies current stored source permissions before/after file I/O and checks the hash. Historical artifacts never query current rows to rebuild content. Private conversation-derived information is excluded; optional legal content requires legal:view on generation and each download. No public paths, PDF service or additional database is introduced.
+
+See [Phase 5 flow, policies, confidentiality and standards details](phase5.md). This local architecture is a hackathon demonstration, not production isolation, infrastructure recovery, legal automation or certified forensic custody.

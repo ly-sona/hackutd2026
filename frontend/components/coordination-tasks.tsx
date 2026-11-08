@@ -254,7 +254,7 @@ export function TaskButton({ id }: { id: string }) {
   return (
     <>
       <button
-        className="rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted"
+        className="max-w-full rounded-md border border-border px-2 py-1 text-xs text-left whitespace-normal [overflow-wrap:anywhere] hover:bg-muted"
         onClick={() => setOpen(true)}
       >
         {task.title}

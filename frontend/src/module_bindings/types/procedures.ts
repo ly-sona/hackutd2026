@@ -10,6 +10,7 @@ import * as AccessSnapshotProcedure from "../access_snapshot_procedure";
 import * as EvidenceDescriptorProcedure from "../evidence_descriptor_procedure";
 import * as InvitationPreviewProcedure from "../invitation_preview_procedure";
 import * as LookupCredentialsProcedure from "../lookup_credentials_procedure";
+import * as RecoveryReadProcedure from "../recovery_read_procedure";
 import * as ScopeReadProcedure from "../scope_read_procedure";
 import * as TakeCommandResultProcedure from "../take_command_result_procedure";
 
@@ -21,6 +22,8 @@ export type InvitationPreviewArgs = __Infer<typeof InvitationPreviewProcedure.pa
 export type InvitationPreviewResult = __Infer<typeof InvitationPreviewProcedure.returnType>;
 export type LookupCredentialsArgs = __Infer<typeof LookupCredentialsProcedure.params>;
 export type LookupCredentialsResult = __Infer<typeof LookupCredentialsProcedure.returnType>;
+export type RecoveryReadArgs = __Infer<typeof RecoveryReadProcedure.params>;
+export type RecoveryReadResult = __Infer<typeof RecoveryReadProcedure.returnType>;
 export type ScopeReadArgs = __Infer<typeof ScopeReadProcedure.params>;
 export type ScopeReadResult = __Infer<typeof ScopeReadProcedure.returnType>;
 export type TakeCommandResultArgs = __Infer<typeof TakeCommandResultProcedure.params>;

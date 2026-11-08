@@ -1,4 +1,5 @@
 "use client";
+import { RelatedRecovery } from "./recovery-workspace";
 import { TaskForm } from "./coordination-tasks";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -54,6 +55,7 @@ export function EntityDetails({
   ]);
   return (
     <div className="space-y-5">
+      <RelatedRecovery entityId={e.id} />
       <div>
         <p className="text-xs uppercase text-muted-foreground">{e.kind}</p>
         <h2 className="mt-2 break-words text-2xl font-semibold">{e.name}</h2>

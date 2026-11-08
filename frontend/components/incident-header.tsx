@@ -86,7 +86,7 @@ export function NotificationCenter() {
           >
             <Link
               className="block text-sm"
-              href={`${incidentBase(n.organizationId, n.incidentId)}${n.taskId ? `/team?task=${encodeURIComponent(n.taskId)}` : n.conversationId ? `/team?conversation=${encodeURIComponent(n.conversationId)}` : `/overview${n.findingId ? `?finding=${encodeURIComponent(n.findingId)}` : ""}`}`}
+              href={`${incidentBase(n.organizationId, n.incidentId)}${n.type === "recovery" ? "/operations" : n.taskId ? `/team?task=${encodeURIComponent(n.taskId)}` : n.conversationId ? `/team?conversation=${encodeURIComponent(n.conversationId)}` : `/overview${n.findingId ? `?finding=${encodeURIComponent(n.findingId)}` : ""}`}`}
             >
               <span
                 className={

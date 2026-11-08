@@ -5,6 +5,8 @@ import {
   TaskButton,
 } from "./coordination-tasks";
 import { useCoordination } from "./coordination-data";
+import { AffectedOperations } from "./recovery-workspace";
+import { IncidentReports, ReportHistory } from "./incident-reports";
 import { ScopeSummaryStrip } from "./scope-summary";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -300,7 +302,9 @@ export function LiveOverview() {
         ))}
       </div>
       <ScopeSummaryStrip summary={d.scopeSummary} />
+      <AffectedOperations />
       <div className="mb-7 flex flex-wrap gap-3">
+        <IncidentReports />
         {a.can("incident:manage") && <UpdateIncident />}
         {a.can("notes:create") && <AddNote />}
         {a.can("evidence:upload") && <AttachEvidence />}
@@ -445,6 +449,12 @@ export function LiveTimeline() {
     "Scope Changes": ["scope"],
     Tasks: ["task"],
     Paging: ["page"],
+    Recovery: ["recovery"],
+    Approvals: ["approval"],
+    "Trust Warnings": ["trust"],
+    Reports: ["report"],
+    Classification: ["classification"],
+    "Legal Review": ["legal"],
   };
   const events = d.events.filter(
     (e) =>
@@ -474,6 +484,10 @@ export function LiveTimeline() {
           <Play size={15} />
           Replay
         </Button>
+      </div>
+      <div className="mb-4">
+        <IncidentReports />
+        <ReportHistory />
       </div>
       <div className="mb-5 flex flex-wrap items-center gap-6 border-b border-border pb-4">
         <select

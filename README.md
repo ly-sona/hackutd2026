@@ -2,7 +2,9 @@
 
 Independent Cyber Incident Response Platform for the **Winstead PC challenge at HackUTD 2026**. AEGIS uses its own accounts, permissions and database instead of the fictional affected organization's SSO, email, directory, VPN, DNS or messaging systems.
 
-**Implemented: Phases 0–4 — foundation, independent access, incident documentation, connected scope, and real-time communication/coordination.** Overview, Scope, Team and Timeline use authorized live SpacetimeDB data. Incident rooms, private direct messages, shared tasks, manual availability, urgent in-app pages and server-controlled escalation are functional. Operations retains its labeled approval preview; recovery approvals, trust warnings and automatic reporting remain Phase 5 work. This hackathon prototype demonstrates trust boundaries; it is not production-hardened or safe to use from a compromised workstation.
+**Implemented: Phases 0–5 — independent access, live incident documentation, connected scope, real-time coordination, evidence-backed trust warnings, approved simulated recovery, restricted fallback access and immutable incident reports.** All five screens use authorized live SpacetimeDB data. Infrastructure restoration/verification is explicitly simulated; the workflow, approvals, tasks, access enforcement, report artifacts and version history are functional. This hackathon prototype demonstrates trust boundaries; it is not production-hardened or safe to use from a compromised workstation.
+
+See [Phase 5 flows and boundaries](docs/phase5.md) for the three demonstration flows, approval policies, safe subset, standards alignment and report confidentiality.
 
 ## Stack and structure
 
@@ -29,8 +31,9 @@ backend/spacetimedb/src/
   incident-seed.ts         Stable versioned fixture; never resets user records
   scope-*.ts               Private inventory, relationships, assessments, projection and seed
   coord-*.ts               Private conversations/tasks/pages, authorization, scheduler and seed
+  recovery-*.ts            Private trust, approvals, durable recovery, reporting and safe-subset boundary
   permissions.ts           Authoritative role/permission matrix
-shared/                    Pure cross-runtime scope and coordination rules
+shared/                    Pure cross-runtime scope, coordination and recovery/report rules
 backend/seed/              Versioned evidence manifest with stable scenario references
 mock-evidence/             Synthetic source artifacts; originals copied to private storage
 scripts/                   Local orchestration, service identity and trusted bootstrap
@@ -112,7 +115,7 @@ All six accounts require their real locally generated passwords. `corporate-admi
 
 ## Synthetic content and limitations
 
-The initial scenarios and original evidence are synthetic. Once seeded, Overview, findings, evidence metadata/links, events, notifications and read state come from the private database through authorized subscriptions. New user actions are real writes. Purchasing approvals remain a labeled preview. Conversations, tasks, manual availability and in-app paging are functional. Availability is not inferred presence. Approval execution, automatic contradiction detection and autonomous impact confirmation are not implemented.
+The initial scenarios and original evidence are synthetic. Once seeded, Overview, findings, evidence metadata/links, events, notifications and read state come from the private database through authorized subscriptions. New user actions are real writes. Operations contains functional approval records and predefined simulated recovery. Conversations, tasks, manual availability and in-app paging are functional. Availability is not inferred presence. Live infrastructure actions, automatic contradiction detection and autonomous impact confirmation are not implemented.
 
 Delivery uses a typed adapter with **demo mode first**. No verified Photon SMS API contract was provided, so Photon credentials are unused. Selecting external mode falls back explicitly to simulated delivery. For a new phone recipient, possession of the invitation link is the demo enrollment proof; administrator phone-verification attestation is not carrier verification, MFA or proof that SMS was delivered. Passkeys, password recovery, production-wide rate limiting, device trust and production identity assurance are not implemented.
 
@@ -139,7 +142,7 @@ npm run test            # Unit/component and shared domain-rule tests
 npm run test:e2e        # Real SpacetimeDB + Chromium security/integration flows
 ```
 
-Playwright owns ports **3100/3101**, database `aegis-e2e`, `.spacetime/e2e/`, and `.next-e2e/`. It does not modify the developer environment file. It verifies independent login/logout, spoofed sessions, corporate-account denial, private table/direct reducer restrictions, cross-tenant and incident isolation, invitation acceptance/expiry/reuse/replacement/revocation, role changes in an open second session, last-admin protection, membership/session expiry, live revocation and phone-recipient enrollment. Phase 0 tests still verify cross-browser real-time health-check writes and connection failure/recovery at `/development`.
+Playwright owns ports **3100/3101**, database `aegis-e2e`, `.spacetime/e2e/`, and `.next-e2e/`. The test runner creates fresh synthetic state in an OS temporary directory for each run, points the ignored `.spacetime/e2e` symlink at it, and records all previous state locations in `.spacetime/e2e-runs.jsonl`. It never deletes or resets previous state and rejects an occupied test database port. It does not modify the developer environment file. It verifies independent login/logout, spoofed sessions, corporate-account denial, private table/direct reducer restrictions, cross-tenant and incident isolation, invitation acceptance/expiry/reuse/replacement/revocation, role changes in an open second session, last-admin protection, membership/session expiry, live revocation and phone-recipient enrollment. Phase 0 tests still verify cross-browser real-time health-check writes and connection failure/recovery at `/development`.
 
 Expiry fixtures require **both** the trusted service identity and database `AEGIS_TEST_MODE=true`; the local runner enables them only in its isolated E2E mode. There is no HTTP fixture endpoint. Do not enable this flag on a shared demo deployment. Tests use local credential files instead of authentication bypasses.
 
@@ -250,7 +253,7 @@ Deterministic traversal follows documented access, containment, storage and depe
 
 New private tables: `scope_entities`, `scope_associations`, `scope_relationships`, `scope_assessments`, `scope_records`, `scope_record_memberships` and `scope_evidence_links`. `scope.*` actions extend the existing service-gated command reducer; `scope_read` provides fresh authorized record/inventory queries, and `visible_scope_data` provides caller-restricted live graph projections. `shared/scope.ts` contains pure counting/traversal rules used by the backend and unit tests. No additional service, dependency or graph database was introduced.
 
-Run the same build/lint/typecheck/unit/browser commands above. Phase 3 tests exercise real graph/record mutations, two-session synchronization, evidence reuse, independent impacts, unique counts, corrections, seed preservation and access revocation. Optional baseline/record comparison, anomaly detection, automated cleaning, approval execution and recovery remain unimplemented. Phase 4 communication follows below.
+Run the same build/lint/typecheck/unit/browser commands above. Phase 3 tests exercise real graph/record mutations, two-session synchronization, evidence reuse, independent impacts, unique counts, corrections, seed preservation and access revocation. Optional general baseline/record comparison, anomaly detection and automated cleaning remain unimplemented. Phases 4 and 5 follow below.
 
 
 ## Phase 4 communication and coordination
@@ -271,4 +274,17 @@ The existing private one-second SpacetimeDB scheduled reducer owns deadlines. De
 
 Run `npm run test:e2e` for real-backend chat, privacy, conversion, task verification, availability, urgent notifications and paging tests alongside all previous phases. A separate disposable restart test temporarily owns **3201** and verifies durable pending pages, messages and one-time escalation across a real standalone restart; it cleans up only its own temporary state. The trusted `coord.test.page_due` fixture can move a pending original deadline into the past only in the isolated test module and is excluded from HTTP routes. No normal client can choose or accelerate a page deadline. For a local visual demo only, set `AEGIS_PAGE_ACK_SECONDS=15` in root `.env.local`, restart `npm run dev`, and use Page responder. Remove the override to restore five minutes.
 
-Deployment requires independent HTTPS/WSS hosting, private service credentials and backed-up database/evidence state. Chat is access-controlled and transport-protected by TLS when deployed; **end-to-end encryption is not implemented**. Phase 5 approvals, recovery execution, trust warnings and report generation remain unimplemented.
+Deployment requires independent HTTPS/WSS hosting, private service credentials and backed-up database/evidence state. Chat is access-controlled and transport-protected by TLS when deployed; **end-to-end encryption is not implemented**. Phase 5 approvals, simulated recovery, trust warnings and immutable report generation are described below.
+
+
+## Phase 5 recovery and reporting
+
+Run the existing `npm run dev` workflow; no additional dependency, service, environment variable or credential is required. The bootstrap preserves existing data and adds `acme-phase5-v1`, predefined versioned recovery templates, synthetic verification originals, independent safe support records and incident reporting metadata.
+
+- **Recovery demo:** Jordan requests customer-support recovery in Operations. Alex and Maya independently approve. The default deterministic verification fails; a separate fallback request and fresh approvals can grant Jordan read-only access to SAFE-001–003 for one hour. Original database restrictions and record-impact assessments remain unchanged. `npm run demo:recovery -- --outcome=success` selects the successful fixture for the next primary execution; use `--outcome=failure` to restore the default. This CLI is development-only and service-gated; no HTTP fixture endpoint exists.
+- **Reports:** Maya/Alex/Priya can review completeness and generate Executive or Detailed HTML reports from Overview/Timeline. Restricted legal review requires additional permission. Open/Download versions from Incident report history; use browser Print / Save as PDF. Unknown scope/root cause stays explicit. New evidence requires a new version; previous bytes and hashes remain unchanged. Operations/Admin cannot export full incident reports, and private conversations/derived private records are excluded.
+- **Closure:** A separate evidence-backed closure request requires independent analyst and commander approval. Recovery never closes the incident or automatically completes investigation work. With only one seeded analyst and commander, request closure as another evidence-authorized responder such as Priya.
+
+Report originals share the ignored private `EVIDENCE_STORAGE_DIR` byte store (0700 directory / 0600 UUID files). Keep this directory and SpacetimeDB state together when backing up a local demo; deleting either loses original artifacts or their authorization metadata. Pending report preparation means file storage/commit did not finish: use Resume version in report history to finish the same reserved snapshot; never label a pending artifact complete. Hash mismatch is an integrity failure, not a reason to overwrite an original. See [Phase 5 details](docs/phase5.md) for limitations and standards references.
+
+Cloud-synced checkouts can evict ignored credentials, database or dependency files and stall reads. Keep files downloaded or use a checkout/state directory outside cloud sync. Preserve existing database state, private originals and credentials when relocating; do not reset them to work around a placeholder.

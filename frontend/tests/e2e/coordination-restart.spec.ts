@@ -7,11 +7,20 @@ import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { DbConnection } from "../../src/module_bindings";
 import { hashPassword, newToken, tokenHash } from "../../lib/server/password";
+import { seedIncidents } from "../../../scripts/seed-incidents";
+import { seedRecovery } from "../../../scripts/seed-recovery";
+import type {
+  RecoveryExecution,
+  RecoveryStep,
+  ApprovalRequest,
+} from "../../lib/recovery";
 import type { Page, Task, Message } from "../../lib/coordination";
 // A separate disposable standalone process proves persisted scheduling after an actual restart.
 // It never stops the shared test server (3101) or the developer's server (3001).
-test("persists pending pages and scheduled escalation through a real standalone restart", async () => {
+test("persists pending pages, recovery approvals and scheduled execution through a real standalone restart", async () => {
   test.setTimeout(90_000);
+  const previousCwd = process.cwd(),
+    previousEnvironment = { ...process.env };
   const state = await mkdtemp(join(tmpdir(), "aegis-page-restart-"));
   const cli =
     process.env.SPACETIME_CLI ??
@@ -203,6 +212,42 @@ test("persists pending pages and scheduled escalation through a real standalone 
       impact: "",
       responderIds: ["alex"],
     });
+    process.env.SPACETIMEDB_SERVER_TOKEN = identity.token;
+    process.env.NEXT_PUBLIC_SPACETIMEDB_HOST = endpoint;
+    process.env.NEXT_PUBLIC_SPACETIMEDB_DB_NAME = database;
+    process.env.EVIDENCE_STORAGE_DIR = join(state, "evidence");
+    process.chdir(root);
+    await seedIncidents();
+    await cmd("scope.seed", "", {});
+    await cmd("coord.seed", "", {});
+    await seedRecovery();
+    await cmd("recovery.demo.profile", "", {
+      organizationId: "acme",
+      incidentId: "IR-2041",
+      profile: "success",
+    });
+    const alexHash = tokenHash(newToken()),
+      jordanHash = tokenHash(newToken());
+    await cmd("login_success", "", {
+      userId: "alex",
+      hash: alexHash,
+      eventId: randomUUID(),
+    });
+    await cmd("login_success", "", {
+      userId: "jordan",
+      hash: jordanHash,
+      eventId: randomUUID(),
+    });
+    const recovery = await cmd("recovery.start", jordanHash, {
+      organizationId: "acme",
+      incidentId: "IR-2041",
+      operationId: randomUUID(),
+      templateId: "restore-support",
+      entityId: "acme:scope:OP-SUPPORT",
+      justification:
+        "Recovery must continue after standalone restart without any browser.",
+      beneficiaryIds: [],
+    });
     const scope = { organizationId: "acme", incidentId: incident.incidentId };
     const message = await cmd("coord.message.send", mayaHash, {
       ...scope,
@@ -240,10 +285,15 @@ test("persists pending pages and scheduled escalation through a real standalone 
           .subscribe([
             "SELECT * FROM visible_coordination_data",
             "SELECT * FROM visible_incident_data",
+            "SELECT * FROM visible_recovery_data",
           ]),
       );
       return {
         c,
+        recoveryRows: <T>(kind: string) =>
+          [...c.db.visibleRecoveryData.iter()]
+            .filter((r) => r.kind === kind)
+            .map((r) => JSON.parse(r.body) as T),
         rows: <T>(kind: string) =>
           [...c.db.visibleCoordinationData.iter()]
             .filter((r) => r.kind === kind)
@@ -251,6 +301,31 @@ test("persists pending pages and scheduled escalation through a real standalone 
       };
     }
     const before = await reader();
+    await expect
+      .poll(
+        () =>
+          before
+            .recoveryRows<RecoveryExecution>("execution")
+            .find((e) => e.id === recovery.executionId)?.state,
+      )
+      .toBe("Awaiting Approval");
+    const recoveryExecution = before
+        .recoveryRows<RecoveryExecution>("execution")
+        .find((e) => e.id === recovery.executionId)!,
+      approval = before
+        .recoveryRows<ApprovalRequest>("request")
+        .find((r) => r.id === recoveryExecution.approvalId)!;
+    for (const hash of [alexHash, mayaHash])
+      await cmd("recovery.decide", hash, {
+        organizationId: "acme",
+        incidentId: "IR-2041",
+        operationId: randomUUID(),
+        requestId: approval.id,
+        revisionToken: approval.revisionToken,
+        decision: "Approve",
+        justification: "Independent restart durability approval.",
+      });
+
     expect(
       before.rows<Page>("page").find((p) => p.id === page.pageId)!.status,
     ).toBe("Awaiting Acknowledgment");
@@ -268,6 +343,24 @@ test("persists pending pages and scheduled escalation through a real standalone 
     // No publish, bootstrap, frontend or test tick after restart. The persisted module/timer alone escalates.
     service = await connect(identity.token);
     const after = await reader();
+    await expect
+      .poll(
+        () =>
+          after
+            .recoveryRows<RecoveryExecution>("execution")
+            .find((e) => e.id === recovery.executionId)?.state,
+      )
+      .toBe("Succeeded");
+    const steps = after
+      .recoveryRows<RecoveryStep>("step")
+      .filter((s) => s.executionId === recovery.executionId);
+    expect(steps).toHaveLength(6);
+    expect(steps.every((s) => s.state === "Completed")).toBe(true);
+    expect(
+      after.rows<Task>("task").find((t) => t.id === recoveryExecution.taskId)
+        ?.status,
+    ).toBe("Open");
+
     await expect
       .poll(
         () =>
@@ -310,5 +403,9 @@ test("persists pending pages and scheduled escalation through a real standalone 
     for (const c of connections) c.disconnect();
     await stop();
     await rm(state, { recursive: true, force: true });
+    process.chdir(previousCwd);
+    for (const k of Object.keys(process.env))
+      if (!(k in previousEnvironment)) delete process.env[k];
+    Object.assign(process.env, previousEnvironment);
   }
 });

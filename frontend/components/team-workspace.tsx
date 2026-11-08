@@ -298,7 +298,7 @@ export function TeamWorkspace() {
             </aside>
             <section className="flex min-w-0 flex-col">
               <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
-                <div>
+                <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-semibold">
                     {c ? display(c) : "No conversation"}
                   </h2>
@@ -308,7 +308,7 @@ export function TeamWorkspace() {
                       : "Private to its two current incident responders"}{" "}
                     · {c?.participants.length ?? 0} members
                   </p>
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {c?.participants.map((id) => (
                       <span key={id} title={d.name(id)}>
                         <Avatar name={d.name(id)} small />

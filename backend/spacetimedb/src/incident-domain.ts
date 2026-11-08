@@ -1,3 +1,4 @@
+import { moduleId } from "./module-id";
 import {
   canReadFinding,
   canReadConversation,
@@ -422,6 +423,11 @@ function execute(
       status = choice(d, "status", choices.incidentStatus),
       commanderId = str(d, "commanderId", 100, true),
       reason = str(d, "reason", 2000);
+    if (status === "Closed" && existing!.status !== "Closed")
+      return p.fail(
+        "ACCESS_DENIED",
+        "Incident closure requires a separate independently approved closure request.",
+      );
     member(commanderId, true);
     const next = {
       ...existing!,
@@ -504,7 +510,9 @@ function execute(
           "Confirmation or resolution requires supporting evidence and a verification justification.",
         );
     }
-    const id = old?.id ?? `${k}:F-${ctx.newUuidV4().toString()}`;
+    const id =
+      old?.id ??
+      `${k}:F-${moduleId(ctx, (id) => !!ctx.db.findings.id.find(`${k}:F-${id}`))}`;
     const row = {
       id,
       organizationId: org,
@@ -687,7 +695,7 @@ function execute(
       excerpt = str(d, "excerpt", 2000, true);
     checkedEvidence([evidenceId]);
     finding(findingId);
-    const id = ctx.newUuidV4().toString();
+    const id = moduleId(ctx, (id) => !!ctx.db.evidenceLinks.id.find(id));
     ctx.db.evidenceLinks.insert({
       id,
       organizationId: org,

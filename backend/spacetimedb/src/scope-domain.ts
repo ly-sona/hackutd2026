@@ -1,3 +1,4 @@
+import { moduleId } from "./module-id";
 import { canReadFinding } from "./coord-access";
 import type { Ctx, Reader } from "./index";
 import {
@@ -359,7 +360,7 @@ export function scopeCommand(
     else ctx.db.scopeAssessments.insert(assessment);
     for (const evidenceId of evidenceIds)
       ctx.db.scopeEvidenceLinks.insert({
-        id: ctx.newUuidV4().toString(),
+        id: moduleId(ctx, (id) => !!ctx.db.scopeEvidenceLinks.id.find(id)),
         ...scope,
         entityId: id,
         assessmentId: assessment.id,
@@ -553,7 +554,7 @@ export function scopeCommand(
     else ctx.db.scopeAssessments.insert(row);
     for (const evidenceId of evidenceIds)
       ctx.db.scopeEvidenceLinks.insert({
-        id: ctx.newUuidV4().toString(),
+        id: moduleId(ctx, (id) => !!ctx.db.scopeEvidenceLinks.id.find(id)),
         ...scope,
         entityId: entity.id,
         assessmentId: id,
@@ -592,7 +593,7 @@ export function scopeCommand(
         );
     }
     const row = {
-      id: ctx.newUuidV4().toString(),
+      id: moduleId(ctx, (id) => !!ctx.db.scopeEvidenceLinks.id.find(id)),
       ...scope,
       entityId: id,
       assessmentId,
@@ -625,7 +626,7 @@ export function scopeCommand(
       p,
     ) as { findingId: string };
     ctx.db.scopeRelationships.insert({
-      id: ctx.newUuidV4().toString(),
+      id: moduleId(ctx, (id) => !!ctx.db.scopeRelationships.id.find(id)),
       ...scope,
       sourceId: entity.id,
       targetId: `finding:${result.findingId}`,
@@ -648,7 +649,7 @@ export function scopeCommand(
   }
   return p.fail("INVALID_INPUT", "Unknown scope action.");
 }
-export function scopeSnapshot(ctx: Reader, org: string, inc: string) {
+export function scopeGraph(ctx: Reader, org: string, inc: string) {
   const k = key(org, inc),
     associations = [...ctx.db.scopeAssociations.incidentKey.filter(k)],
     entities = associations.flatMap((a) => {
@@ -658,6 +659,14 @@ export function scopeSnapshot(ctx: Reader, org: string, inc: string) {
     relationships = [...ctx.db.scopeRelationships.incidentKey.filter(k)],
     assessments = [...ctx.db.scopeAssessments.incidentKey.filter(k)],
     links = [...ctx.db.scopeEvidenceLinks.incidentKey.filter(k)];
+  return { entities, relationships, assessments, links };
+}
+export function scopeSnapshot(ctx: Reader, org: string, inc: string) {
+  const { entities, relationships, assessments, links } = scopeGraph(
+    ctx,
+    org,
+    inc,
+  );
   const records = entities
     .filter((e) => e.kind === "Dataset")
     .flatMap((e) =>
