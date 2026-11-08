@@ -5,13 +5,17 @@ import {
   TaskButton,
 } from "./coordination-tasks";
 import { useCoordination } from "./coordination-data";
-import { AffectedOperations } from "./recovery-workspace";
-import { IncidentReports, ReportHistory } from "./incident-reports";
 import { ScopeSummaryStrip } from "./scope-summary";
-import Link from "next/link";
+import Link from "./workspace-link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, Play, ChevronRight } from "lucide-react";
+import {
+  ArrowRight,
+  Play,
+  ChevronRight,
+  MoreHorizontal,
+  Check,
+} from "lucide-react";
 import { useAccess } from "./workspace-provider";
 import { useIncident } from "./incident-data";
 import {
@@ -30,6 +34,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
+import { Avatar } from "./account-menu";
+import { PageHeading, Disclosure } from "./workspace-ui";
+import { AffectedOperations } from "./recovery-workspace";
+import { IncidentReports, ReportHistory } from "./incident-reports";
 import { api } from "@/lib/api";
 import { incidentBase } from "@/lib/roles";
 import {
@@ -180,52 +188,62 @@ function FindingRow({
   open: () => void;
 }) {
   const d = useIncident();
+  const owner = d.members.find(
+    (member) => member.userId === f.assignedTo,
+  )?.name;
   return (
     <button
       data-testid={`finding-${f.id}`}
       onClick={open}
-      className="flex w-full items-center gap-4 px-4 py-4 text-left hover:bg-muted/30"
+      className="flex w-full items-center gap-5 px-5 py-3 text-left hover:bg-muted/25"
     >
       <span
-        className={`size-2.5 shrink-0 rounded-full ${f.priority === "Critical" ? "bg-red-400" : "bg-amber-300"}`}
+        className={`size-3.5 shrink-0 rounded-full ${!unresolved(f) || ["Medium", "Low"].includes(f.priority) ? "bg-emerald-400" : f.priority === "Critical" ? "bg-red-400" : "bg-amber-400"}`}
+        aria-label={!unresolved(f) ? "Addressed" : `${f.priority} priority`}
       />
-      <div className="min-w-0">
-        <p className="text-sm font-semibold">
-          {f.title}{" "}
+      <div className="min-w-0 flex-1">
+        <p className="text-lg font-semibold leading-6 sm:text-xl">
+          {f.title}
           {isUnread(f, d.reads) && (
             <span
-              className="ml-2 text-xs font-normal text-white"
+              className="ml-2 text-sm font-normal text-muted-foreground"
               data-testid="unread-finding"
             >
               New
             </span>
           )}
         </p>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+        <p className="mt-1 line-clamp-1 text-base leading-6 text-muted-foreground">
+          {unresolved(f) ? "Unresolved" : "Addressed"} · {f.status} ·{" "}
           {f.description}
         </p>
-        <p className="mt-2 text-xs">
-          <span className={tone(f.priority)}>{f.priority}</span> · {f.status} ·{" "}
-          {unresolved(f) ? "Unresolved" : "Addressed"}{" "}
-          <span className="text-muted-foreground">
-            ·{" "}
-            {d.members.find((m) => m.userId === f.assignedTo)?.name ??
-              "Unassigned"}
-          </span>
-        </p>
       </div>
-      <ArrowRight size={16} className="ml-auto shrink-0" />
+      {owner && (
+        <span className="ml-auto hidden shrink-0 items-center gap-3 md:flex">
+          <Avatar name={owner} small />
+          <span className="text-sm text-muted-foreground">
+            Assigned to{" "}
+            {owner
+              .split(" ")
+              .map((part) => part[0])
+              .join("")}
+          </span>
+        </span>
+      )}
+      <ArrowRight size={18} className="shrink-0" />
     </button>
   );
 }
 export function LiveOverview() {
   const a = useAccess(),
     d = useIncident(),
+    coordination = useCoordination(),
     params = useSearchParams();
   const [selected, setSelected] = useState<string | null>(null);
-  const i = d.incident;
-  const shown = selected ?? params.get("finding");
   const [dismissed, setDismissed] = useState<string | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const i = d.incident,
+    shown = selected ?? params.get("finding");
   if (!d.ready) return <p role="status">Loading incident…</p>;
   if (!i)
     return (
@@ -239,197 +257,250 @@ export function LiveOverview() {
       : [];
   const pending = d.findings.filter(unresolved);
   const sorted = [...d.findings].sort(
-    (a, b) =>
-      Number(unresolved(b)) - Number(unresolved(a)) ||
-      Number(b.updatedAt) - Number(a.updatedAt),
+    (left, right) =>
+      Number(unresolved(right)) - Number(unresolved(left)) ||
+      Number(right.updatedAt) - Number(left.updatedAt),
   );
+  // Show one urgent, one watch and one routine item before the complete work list.
+  const attention: Finding[] = [];
+  for (const priorities of [["Critical"], ["High"], ["Medium", "Low"]]) {
+    const item = sorted.find(
+      (finding) => unresolved(finding) && priorities.includes(finding.priority),
+    );
+    if (item) attention.push(item);
+  }
+  for (const item of sorted) {
+    if (attention.length === 3) break;
+    if (!attention.includes(item)) attention.push(item);
+  }
+  const remaining = sorted.filter((finding) => !attention.includes(finding));
+  const openTasks = coordination.tasks.filter(
+    (task) => !["Completed", "Canceled"].includes(task.status),
+  );
+  const openFinding = (id: string) => {
+    setDismissed(null);
+    setSelected(id);
+  };
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-5">
-        <div className="max-w-3xl">
-          <p className="mb-1.5 font-mono text-sm tracking-wide">
-            INCIDENT {i.incidentId}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-[40px]">
-            {i.title}
-          </h1>
-          <dl
-            aria-label="Incident severity and status"
-            className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <dt className="text-muted-foreground">Severity:</dt>
-              <dd className={`font-medium ${tone(i.severity)}`}>
-                {i.severity}
-              </dd>
-            </div>
-            <div className="flex items-center gap-2">
-              <dt className="text-muted-foreground">Status:</dt>
-              <dd className="font-medium">{i.status}</dd>
-            </div>
-          </dl>
-          <p className="mt-2 text-sm text-muted-foreground">
+      <PageHeading
+        className="mb-6"
+        title={i.title}
+        eyebrow={`INCIDENT ${i.incidentId}`}
+        description={
+          <>
+            <dl
+              aria-label="Incident severity and status"
+              className="mb-2 flex flex-wrap gap-x-6 gap-y-2 text-base"
+            >
+              <div className="flex items-center gap-2">
+                <dt>Severity:</dt>
+                <dd className={`font-medium ${tone(i.severity)}`}>{i.severity}</dd>
+              </div>
+              <div className="flex items-center gap-2">
+                <dt>Status:</dt>
+                <dd className="font-medium text-foreground">{i.status}</dd>
+              </div>
+            </dl>
             {i.systems || i.type} · Opened {incidentTime(i.createdAt)}
-          </p>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          </>
+        }
+        actions={
+          <>
+            {a.can("findings:create") && <FindingForm />}
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Incident details and actions"
+              aria-expanded={toolsOpen}
+              onClick={() => setToolsOpen(!toolsOpen)}
+            >
+              <MoreHorizontal size={22} />
+            </Button>
+          </>
+        }
+      />
+      {toolsOpen && (
+        <section
+          aria-label="Incident details and actions"
+          className="mb-8 space-y-6 rounded-lg border border-border p-6"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            {a.can("incident:manage") && <UpdateIncident />}
+            {a.can("notes:create") && <AddNote />}
+            {a.can("evidence:upload") && <AttachEvidence />}
+            {a.can("incident:create") && (
+              <NewIncident
+                organizationId={a.organizationId}
+                responders={d.members}
+              />
+            )}
+            {a.can("tasks:create") && <TaskForm />}
+          </div>
+          <p className="max-w-4xl text-base leading-7 text-muted-foreground">
             {i.description}
           </p>
-        </div>
-        <div
-          role="group"
-          aria-label="Incident actions"
-          className="flex flex-wrap items-center gap-3 pt-2"
-        >
-          {a.can("findings:create") && <FindingForm />}
-          {a.can("incident:create") && (
-            <NewIncident
-              organizationId={a.organizationId}
-              responders={d.members}
-            />
-          )}
-        </div>
-      </div>
-      <div className="mb-9 grid grid-cols-2 gap-y-6 lg:grid-cols-4">
-        {[
-          { label: "Unresolved findings", value: pending.length },
-          {
-            label: "New findings",
-            value: d.findings.filter((f) => isUnread(f, d.reads)).length,
-          },
-          { label: "New updates", value: newEvents.length },
-          { label: "Responders", value: d.members.length },
-        ].map((m, index) => (
-          <div
-            key={m.label}
-            className={`py-1 ${index ? "border-l border-border pl-6" : ""}`}
-          >
-            <p
-              className="text-3xl font-semibold"
-              data-testid={
-                m.label === "New updates" ? "new-updates" : undefined
-              }
-            >
-              {m.value}
-            </p>
-            <p className="mt-1 text-sm">{m.label}</p>
-          </div>
-        ))}
-      </div>
-      <ScopeSummaryStrip summary={d.scopeSummary} />
-      <AffectedOperations />
-      <div className="mb-7 flex flex-wrap gap-3">
-        {a.can("incident:manage") && <UpdateIncident />}
-        {a.can("notes:create") && <AddNote />}
-        {a.can("evidence:upload") && <AttachEvidence />}
-      </div>
-      <dl className="mb-8 flex flex-wrap gap-x-8 gap-y-3 text-xs text-muted-foreground">
-        <div>
-          <dt className="text-foreground">Incident Manager</dt>
-          <dd className="mt-1">
-            {d.members.find((m) => m.userId === i.commanderId)?.name ??
-              (i.commanderId || "Unassigned")}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-foreground">Discovered</dt>
-          <dd className="mt-1">{incidentTime(i.discoveredAt)}</dd>
-        </div>
-        <div>
-          <dt className="text-foreground">Reporter</dt>
-          <dd className="mt-1">
-            {d.members.find((m) => m.userId === i.createdBy)?.name ??
-              i.createdBy}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-foreground">Type</dt>
-          <dd className="mt-1">{i.type}</dd>
-        </div>
-      </dl>
-      <section className="mb-8 border-y border-border py-4">
-        <h2 className="text-sm font-semibold">Since your last visit</h2>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {d.visitError ??
-            (d.cutoff === undefined
-              ? "Loading your visit window…"
-              : d.cutoff === "0"
-                ? "First visit — review the current incident summary."
-                : `${newEvents.length} updates since ${incidentTime(d.cutoff)}. This window stays fixed while you navigate this visit.`)}
-        </p>
-        {newEvents.slice(0, 3).map((e) => (
-          <Link
-            key={e.id}
-            className="mt-2 block text-xs"
-            href={`${incidentBase(a.organizationId, a.incidentId)}/timeline?event=${e.id}`}
-          >
-            {e.title}
-          </Link>
-        ))}
-      </section>
-      <div className="grid items-start gap-10 xl:grid-cols-[2fr_1fr]">
-        <div>
-          <h2 className="mb-4 text-xl font-semibold">Needs your attention</h2>
-          <div className="divide-y divide-border rounded-lg border border-border">
-            <CoordinationAttention />
-            {sorted.map((f) => (
-              <FindingRow
-                key={f.id}
-                finding={f}
-                open={() => {
-                  setDismissed(null);
-                  setSelected(f.id);
-                }}
-              />
-            ))}
-            {!sorted.length && (
-              <p className="p-5 text-sm text-muted-foreground">
-                No findings recorded. Add the first observation.
-              </p>
-            )}
-          </div>
-          <section className="mt-8">
-            <h2 className="mb-4 text-xl font-semibold">Business impact</h2>
-            <p className="rounded-lg border border-border p-4 text-sm leading-6 text-muted-foreground">
+          <dl className="grid gap-5 text-base sm:grid-cols-4">
+            <div>
+              <dt className="text-muted-foreground">Incident Manager</dt>
+              <dd className="mt-1">
+                {d.members.find((m) => m.userId === i.commanderId)?.name ??
+                  (i.commanderId || "Unassigned")}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Discovered</dt>
+              <dd className="mt-1">{incidentTime(i.discoveredAt)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Reporter</dt>
+              <dd className="mt-1">
+                {d.members.find((m) => m.userId === i.createdBy)?.name ??
+                  i.createdBy}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Type</dt>
+              <dd className="mt-1">{i.type}</dd>
+            </div>
+          </dl>
+          <p className="text-base text-muted-foreground">
+            {pending.length} unresolved findings ·{" "}
+            {d.findings.filter((f) => isUnread(f, d.reads)).length} new findings
+            · <span data-testid="new-updates">{newEvents.length}</span> new
+            updates
+          </p>
+          <p className="text-base text-muted-foreground">
+            {d.visitError ??
+              (d.cutoff === undefined
+                ? "Loading your visit window…"
+                : d.cutoff === "0"
+                  ? "First visit — review the current incident summary."
+                  : `Since your last visit: ${newEvents.length} updates since ${incidentTime(d.cutoff)}. This window stays fixed while you navigate this visit.`)}
+          </p>
+          <ScopeSummaryStrip summary={d.scopeSummary} />
+          <Disclosure title="Business impact">
+            <p className="text-base leading-7">
               {i.impact ||
                 "Impact under investigation; no verified scope recorded."}
             </p>
-          </section>
-          <section className="mt-8">
-            <h2 className="mb-4 text-xl font-semibold">Incident evidence</h2>
-            <div className="flex flex-wrap gap-2">
+          </Disclosure>
+          <Disclosure
+            title={`Incident evidence · ${d.evidence.length} originals`}
+          >
+            <div className="flex flex-wrap gap-3">
               {d.evidence.map((e) => (
                 <EvidenceButton key={e.id} evidence={e} />
               ))}
             </div>
             {!a.can("evidence:view") && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Evidence review requires additional permissions.
               </p>
             )}
+          </Disclosure>
+        </section>
+      )}
+      <div className="mb-10 grid grid-cols-2 gap-y-6 lg:grid-cols-4">
+        {[
+          {
+            label: d.scopeSummary
+              ? "Systems to investigate"
+              : "Unresolved findings",
+            value: d.scopeSummary?.systemsUnderInvestigation ?? pending.length,
+          },
+          {
+            label: d.scopeSummary ? "Groups to investigate" : "New findings",
+            value:
+              d.scopeSummary?.groupsUnderInvestigation ??
+              d.findings.filter((f) => isUnread(f, d.reads)).length,
+          },
+          { label: "Open tasks", value: openTasks.length },
+          { label: "Responders", value: coordination.responders.length },
+        ].map((metric, index) => (
+          <div
+            key={metric.label}
+            className={`${index ? "border-l border-border pl-6" : ""}`}
+          >
+            <p className="text-4xl font-semibold">{metric.value}</p>
+            <p className="mt-1 text-base leading-6 sm:text-lg">
+              {metric.label}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-12 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="relative min-w-0">
+          <h2 className="mb-4 text-2xl font-semibold">Needs your attention</h2>
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {attention.map((f) => (
+              <FindingRow
+                key={f.id}
+                finding={f}
+                open={() => openFinding(f.id)}
+              />
+            ))}
+            {!sorted.length && (
+              <p className="p-5 text-muted-foreground">
+                No findings recorded. Add the first observation.
+              </p>
+            )}
+          </div>
+          <Disclosure
+            title={`View all work (${d.findings.length + openTasks.length})`}
+            className="attention-overflow !border-0 !p-0"
+          >
+            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              <CoordinationAttention />
+              {remaining.map((f) => (
+                <FindingRow
+                  key={f.id}
+                  finding={f}
+                  open={() => openFinding(f.id)}
+                />
+              ))}
+            </div>
+          </Disclosure>
+          <section className="mt-7">
+            <h2 className="mb-4 text-2xl font-semibold">Affected operations</h2>
+            <AffectedOperations embedded />
           </section>
         </div>
         <section>
-          <h2 className="mb-6 text-xl font-semibold">Recent activity</h2>
-          <div className="ml-1 border-l border-border">
-            {d.events.slice(0, 6).map((e) => (
+          <h2 className="mb-6 text-2xl font-semibold">Recent activity</h2>
+          <div className="ml-2 border-l border-border">
+            {d.events.slice(0, 3).map((e) => (
               <Link
                 key={e.id}
                 href={`${incidentBase(a.organizationId, a.incidentId)}/timeline?event=${e.id}`}
-                className="relative mb-6 block pl-6"
+                className="relative flex gap-6 pb-8 pl-8"
               >
-                <span className="absolute top-1.5 -left-1 size-2 rounded-full bg-white" />
-                <p className="text-xs text-muted-foreground">
-                  {incidentTime(e.createdAt, false)} · {e.type}
-                </p>
-                <p className="mt-2 text-sm font-semibold">{e.title}</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {d.members.find((m) => m.userId === e.actorId)?.name ??
-                    e.actorId}{" "}
-                  · {e.description.slice(0, 160)}
-                </p>
+                <span className="absolute top-2 -left-1.5 size-3 rounded-full bg-white" />
+                <time className="shrink-0 text-base tabular-nums">
+                  {incidentTime(e.createdAt, false)
+                    .replace(" CST", "")
+                    .replace(" CDT", "")}
+                </time>
+                <div className="min-w-0">
+                  <p
+                    className="line-clamp-1 text-xl font-semibold"
+                    title={e.title}
+                  >
+                    {e.title}
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-base leading-6 text-muted-foreground">
+                    {e.description}
+                  </p>
+                </div>
               </Link>
             ))}
           </div>
+          <Link
+            className="ml-10 text-sm text-muted-foreground underline underline-offset-4"
+            href={`${incidentBase(a.organizationId, a.incidentId)}/timeline`}
+          >
+            View full timeline →
+          </Link>
         </section>
       </div>
       {shown && shown !== dismissed && (
@@ -445,9 +516,11 @@ export function LiveOverview() {
     </>
   );
 }
+
 export function LiveTimeline() {
   const a = useAccess(),
     d = useIncident(),
+    coordination = useCoordination(),
     params = useSearchParams();
   const [selected, setSelected] = useState<string | null>(null),
     [filter, setFilter] = useState("All Events"),
@@ -462,12 +535,6 @@ export function LiveTimeline() {
     "Scope Changes": ["scope"],
     Tasks: ["task"],
     Paging: ["page"],
-    Recovery: ["recovery"],
-    Approvals: ["approval"],
-    "Trust Warnings": ["trust"],
-    Reports: ["report"],
-    Classification: ["classification"],
-    "Legal Review": ["legal"],
   };
   const events = d.events.filter(
     (e) =>
@@ -477,82 +544,158 @@ export function LiveTimeline() {
           d.cutoff !== "0" &&
           BigInt(e.createdAt) > BigInt(d.cutoff))),
   );
+  const findingFor = (e: (typeof d.events)[number]) =>
+    d.findings.find((item) => item.id === e.findingId);
+  const urgent = (e: (typeof d.events)[number]) => {
+    const f = findingFor(e);
+    return (
+      (e.type === "page" && !["Acknowledged", "Canceled"].includes(e.status)) ||
+      (e.type === "finding" &&
+        !!f &&
+        f.priority === "Critical" &&
+        unresolved(f))
+    );
+  };
+  const recorded = (e: (typeof d.events)[number]) =>
+    ["Resolved", "Completed", "Acknowledged", "Ruled Out"].includes(e.status) ||
+    e.type === "decision";
   const current =
     events.find((e) => e.id === (selected ?? params.get("event"))) || events[0];
+  const currentId = current?.id;
+  useEffect(() => {
+    if (selected || !currentId) return;
+    const row = document.getElementById(`timeline-event-${currentId}`);
+    const feed = row?.closest<HTMLElement>('[data-testid="timeline-events"]');
+    if (row && feed) feed.scrollTop = row.offsetTop;
+  }, [currentId, selected]);
+  const newEvent = (e: (typeof d.events)[number]) =>
+    (!!d.cutoff &&
+      d.cutoff !== "0" &&
+      BigInt(e.createdAt) > BigInt(d.cutoff)) ||
+    (!!findingFor(e) && isUnread(findingFor(e)!, d.reads));
+  const linkedFinding = current ? findingFor(current) : undefined;
   const evidenceIds = current
     ? (JSON.parse(current.evidenceIds) as string[])
     : [];
+  const evidence = d.evidence.filter(
+    (e) =>
+      evidenceIds.includes(e.id) ||
+      d.links.some(
+        (l) =>
+          l.evidenceId === e.id &&
+          l.findingId &&
+          l.findingId === current?.findingId,
+      ),
+  );
+  let scopeEntityId = "",
+    taskId = "";
+  try {
+    const value = JSON.parse(current?.newValue || "{}");
+    scopeEntityId =
+      typeof value.scopeEntityId === "string" ? value.scopeEntityId : "";
+    taskId = typeof value.taskId === "string" ? value.taskId : "";
+  } catch {
+    /* Historical values need not be JSON. */
+  }
+  const task = coordination.tasks.find((item) => item.id === taskId);
+  const ownerId = linkedFinding?.assignedTo || task?.assignedUserId;
+  const shortTime = (time: string) =>
+    incidentTime(time, false).replace(" CST", "").replace(" CDT", "");
   return (
     <>
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Timeline
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            What happened, what matters, and what comes next.
-          </p>
-        </div>
-        <Button variant="outline" disabled>
-          <Play size={15} />
-          Replay
-        </Button>
-      </div>
+      <PageHeading
+        className="mb-4"
+        title="Timeline"
+        description="What happened, what matters, and what comes next."
+        actions={
+          <Button
+            variant="outline"
+            disabled
+            title="Timeline replay is not implemented"
+          >
+            <Play size={18} />
+            Replay
+          </Button>
+        }
+      />
       <div className="mb-4">
         <IncidentReports />
         <ReportHistory />
       </div>
-      <div className="mb-5 flex flex-wrap items-center gap-6 border-b border-border pb-4">
+      <div className="mb-6 flex flex-wrap items-center gap-8 border-b border-border pb-3">
         <select
           aria-label="Filter timeline events"
-          className={`${fieldClass} max-w-44`}
+          className={`${fieldClass} max-w-48`}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
-          {["All Events", ...Object.keys(filterTypes)].map((v) => (
-            <option key={v}>{v}</option>
+          {["All Events", ...Object.keys(filterTypes)].map((value) => (
+            <option key={value}>{value}</option>
           ))}
         </select>
-        <label className="flex items-center gap-3 text-sm text-muted-foreground">
+        <label className="flex cursor-pointer items-center gap-3 text-base sm:text-lg">
           <input
             type="checkbox"
+            className="aegis-switch"
             checked={since}
             onChange={(e) => setSince(e.target.checked)}
           />
           Since my last visit
         </label>
-        <span className="ml-auto text-xs text-muted-foreground">
-          America/Chicago · Newest first · Live
-        </span>
+        <span className="ml-auto text-sm">Incident history · Newest first</span>
       </div>
-      <div className="grid min-h-[540px] gap-8 lg:grid-cols-[1.6fr_1fr]">
-        <section data-testid="timeline-events">
+      <div className="grid min-h-[610px] items-start gap-7 lg:grid-cols-[1.5fr_1fr]">
+        <section
+          aria-label="Incident events"
+          data-testid="timeline-events"
+          className="timeline-track relative max-h-[610px] overflow-y-auto pr-2"
+        >
           {events.map((e) => (
             <button
+              type="button"
               key={e.id}
+              id={`timeline-event-${e.id}`}
               data-event-type={e.type}
+              aria-pressed={current?.id === e.id}
               onClick={() => setSelected(e.id)}
-              className={`flex w-full items-start gap-4 border-b border-border px-3 py-5 text-left ${current?.id === e.id ? "border-l-4 border-l-red-400 bg-red-400/10" : "hover:bg-muted/20"}`}
+              className={`relative flex w-full items-start gap-4 border-b border-border border-l-4 px-4 py-4 text-left sm:gap-8 sm:px-8 ${current?.id === e.id ? (urgent(e) ? "rounded-md border-l-red-400 bg-[#281516]" : "rounded-md border-l-white bg-[#1b1b1b]") : "border-l-transparent hover:bg-muted/20"}`}
             >
-              <time className="mt-1 w-20 shrink-0 font-mono text-xs">
-                {incidentTime(e.createdAt, false)}
+              <time className="mt-0.5 w-12 shrink-0 font-mono text-base tracking-wide sm:w-[72px] sm:text-lg">
+                {shortTime(e.createdAt)}
               </time>
               <span
-                className={`mt-2 size-2 shrink-0 rounded-full ${e.status === "Resolved" ? "bg-emerald-400" : e.type === "finding" ? "bg-amber-300" : "bg-neutral-400"}`}
+                className={`relative z-10 mt-2 size-3 shrink-0 rounded-full ${urgent(e) ? "bg-red-400" : recorded(e) ? "bg-emerald-400" : ["finding", "evidence", "scope"].includes(e.type) ? "bg-amber-400" : "bg-neutral-400"}`}
               />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold">{e.title}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
+              <span className="min-w-0 flex-1">
+                <span
+                  data-event-title={e.title}
+                  className="block text-lg font-semibold leading-7 sm:text-xl"
+                >
+                  {urgent(e) && <span className="text-red-400">Urgent · </span>}
+                  {e.type === "decision" && (
+                    <span className="text-emerald-400">
+                      <Check className="mr-2 inline" size={18} />
+                      Decision recorded ·{" "}
+                    </span>
+                  )}
+                  {e.title}
+                  {newEvent(e) && (
+                    <span className="ml-3 text-sm font-normal text-muted-foreground">
+                      New
+                    </span>
+                  )}
+                </span>
+                <span className="mt-1 block text-base text-muted-foreground sm:text-lg">
                   {d.members.find((m) => m.userId === e.actorId)?.name ??
                     e.actorId}{" "}
-                  · {e.type} · {e.status}
-                </p>
-              </div>
-              <ChevronRight size={16} className="ml-auto shrink-0" />
+                  · {e.status || e.type}
+                </span>
+              </span>
+              <ChevronRight size={20} className="mt-1 shrink-0" />
             </button>
           ))}
           {!events.length && (
-            <p className="py-8 text-sm text-muted-foreground">
+            <p className="py-8 text-base text-muted-foreground">
               No events match this filter
               {since && d.cutoff === "0"
                 ? " — first visit shows the current summary on Overview"
@@ -562,106 +705,125 @@ export function LiveTimeline() {
           )}
         </section>
         <aside
-          className="min-w-0 border-t border-border pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8"
           data-testid="event-detail"
+          aria-label="Selected event details"
+          className="min-w-0 border-t border-border pt-5 lg:max-h-[680px] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0"
         >
           {current && (
             <>
-              <p className={`mb-3 text-sm ${tone(current.status)}`}>
-                {current.type} · {current.status || "Documented"}
+              <p
+                className={`mb-3 flex items-center gap-2 text-base ${urgent(current) ? "text-red-400" : recorded(current) ? "text-emerald-400" : "text-amber-400"}`}
+              >
+                <span className="size-3 rounded-full bg-current" />
+                {urgent(current)
+                  ? "Urgent"
+                  : recorded(current)
+                    ? "Recorded"
+                    : "Needs review"}
+                <span className="text-muted-foreground">
+                  · {current.status || "Documented"}
+                </span>
               </p>
-              <h2 className="text-2xl font-semibold">{current.title}</h2>
-              <p className="mt-3 text-xs text-muted-foreground">
-                {a.incidentId} · {incidentTime(current.createdAt)}
+              <h2 className="text-[28px] font-semibold leading-tight">
+                {current.title}
+              </h2>
+              <p className="mt-2 text-base text-muted-foreground">
+                {linkedFinding?.relatedSystem || a.incidentId} ·{" "}
+                {incidentTime(current.createdAt)}
               </p>
-              {current.type === "scope" &&
-                a.can("scope:view") &&
-                (() => {
-                  try {
-                    const target = JSON.parse(current.newValue)
-                      .scopeEntityId as unknown;
-                    return typeof target === "string" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        asChild
-                      >
-                        <Link
-                          href={`${incidentBase(a.organizationId, a.incidentId)}/scope?entity=${encodeURIComponent(target)}`}
-                        >
-                          Open scope entity
-                        </Link>
-                      </Button>
-                    ) : null;
-                  } catch {
-                    return null;
-                  }
-                })()}
-              {["task", "page"].includes(current.type) &&
-                (() => {
-                  try {
-                    const id = JSON.parse(current.newValue).taskId;
-                    return typeof id === "string" ? (
-                      <div className="mt-4">
-                        <TaskButton id={id} />
-                      </div>
-                    ) : null;
-                  } catch {
-                    return null;
-                  }
-                })()}
-              <h3 className="mt-8 mb-3 font-semibold">Investigation details</h3>
-              <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+              <h3 className="mb-3 mt-10 text-lg font-semibold">
+                {urgent(current) ? "Why it needs review" : "What happened"}
+              </h3>
+              <div className="space-y-2 text-base">
+                <p className="flex gap-6">
+                  <time className="font-mono">
+                    {shortTime(current.observedAt)}
+                  </time>
+                  <span>Observed</span>
+                </p>
+                <p className="flex gap-6">
+                  <time className="font-mono">
+                    {shortTime(current.createdAt)}
+                  </time>
+                  <span>Recorded</span>
+                </p>
+              </div>
+              <p className="mt-5 line-clamp-3 text-base leading-7 text-muted-foreground">
                 {current.description}
               </p>
-              {current.correctsEventId && (
-                <button
-                  className="mt-3 text-xs underline"
-                  onClick={() => {
-                    setFilter("All Events");
-                    setSince(false);
-                    setSelected(current.correctsEventId);
-                  }}
-                >
-                  Correction of event #{current.correctsEventId}
-                </button>
+              <h3 className="mb-2 mt-8 text-lg font-semibold">Next step</h3>
+              <p className="text-base leading-7">
+                {task
+                  ? "Open the task to review its work and verification."
+                  : linkedFinding && unresolved(linkedFinding)
+                    ? "Review the supporting evidence and investigation."
+                    : "Review the recorded outcome and supporting details."}
+              </p>
+              {ownerId && (
+                <p className="mt-3 text-base text-muted-foreground">
+                  {coordination.name(ownerId)} · Assigned responder
+                </p>
               )}
-              {current.findingId && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-5"
-                  onClick={() => setFinding(current.findingId)}
-                >
-                  Open related finding
-                </Button>
-              )}
-              <div className="mt-5 flex flex-wrap gap-2">
-                {d.evidence
-                  .filter(
-                    (e) =>
-                      evidenceIds.includes(e.id) ||
-                      d.links.some(
-                        (l) =>
-                          l.evidenceId === e.id &&
-                          l.findingId &&
-                          l.findingId === current.findingId,
-                      ),
-                  )
-                  .map((e) => (
+              <div className="mt-7 flex flex-wrap gap-3">
+                {evidence[0] && (
+                  <EvidenceButton
+                    evidence={evidence[0]}
+                    findingId={current.findingId}
+                  />
+                )}
+                {current.findingId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFinding(current.findingId)}
+                  >
+                    Open related finding
+                  </Button>
+                )}
+                {taskId && <TaskButton id={taskId} />}
+              </div>
+              <Disclosure title="Sources & audit details" className="mt-8">
+                <p className="mb-5 whitespace-pre-wrap text-base leading-7">
+                  {current.description}
+                </p>
+                {current.type === "scope" &&
+                  a.can("scope:view") &&
+                  scopeEntityId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mb-5"
+                      asChild
+                    >
+                      <Link
+                        href={`${incidentBase(a.organizationId, a.incidentId)}/scope?entity=${encodeURIComponent(scopeEntityId)}`}
+                      >
+                        Open scope entity
+                      </Link>
+                    </Button>
+                  )}
+                {current.correctsEventId && (
+                  <button
+                    className="mb-4 block text-sm underline"
+                    onClick={() => {
+                      setFilter("All Events");
+                      setSince(false);
+                      setSelected(current.correctsEventId);
+                    }}
+                  >
+                    Correction of event #{current.correctsEventId}
+                  </button>
+                )}
+                <div className="mb-5 flex flex-wrap gap-3">
+                  {evidence.slice(1).map((e) => (
                     <EvidenceButton
                       key={e.id}
                       evidence={e}
                       findingId={current.findingId}
                     />
                   ))}
-              </div>
-              <details className="mt-7 border-t border-border pt-5">
-                <summary className="cursor-pointer text-sm font-semibold">
-                  Sources & audit details
-                </summary>
-                <dl className="mt-4 grid grid-cols-[100px_minmax(0,1fr)] gap-2 text-xs">
+                </div>
+                <dl className="grid grid-cols-[90px_minmax(0,1fr)] gap-x-4 gap-y-3 text-sm">
                   <dt>Event</dt>
                   <dd>#{current.id} · immutable</dd>
                   <dt>Actor</dt>
@@ -673,6 +835,17 @@ export function LiveTimeline() {
                   <dd>{incidentTime(current.observedAt)}</dd>
                   <dt>Recorded</dt>
                   <dd>{incidentTime(current.createdAt)}</dd>
+                  {current.timingCorrectionId && (
+                    <>
+                      <dt>Time correction</dt>
+                      <dd>
+                        Synthetic fixture correction #{current.timingCorrectionId}.
+                        Original observation: {incidentTime(current.originalObservedAt!)}.
+                        {current.originalRecordedAt && ` Original recording: ${incidentTime(current.originalRecordedAt)}.`}
+                        Corrected by {d.members.find((member) => member.userId === "maya")?.name ?? "maya"} on {incidentTime(current.timingCorrectedAt!)}.
+                      </dd>
+                    </>
+                  )}
                   <dt>Previous</dt>
                   <dd className="max-h-36 overflow-auto whitespace-pre-wrap break-all">
                     {current.previousValue || "—"}
@@ -682,17 +855,17 @@ export function LiveTimeline() {
                     {current.newValue || "—"}
                   </dd>
                 </dl>
-                <p className="mt-3 text-xs text-muted-foreground">
+                <p className="mt-5 text-sm leading-6 text-muted-foreground">
                   Historical synthetic observations remain assessments unless
                   explicitly verified. Documentation does not execute response
                   actions.
                 </p>
-              </details>
-              <div className="mt-5 flex flex-wrap gap-2">
                 {a.can("notes:create") && (
-                  <AddNote correctsEventId={current.id} />
+                  <div className="mt-5">
+                    <AddNote correctsEventId={current.id} />
+                  </div>
                 )}
-              </div>
+              </Disclosure>
             </>
           )}
         </aside>

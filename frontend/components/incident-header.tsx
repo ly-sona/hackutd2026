@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "./workspace-link";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { useAccess } from "./workspace-provider";
@@ -21,7 +21,7 @@ export function IncidentSelector() {
   return (
     <select
       aria-label="Select incident"
-      className="w-20 min-w-0 truncate bg-transparent text-sm sm:w-64"
+      className="w-24 min-w-0 truncate bg-transparent text-base sm:w-28 sm:text-lg"
       value={a.incidentId}
       onChange={(e) =>
         router.push(
@@ -32,7 +32,7 @@ export function IncidentSelector() {
       {d.incidents.length ? (
         d.incidents.map((i) => (
           <option key={i.id} value={i.incidentId}>
-            {i.incidentId} · {i.title} · {i.severity}
+            {i.incidentId}
           </option>
         ))
       ) : (

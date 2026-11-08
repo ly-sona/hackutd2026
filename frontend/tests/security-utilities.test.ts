@@ -6,7 +6,7 @@ import {
   newToken,
 } from "@/lib/server/password";
 import { safeReturnPath } from "@/lib/auth-navigation";
-import { matrix } from "../../backend/spacetimedb/src/permissions";
+import { matrix, permissions } from "../../backend/spacetimedb/src/permissions";
 
 describe("security primitives", () => {
   it("salts password hashes and rejects wrong credentials", async () => {
@@ -36,9 +36,9 @@ describe("security primitives", () => {
     ])
       expect(safeReturnPath(path)).toBe("/organizations");
   });
-  it("separates access administration from operational approvals", () => {
+  it("grants administrators all permissions while preserving other role limits", () => {
     expect(matrix.administrator).toContain("members:invite");
-    expect(matrix.administrator).not.toContain("operations:approve");
+    expect(matrix.administrator).toEqual(permissions);
     expect(matrix.commander).toContain("operations:approve");
     for (const role of ["analyst", "legal", "operations"] as const)
       expect(matrix[role]).not.toContain("members:edit");

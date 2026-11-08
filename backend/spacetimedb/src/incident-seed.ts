@@ -2,6 +2,26 @@ import type { Ctx } from "./index";
 import type { Ports } from "./incident-domain";
 // Stable scenario identifiers. Source observations are bounded claims, not hidden ground truth.
 const at = (time: string) => BigInt(Date.parse(`2026-11-07T${time}:00-06:00`));
+
+// Match only unchanged, known initial fixtures, never responder-created events.
+export function isInitialFixtureEvent(event: {
+  incidentId: string; type: string; title: string; createdAt: bigint;
+  findingId: string; description: string;
+}) {
+  return scenarios.some(([inc, title, , , , , tm]) =>
+    event.incidentId === inc && event.type === "incident" &&
+    event.title === `Incident opened: ${title}` && event.createdAt === at(tm),
+  ) || findingFixtures.some(([inc, fid, title, , , , , tm]) =>
+    event.incidentId === inc && event.type === "finding" &&
+    event.findingId === `${inc}:${fid}` && event.title === title && event.createdAt === at(tm),
+  ) || (event.type === "evidence" && /^Evidence attached: EV-0(12|18|21|24|25|26|27|28|29|30)$/.test(event.title) &&
+    event.createdAt >= at("08:00") && event.createdAt <= at("10:00")) || [
+    ["IR-2041", "Responder invited", "09:08"],
+    ["IR-2041", "Independent verification requested", "09:27"],
+    ["IR-2042", "Owner corroboration requested", "09:03"],
+    ["IR-2043", "Investigation opened", "08:43"],
+  ].some(([inc, title, tm]) => event.incidentId === inc && event.title === title && event.createdAt === at(tm));
+}
 const scenarios = [
   [
     "IR-2041",

@@ -25,7 +25,7 @@ import {
   DialogDescription,
 } from "./ui/dialog";
 export const fieldClass =
-  "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
+  "w-full rounded-md border border-border bg-background px-3 py-2.5 text-base";
 export function Field({
   label,
   children,
@@ -34,7 +34,7 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="grid gap-2 text-sm">
+    <label className="grid gap-2 text-base">
       {label}
       {children}
     </label>
@@ -71,10 +71,12 @@ export function Editor({
   trigger,
   children,
   onSubmit,
+  primary = false,
 }: {
   title: string;
   description: string;
   trigger: string;
+  primary?: boolean;
   children: React.ReactNode;
   onSubmit: (data: FormData) => Promise<unknown>;
 }) {
@@ -97,8 +99,8 @@ export function Editor({
   return (
     <>
       <Button
-        variant="outline"
-        size="sm"
+        variant={primary ? "default" : "outline"}
+        size={primary ? "default" : "sm"}
         onClick={() => {
           setOpen(true);
           setError("");
@@ -117,7 +119,7 @@ export function Editor({
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          <form className="grid gap-4" onSubmit={submit}>
+          <form className="grid gap-5" onSubmit={submit}>
             {children}
             {error && (
               <p role="alert" className="text-sm text-red-400">
@@ -207,7 +209,7 @@ export function NewIncident({
         <select className={fieldClass} name="commanderId">
           <option value="">Unassigned</option>
           {responders
-            .filter((r) => r.role === "commander")
+            .filter((r) => ["commander", "administrator"].includes(r.role))
             .map((r) => (
               <option key={r.userId} value={r.userId}>
                 {r.name}
@@ -261,6 +263,7 @@ export function FindingForm({
     : [];
   return (
     <Editor
+      primary={!finding && !sourceMessage && !scopeEntityId}
       title={finding ? "Update finding" : "Add finding"}
       description="Separate observed facts from assessments. Confirmation and resolution require evidence and a verification justification."
       trigger={finding ? "Update finding" : "Add finding"}
@@ -455,7 +458,7 @@ export function UpdateIncident() {
         >
           <option value="">Unassigned</option>
           {d.members
-            .filter((m) => m.role === "commander")
+            .filter((m) => ["commander", "administrator"].includes(m.role))
             .map((m) => (
               <option key={m.id} value={m.userId}>
                 {m.name}

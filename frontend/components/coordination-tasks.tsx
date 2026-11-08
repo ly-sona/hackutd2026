@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "./workspace-link";
 import { useAccess } from "./workspace-provider";
 import { useIncident } from "./incident-data";
 import { useCoordination, useCoordinationCommand } from "./coordination-data";
@@ -104,12 +104,14 @@ export function TaskForm({
   title = "",
   description = "",
   trigger = "Create task",
+  primary = false,
 }: {
   source?: Message;
   references?: Reference[];
   title?: string;
   description?: string;
   trigger?: string;
+  primary?: boolean;
 }) {
   const a = useAccess(),
     d = useCoordination(),
@@ -121,6 +123,7 @@ export function TaskForm({
   return (
     <Editor
       title="Create task"
+      primary={primary}
       description={
         source
           ? "Convert this message into tracked work. The source conversation's access restrictions are preserved."
@@ -247,7 +250,7 @@ function ResponderSelect({
     </Field>
   );
 }
-export function TaskButton({ id }: { id: string }) {
+export function TaskButton({ id, plain = false }: { id: string; plain?: boolean }) {
   const [open, setOpen] = useState(false),
     d = useCoordination(),
     task = d.tasks.find((t) => t.id === id);
@@ -255,7 +258,7 @@ export function TaskButton({ id }: { id: string }) {
   return (
     <>
       <button
-        className="max-w-full rounded-md border border-border px-2 py-1 text-xs text-left whitespace-normal [overflow-wrap:anywhere] hover:bg-muted"
+        className={`max-w-full whitespace-normal [overflow-wrap:anywhere] ${plain ? "text-left text-base font-semibold hover:underline underline-offset-4" : "rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted"}`}
         onClick={() => setOpen(true)}
       >
         {task.title}
@@ -341,6 +344,7 @@ export function TaskDialog({
           linked findings and scope assessments keep their own verification
           state.
         </p>
+        <div className="flex flex-wrap gap-3">
         {a.can("tasks:update") && (
           <Editor
             title="Update task"
@@ -432,6 +436,7 @@ export function TaskDialog({
               </p>
             </Editor>
           )}
+        </div>
         <section className="space-y-3 border-t border-border pt-4">
           <h3 className="font-medium">Paging history</h3>
           {!pages.length && (
@@ -530,7 +535,7 @@ export function TaskDialog({
     </Dialog>
   );
 }
-export function TaskList({ assignedOnly = false }: { assignedOnly?: boolean }) {
+export function TaskList({ assignedOnly = false, embedded = false }: { assignedOnly?: boolean; embedded?: boolean }) {
   const a = useAccess(),
     d = useCoordination(),
     incident = useIncident();
@@ -542,12 +547,12 @@ export function TaskList({ assignedOnly = false }: { assignedOnly?: boolean }) {
   const now = Number(d.policy?.now ?? 0),
     overdue = active.filter((t) => t.dueAt !== "0" && Number(t.dueAt) < now);
   return (
-    <section className="mt-6 border-t border-border pt-5">
+    <section className={embedded ? "" : "mt-6 border-t border-border pt-5"}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">
+          {!embedded && <h2 className="text-xl font-semibold">
             {assignedOnly ? "Your tasks" : "Incident tasks"}
-          </h2>
+          </h2>}
           <p className="mt-1 text-xs text-muted-foreground">
             {active.length} active · {overdue.length} overdue
             {assignedOnly
@@ -571,9 +576,9 @@ export function TaskList({ assignedOnly = false }: { assignedOnly?: boolean }) {
             className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3"
           >
             <div className="min-w-0">
-              <TaskButton id={t.id} />
+              <TaskButton id={t.id} plain />
               <p className="mt-1 text-xs text-muted-foreground">
-                {d.name(t.assignedUserId)} · {t.priority} · {t.status}
+                {d.name(t.assignedUserId)} · <span className={t.priority === "Critical" ? "text-red-400" : t.priority === "High" ? "text-amber-400" : ""}>{t.priority}</span> · <span className={t.status === "Completed" ? "text-emerald-400" : ""}>{t.status}</span>
               </p>
             </div>
             <span

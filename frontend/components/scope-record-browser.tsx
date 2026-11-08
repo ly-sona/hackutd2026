@@ -119,7 +119,7 @@ export function RecordBrowser({
           </p>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="min-w-[560px] w-full text-left text-base">
             <thead>
               <tr className="border-b border-border">
                 <th className="py-3">Record</th>

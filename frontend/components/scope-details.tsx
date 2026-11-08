@@ -1,7 +1,7 @@
 "use client";
 import { RelatedRecovery } from "./recovery-workspace";
 import { TaskForm } from "./coordination-tasks";
-import Link from "next/link";
+import Link from "./workspace-link";
 import { ChevronRight } from "lucide-react";
 import { useAccess } from "./workspace-provider";
 import { useScope } from "./scope-data";
@@ -15,6 +15,7 @@ import {
 } from "./scope-forms";
 import { EvidenceButton, AttachEvidence } from "./evidence-panel";
 import { Button } from "./ui/button";
+import { Disclosure } from "./workspace-ui";
 import {
   impactTypes,
   isConfirmed,
@@ -22,15 +23,19 @@ import {
   type ScopeAssessment,
 } from "@/lib/scope";
 import { incidentBase } from "@/lib/roles";
-import { incidentTime } from "@/lib/incident-model";
+import { incidentTime, businessContinuityStatus } from "@/lib/incident-model";
 export function EntityDetails({
   entity: e,
   select,
   browse,
+  compact = false,
+  expand,
 }: {
   entity: ScopeEntity;
   select: (e: ScopeEntity) => void;
   browse: (id: string) => void;
+  compact?: boolean;
+  expand?: () => void;
 }) {
   const a = useAccess(),
     d = useScope(),
@@ -53,6 +58,121 @@ export function EntityDetails({
       return other.startsWith("finding:") ? [other.slice(8)] : [];
     }),
   ]);
+  const continuity = e.kind === "Business Operation" ? businessContinuityStatus(incident.events, e.id) : undefined;
+  if (compact) {
+    const dimension = ["Dataset", "Record Group", "Record"].includes(e.kind)
+      ? "Exfiltration"
+      : e.kind === "Business Operation" ? "Availability" : "Compromise";
+    const assessment = assessments.find((item) => item.dimension === dimension);
+    const state = assessment?.status ?? "Unassessed";
+    const evidenceIds = [...new Set(links.map((link) => link.evidenceId))];
+    return (
+      <div className="space-y-6">
+        <div>
+          <p className="text-sm uppercase text-muted-foreground">
+            {e.kind === "Record" ? "Customer record" : e.kind}
+          </p>
+          <h2 className="mt-2 text-[30px] font-semibold">{e.name}</h2>
+          {continuity && <p className="mt-2 text-sm">Reported business status: {continuity}</p>}
+          <p
+            className={`mt-3 flex items-center gap-2 text-base ${state === "Ruled Out" ? "text-emerald-400" : isConfirmed(state) ? "text-red-400" : "text-amber-400"}`}
+          >
+            <span className="size-3 rounded-full bg-current" />
+            {state}
+          </p>
+        </div>
+        <p className="border-y border-border py-5 text-base leading-7">
+          {e.kind === "Record" &&
+          !assessments.some((item) => isConfirmed(item.status))
+            ? "Possible access path. Individual access is not confirmed."
+            : e.description}
+        </p>
+        {e.kind === "Record" && e.parentId && (
+          <p className="text-sm text-muted-foreground">
+            Group: {d.entities.find((item) => item.id === e.parentId)?.name ?? e.parentId}
+          </p>
+        )}
+        {!["Evidence", "Finding", "Incident"].includes(e.kind) && (
+          <>
+            <div
+              className="flex justify-between gap-4 text-base"
+              data-testid={`assessment-${dimension}`}
+            >
+              <span>{dimension}</span>
+              <span className="text-muted-foreground">{state}</span>
+            </div>
+            <Disclosure title="Other impacts">
+              <div className="space-y-4">
+                {impactTypes
+                  .filter((item) => item !== dimension)
+                  .map((item) => (
+                    <div
+                      className="flex justify-between gap-3 text-sm"
+                      data-testid={`assessment-${item}`}
+                      key={item}
+                    >
+                      <span>{item}</span>
+                      <span className="text-muted-foreground">
+                        {assessments.find((value) => value.dimension === item)
+                          ?.status ?? "Unassessed"}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </Disclosure>
+          </>
+        )}
+        {evidence && <EvidenceButton evidence={evidence} annotations={links} />}
+        {e.kind === "Record Group" && a.can("scope:records") && (
+          <Button variant="outline" onClick={() => browse(e.id)}>
+            {e.countKnown
+              ? `Browse ${e.recordCount.toLocaleString("en-US")} records`
+              : "Browse enumerated records"}
+          </Button>
+        )}
+        <Disclosure
+          title={`Evidence · ${evidenceIds.length} ${evidenceIds.length === 1 ? "item" : "items"}`}
+        >
+          <div className="space-y-3">
+            {evidenceIds.map((id) => {
+              const original = incident.evidence.find(
+                (value) => value.id === id,
+              );
+              return (
+                original && (
+                  <EvidenceButton
+                    key={id}
+                    evidence={original}
+                    annotations={links.filter((link) => link.evidenceId === id)}
+                  />
+                )
+              );
+            })}
+            {!evidenceIds.length && (
+              <p className="text-sm text-muted-foreground">
+                No supporting evidence linked yet.
+              </p>
+            )}
+          </div>
+        </Disclosure>
+        {!["Evidence", "Finding", "Incident"].includes(e.kind) && (
+          <TaskForm
+            trigger="Assign investigation"
+            primary
+            title={`Investigate ${e.name}`}
+            description={e.description}
+            references={[{ kind: "scope", id: e.id }]}
+          />
+        )}
+        <button
+          className="block text-sm text-muted-foreground underline underline-offset-4"
+          onClick={expand}
+        >
+          Open full investigation →
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="space-y-5">
       <RelatedRecovery entityId={e.id} />
@@ -64,6 +184,7 @@ export function EntityDetails({
       <p className="border-y border-border py-4 text-sm leading-6">
         {e.description}
       </p>
+      {continuity && <p className="text-sm">Reported business status: {continuity}</p>}
       {e.owner && (
         <p className="text-xs text-muted-foreground">Owner · {e.owner}</p>
       )}
@@ -135,23 +256,26 @@ export function EntityDetails({
                 className="border-b border-border py-3"
                 data-testid={`assessment-${dimension}`}
               >
-                <div className="flex justify-between gap-2 text-xs">
-                  <span>{dimension}</span>
-                  <span
-                    className={
-                      assessment && isConfirmed(assessment.status)
-                        ? "text-red-400"
-                        : assessment?.status === "Ruled Out"
-                          ? "text-emerald-400"
-                          : "text-amber-300"
-                    }
-                  >
-                    {assessment?.status ?? "Unassessed"}
-                  </span>
-                </div>
-                {assessment && (
-                  <AssessmentDetail assessment={assessment} entity={e} />
-                )}
+                <details>
+                  <summary className="flex cursor-pointer items-center justify-between gap-3 text-base">
+                    <span>{dimension}</span>
+                    <span
+                      className={
+                        assessment && isConfirmed(assessment.status)
+                          ? "text-red-400"
+                          : assessment?.status === "Ruled Out"
+                            ? "text-emerald-400"
+                            : "text-amber-300"
+                      }
+                    >
+                      {assessment?.status ?? "Unassessed"}
+                    </span>
+                    <ChevronRight size={16} className="shrink-0" />
+                  </summary>
+                  {assessment && (
+                    <AssessmentDetail assessment={assessment} entity={e} />
+                  )}
+                </details>
               </div>
             );
           })}
@@ -173,11 +297,11 @@ export function EntityDetails({
           <Link
             href={`${base}/overview?finding=${encodeURIComponent(e.reference)}`}
           >
-            Open Phase 2 finding
+            Open finding
           </Link>
         </Button>
       )}
-      <details open className="border-y border-border py-4">
+      <details className="border-y border-border py-4">
         <summary className="cursor-pointer text-sm font-semibold">
           Evidence · {new Set(links.map((l) => l.evidenceId)).size} linked
           originals
@@ -213,8 +337,7 @@ export function EntityDetails({
           )}
         </div>
       </details>
-      <section>
-        <h3 className="mb-2 text-sm font-semibold">Related entities</h3>
+      <Disclosure title={`Related entities · ${relationships.length}`}>
         {relationships.slice(0, 20).map((r) => {
           const target = d.entities.find(
             (v) => v.id === (r.sourceId === e.id ? r.targetId : r.sourceId),
@@ -239,7 +362,7 @@ export function EntityDetails({
             )
           );
         })}
-      </section>
+      </Disclosure>
       {findings.size > 0 && (
         <section>
           <h3 className="mb-2 text-sm font-semibold">Related findings</h3>

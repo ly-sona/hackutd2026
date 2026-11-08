@@ -7,6 +7,7 @@ import { useIncident } from "./incident-data";
 import { Editor, Field, Select, fieldClass } from "./incident-forms";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { Disclosure } from "./workspace-ui";
 import {
   Dialog,
   DialogContent,
@@ -183,26 +184,12 @@ function EvidenceViewer({
   return (
     <div className="min-w-0 space-y-4 text-sm">
       <p>{e.description}</p>
-      <TaskForm title={`Review ${e.id}: ${e.filename}`} description={e.description} references={[{kind:"evidence",id:e.id}]} />
-      <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 text-xs">
-        <dt>Source</dt>
-        <dd>{e.source}</dd>
-        <dt>Uploader</dt>
-        <dd>
-          {d.members.find((m) => m.userId === e.uploadedBy)?.name ??
-            e.uploadedBy}
-        </dd>
-        <dt>Collected</dt>
-        <dd>{incidentTime(e.collectedAt)}</dd>
-        <dt>Uploaded</dt>
-        <dd>{incidentTime(e.uploadedAt)}</dd>
-        <dt>Size</dt>
-        <dd>
-          {e.size} bytes · {e.contentType}
-        </dd>
-        <dt>SHA-256</dt>
-        <dd className="break-all font-mono">{e.sha256}</dd>
-      </dl>
+      <TaskForm
+        title={`Review ${e.id}: ${e.filename}`}
+        description={e.description}
+        references={[{ kind: "evidence", id: e.id }]}
+      />
+
       {links.map((l) => (
         <div key={l.id} className="border-l border-border pl-3 text-xs">
           <p>{l.annotation}</p>
@@ -244,6 +231,27 @@ function EvidenceViewer({
           className="max-h-96 max-w-full object-contain"
         />
       )}
+      <Disclosure title="Provenance & integrity">
+        <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 text-xs">
+          <dt>Source</dt>
+          <dd>{e.source}</dd>
+          <dt>Uploader</dt>
+          <dd>
+            {d.members.find((m) => m.userId === e.uploadedBy)?.name ??
+              e.uploadedBy}
+          </dd>
+          <dt>Collected</dt>
+          <dd>{incidentTime(e.collectedAt)}</dd>
+          <dt>Uploaded</dt>
+          <dd>{incidentTime(e.uploadedAt)}</dd>
+          <dt>Size</dt>
+          <dd>
+            {e.size} bytes · {e.contentType}
+          </dd>
+          <dt>SHA-256</dt>
+          <dd className="break-all font-mono">{e.sha256}</dd>
+        </dl>
+      </Disclosure>
       <Button variant="outline" asChild>
         <a href={url}>Download original</a>
       </Button>

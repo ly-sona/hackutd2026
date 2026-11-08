@@ -26,7 +26,7 @@ export function Avatar({
 }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs text-foreground ${small ? "size-7" : "size-9"}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-border bg-[#252525] text-sm text-foreground ${small ? "size-8" : "size-10"}`}
     >
       {name
         .split(" ")

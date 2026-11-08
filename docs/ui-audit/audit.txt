@@ -1,0 +1,309 @@
+AEGIS UI fidelity audit — November 7, 2026
+
+Historical baseline: this report and its screenshots describe the UI before the
+Phase 2 pull. The merge to ca3d2d1 retains the visual system and preview-page
+refinements while replacing static Overview/Timeline with live incident records,
+enabling documentation actions and preserving the incident selector/notifications.
+Earlier statements about disabled Overview actions and static Timeline fixtures
+are historical, not descriptions of the current Phase 2 implementation.
+
+Reference set
+=============
+The approved five images are preserved unchanged under docs/design-references:
+01-overview.png, 02-scope.png, 03-operations.png, 04-team.png, 05-timeline.png.
+These match the images saved in the original "initial UI pages" folder.
+There is no sixth page or separate incident room.
+
+Method and evidence
+===================
+Compared every visible region of all five references with the actual authenticated
+application at 1600 x 1000, then checked all five pages at 390 x 844. The original
+captures are in before/; corrected captures are in after/. The application uses
+the real local authentication service and SpacetimeDB, with synthetic incident
+fixtures. Maya Chen was the desktop capture account. Browser measurements and
+selection results are recorded in after/audit-results.json.
+
+This is a visual/interaction audit of these five incident pages, not a claim of
+pixel identity. The references are raster mockups with inconsistent font shapes,
+texture and spacing. The implementation uses a consistent responsive system.
+All observed differences are listed below, including deliberate differences that
+remain. FIXED means corrected in this change; RETAINED means already correct;
+INTENTIONAL means the reason for the remaining difference is explicitly recorded.
+
+Shared shell and visual system
+==============================
+S01 FIXED — All five pages: Arial had a narrower, less geometric appearance than
+    the references. Bundled local Geist and Geist Mono now load without a remote
+    font request. The font license is included under frontend/app/fonts/.
+S02 FIXED — All five page titles: hierarchy was undersized. Restored 40px desktop
+    page titles and the larger Overview incident title; mobile titles remain 30px.
+S03 FIXED — Supporting text throughout the pages was commonly 11–14px. Increased
+    body text to 16–18px and strengthened section headings and primary row labels.
+S04 FIXED — Near-black surfaces, secondary text and neutral borders were too faint.
+    Centralized background #090909, card #111111, secondary text #b8b8bd,
+    separator #454545 and input/outline border #666666.
+S05 FIXED — Red severity/conflict marks: restored a consistent sharper #ff535b.
+S06 FIXED — Yellow review/pending marks: restored a consistent #ffcd38.
+S07 FIXED — Green availability/approval/fallback marks: replaced the teal appearance
+    with #45e176, consistently across text, dots and outlines.
+S08 FIXED — Disabled primary actions were dim gray instead of filled white.
+    Add finding, Assign investigation, Approve request and Send now retain their
+    white fill and dark text at opacity 1 while remaining actually disabled.
+S09 FIXED — Outline controls were tiny and washed out. Restored stronger borders,
+    transparent backgrounds, readable labels and consistent rectangular corners.
+S10 FIXED — Status badges were tiny pills. Restored compact rounded rectangles;
+    Critical, Restricted and Fallback available intentionally remain outlined,
+    because their approved reference badges are outlined rather than solid fills.
+S11 FIXED — Search inputs and the composer had unintended gray fills and small
+    labels. Restored transparent fields, readable text and the flat chat composer.
+S12 FIXED — Header logo/name were smaller. Enlarged AEGIS to the shared 26px brand.
+S13 FIXED — Breadcrumb: replaced the extra chevron and slash after the brand with
+    a vertical separator, then Acme / IR-2041 as in the approved header.
+S14 FIXED — Header incident identifier, account avatar and search sizing were small.
+    Restored consistent identifier, 40px avatar, 340px search and shortcut keycap.
+S15 FIXED — Navigation was too small and tightly grouped. Restored 18px labels,
+    consistent tab spacing, white active text and a white underline on every page.
+S16 FIXED — Main gutters and page framing varied from the mocks. All five pages
+    now share the same shell, 54px desktop gutters and responsive 20px phone gutters.
+S17 FIXED — The extra access-status footer introduced a line and content absent
+    from every reference. Its accessible status remains available to assistive
+    technology; the visible page footer is removed.
+S18 FIXED — Repeated implementation-phase disclaimers competed with the mock text.
+    Consolidated the synthetic-preview notice into a small Demo header indicator
+    and contextual tooltips instead of repeating paragraphs inside each section.
+S19 FIXED — Native disclosure triangles plus custom layout looked inconsistent.
+    Standardized visible chevrons and collapsed sections, with rotation on opening.
+S20 RETAINED — Five shared tabs, their order and URL navigation. No incident-room tab.
+
+Overview
+========
+O01 FIXED — Incident eyebrow was too small. Restored a readable monospace identifier.
+O02 FIXED — Incident title was narrower/smaller. Increased its scale and weight.
+O03 FIXED — Subtitle differed from the mock and included a repeated synthetic label.
+    Restored "Customer platform · Opened today at 09:04 CST" in the synthetic fixture.
+O04 FIXED — Critical and Add finding were tiny, with a gray primary action.
+    Restored larger outlined severity and a filled white primary action.
+O05 FIXED — Four metric labels and counts were too small. Increased type and kept
+    the four-column row with thin vertical dividers on desktop.
+O06 FIXED — Needs your attention and Recent activity headings lacked the mock scale.
+    Restored clear section hierarchy without adding new content sections.
+O07 FIXED — All three attention titles and their single supporting sentences were
+    too small. Increased readable type and adjusted row padding to stay compact.
+O08 FIXED — Attention dots were undersized and the third dot was teal. Restored
+    sharp red/yellow/green semantics and stronger, consistently sized dots.
+O09 FIXED — Assignee avatars/labels/arrows were small and weak. Increased their
+    size, alignment and contrast while preserving one owner per row.
+O10 FIXED — Affected operations table text and status badges were too small.
+    Restored larger table type and rectangular colored outlines.
+O11 FIXED — Recent activity used "Containment reports conflict", "New network
+    evidence" and "Database isolation reported" instead of the chosen compact
+    labels. Restored "Conflict flagged", "EV-018 attached", "Isolation reported".
+O12 FIXED — Recent activity times, titles and descriptions were tiny. Increased
+    them while retaining the three-event spine and its simple one-line summaries.
+O13 RETAINED — No yellow "containment needs verification" banner, decision modal,
+    customer-service paragraph or extra business-impact descriptions were added.
+O14 INTENTIONAL — The mock says 6 responders; the authenticated local data currently
+    has 5 active assigned members. The count remains derived from actual membership.
+O15 INTENTIONAL — Mock owner initials MK/TW differ from the consistent current
+    Maya Chen/Alex Rivera fixtures (MC/AR). Kept actual consistent identities.
+O16 INTENTIONAL — Add finding keeps its reference appearance but does not execute
+    a later-phase finding mutation. Its disabled attribute and tooltip remain.
+
+Scope & evidence
+================
+C01 FIXED — Page title, subtitle and Filter action were undersized/low-contrast.
+    Restored shared heading/action treatment.
+C02 FIXED — Canvas was visually weaker than the reference. Restored near-black
+    background, a clearer dotted grid, thin frame and generous desktop graph area.
+C03 FIXED — Account/system/group/record spacing and fitting were too cramped.
+    Restored a six-node layout with the main access chain above its two branches.
+C04 FIXED — Node headings, entity kinds and statuses were too small. Increased
+    node text and prevented the October-customer count from wrapping awkwardly.
+C05 FIXED — Node status coloring over-emphasized whole labels. Restored neutral
+    node label text with colored status dots, matching the reference hierarchy.
+C06 FIXED — Customer-support icon did not track with the reference. Restored a
+    settings/operation icon beside the flat operation card.
+C07 FIXED — Selected C-1044 needed a distinct white frame. Preserved its stronger
+    white outline, compact record card and initial selection.
+C08 FIXED — Branch edges converged without the reference's separate entry arrows.
+    Dependency and evidence now enter two separate bottom handles on the database.
+C09 FIXED — Edge labels and arrow contrast were weak. Restored neutral readable
+    labels, visible directed arrows and clear Can access/Contains/Depends on/
+    Supports claim relationships.
+C10 FIXED — Inspector framing was too card-like/dense. Kept the slim right pane
+    with one vertical separator and compact horizontal section dividers.
+C11 FIXED — Inspector title, status and uncertainty copy were too small.
+    Restored record title, yellow investigation status and readable uncertainty.
+C12 FIXED — Every selected node reused record-specific exfiltration details.
+    Each entity now has its own description, status and evidence context.
+    Exfiltration/Other impacts appear only for records and the record group.
+C13 FIXED — Account selection reused an investigation state despite confirmed
+    compromise. Its inspector now agrees with its confirmed node status.
+C14 FIXED — Different entities reused the same evidence context. Account activity,
+    service dependency, traffic-log source and record uncertainty are separated.
+C15 FIXED — Assign investigation was a dim gray action. Restored its white fill
+    and reference-sized width; it remains disabled pending the feature phase.
+C16 FIXED — Mobile fit-to-screen reduced the graph to unreadable miniature nodes.
+    Added a readable entity selector and optional pannable graph, with the selected
+    details below. Desktop keeps the approved graph layout.
+C17 INTENTIONAL — React Flow's attribution remains visible in the canvas corner.
+    It is absent from the generated reference and has not been hidden.
+C18 INTENTIONAL — Browse records and Filter remain disabled; their actual workflows
+    are later-phase work. The visible controls retain the chosen design.
+
+Operations
+==========
+P01 FIXED — Heading, description and New request control lacked the reference scale.
+    Restored the common page heading and outlined action.
+P02 FIXED — Summary included extra demo text. Restored the short three-state line:
+    1 needs you · 1 in review · 1 authorized.
+P03 FIXED — List/detail framing and spacing were too weak. Restored top divider,
+    left request list, vertical split and larger selected-request workspace.
+P04 FIXED — Selected Recovery hardware row lacked a sufficiently visible filled
+    state. Restored dark fill plus the white left rule; inactive rows stay flat.
+P05 FIXED — Request names, IDs, amounts and state labels were undersized.
+    Increased type while preserving yellow pending/review and green authorized.
+P06 FIXED — Request-detail heading and $4,800 amount were too small. Restored
+    their matched prominent scale and aligned amount placement.
+P07 FIXED — Requester/Normal route facts were cramped. Restored a clear label/value
+    layout; narrower phones use a smaller label column to prevent overflow.
+P08 FIXED — Every request reused the same compromised-SSO normal route/rationale.
+    Each request now has its own route, rationale and dependency/evidence summary.
+P09 FIXED — Approver rows, names, roles and decision labels were too small.
+    Restored readable independent approval rows and consistent avatars/dividers.
+P10 FIXED — Authorized storage request still showed its second approver Pending
+    because status was derived from row index. Decisions are now request-specific;
+    the authorized example shows both reviewers Approved.
+P11 FIXED — Fallback rationale collapsed to a bare label; the chosen mock exposes
+    Purchasing → Corporate SSO · EV-011 below it. Restored this summary preview
+    even while the full rationale disclosure is collapsed.
+P12 FIXED — Approve request was gray and too narrow. Restored filled white action
+    and the secondary Request changes action aligned beside it when space allows.
+P13 FIXED — Repeated phase explanation crowded the approval footer. Restored the
+    short two-approver/authorization-only statement and moved phase detail to tooltip.
+P14 INTENTIONAL — Approve request, Request changes and New request remain disabled.
+    No approval/payment workflow was added or falsely marked as executed.
+P15 INTENTIONAL — Administrator-only authority clarification remains when applicable;
+    platform administration still does not imply approval permission.
+
+Team
+====
+T01 FIXED — Page and conversation headings were too small. Restored their hierarchy.
+T02 FIXED — Directory search was a small gray-filled field. Restored a clear outline,
+    transparent surface, search icon and readable placeholder.
+T03 FIXED — Incident-chat row used initials instead of the reference's group icon.
+    Restored the group icon and obvious dark selected row with a white left rule.
+T04 FIXED — Automatic creation text was missing from the selected group entry.
+    Restored member count, Created automatically and Incident group chat label.
+T05 FIXED — Header counted administrative membership as a core chat responder.
+    The preview now consistently shows the four assigned core response roles.
+T06 FIXED — Conversation header needed the reference's Members action and overflow
+    affordance. Restored their size/placement and a readable membership preview.
+T07 FIXED — Avatar/role strip was tiny and included the admin in core roles.
+    Restored the four core avatars and Commander · Security · Legal · Operations.
+T08 FIXED — System note was implementation prose rather than the mock's creation
+    confirmation. Restored the short automatic-conversation creation note.
+T09 FIXED — Direct-message entries were static text. They now select a local DM
+    preview, update its heading/profile/composer and can return to the group preview.
+T10 FIXED — Directory names, roles, availability and task notes were tiny and badly
+    separated. Increased type, consistent colored dots and compact aligned rows.
+T11 FIXED — Message names, timestamps and text were small/low-contrast. Restored
+    readable flat messages without introducing chat bubbles or a boxed page.
+T12 FIXED — EV-018 attachment and Create task were very dim. Restored the clear
+    outlined attachment and underlined task affordance; mutation controls stay disabled.
+T13 FIXED — Composer was a gray rounded box with a dim Send button/icon.
+    Restored the flat underline, attachment affordance and filled white Send label.
+T14 FIXED — Self-availability row was implementation-specific "Access active".
+    Restored the compact You · Available presentation used by the mock.
+T15 FIXED — Mobile placed the complete directory before the conversation.
+    Collapsed the directory under Conversations so chat is immediately reachable.
+T16 FIXED — Mobile header squeezed the title alongside Members into a narrow column.
+    Header controls can now wrap below the conversation heading.
+T17 FIXED — Responsive duplicate directory preceded the visible desktop directory
+    in DOM order. Reordered it so desktop name selection and invitation checks find
+    the visible directory first; the mobile picker still comes before chat visually.
+T18 INTENTIONAL — Maya cannot Invite responder/Manage members/Invitations in this
+    security model. Those controls show for an authorized admin; Maya instead sees
+    Access managed by your administrator. The reference mixes those admin controls
+    with Maya's commander identity; permissions have not been weakened to copy it.
+T19 INTENTIONAL — Directory reflects actual visible membership. Sam appears in the
+    default local data, while Taylor only appears when invited/authorized. Temporary
+    access and inactive state are shown when present rather than invented.
+T20 INTENTIONAL — Preview messages and Busy/Available presence are synthetic, not
+    an implemented chat transport. Sending, attaching and task creation stay disabled.
+
+Timeline
+========
+L01 FIXED — Page heading, subtitle, Replay and filter labels were undersized.
+    Restored shared scale and outlined controls.
+L02 FIXED — Since my last visit had no useful local filtering. It now selects the
+    synthetic events marked New, with a clear toggle/focus state.
+L03 FIXED — Chronological feed lacked the chosen continuous vertical spine.
+    Added the spine and aligned its red/green/yellow/neutral event dots.
+L04 FIXED — Urgent row selection was too weak. Restored the muted red fill and
+    prominent red left rule while keeping the urgent label sharply red.
+L05 FIXED — Event times, titles, actor/status lines and chevrons were small.
+    Increased hierarchy and adjusted row density to retain the slim feed.
+L06 FIXED — Approval row omitted the green check and Approval recorded prefix.
+    Restored both while keeping its title and 1 of 2 approvals context.
+L07 FIXED — New markers were absent. Added them to the conflict and evidence events.
+L08 FIXED — Earliest event was "Response planning started" instead of the approved
+    "Responder invited". Restored the invitation label and consistent sample detail.
+L09 FIXED — Right pane reused database/conflict/status/owner content for unrelated
+    selected events. Each event now has its own heading, entity, status, confidence,
+    explanation, next step, owner and relevant evidence.
+L10 FIXED — Restored the chosen simple default inspector: Is the database isolated?,
+    Customer Database, Urgent · Unresolved, exactly two time facts, uncertainty,
+    one next step/owner, Review evidence, collapsed Sources & audit details.
+L11 FIXED — Repeated technical cards/details crowded the inspector. Kept source
+    provenance and confidence in the collapsed audit disclosure.
+L12 FIXED — Selected evidence needed an inspectable destination. Review evidence
+    opens a read-only synthetic EV-018 preview with distinct observed/attached times;
+    it does not create evidence or claim verified containment/exfiltration.
+L13 FIXED — Filter changes could leave unrelated details selected. Selecting a filter
+    or New-only state now selects its first matching event when one exists.
+    An empty result hides the previous event inspector instead of showing stale data.
+L14 INTENTIONAL — No dynamic replay, actual access-audit event stream or incident
+    timeline persistence is claimed. Replay remains disabled; real access audit
+    records remain available through the existing administration functionality.
+
+Remaining reference differences and limits
+=========================================
+R01 INTENTIONAL — Same content regions, navigation, color semantics and selected
+    compositions are restored, but responsive gutters, line wraps, measured text,
+    row heights and panel widths are not pixel-identical to the raster references.
+R02 INTENTIONAL — Geist is the consistent implementation font, not a recreation of
+    the mock images' irregular AI-rendered glyph shapes/kerning.
+R03 INTENTIONAL — Flat near-black UI surfaces replace the raster mock's grain,
+    bloom, uneven gradients and slightly inconsistent rounded corners.
+R04 INTENTIONAL — The consistent existing AEGIS SVG mark is retained. Individual
+    raster references show slightly different triangle cuts/stripes.
+R05 INTENTIONAL — The compact Demo indicator is additional to the references and
+    truthfully distinguishes synthetic incident content from functional access.
+R06 INTENTIONAL — Real account names/initials, responder counts, invitation counts
+    and membership visibility remain data-driven, as detailed above.
+R07 INTENTIONAL — Later-phase actions retain their design but remain disabled;
+    tooltips explain the limitation. This change is not a later-phase backend build.
+R08 INTENTIONAL — Phones stack content and collapse the conversation directory;
+    no approved phone reference exists. Desktop composition remains the visual source.
+R09 INTENTIONAL — React Flow attribution is visible on Scope. The Next.js development
+    indicator can appear in local screenshots; it is not application UI in production.
+R10 INTENTIONAL — Search/notifications/account menus, admin-only controls, functional
+    login and security dialogs go beyond the static reference states. Existing real
+    behavior is preserved rather than replaced with image-only imitations.
+
+Verification
+============
+Final results: npm run build PASS; npm run lint PASS; npm run typecheck PASS;
+npm run test PASS (13 tests); npm run test:e2e PASS (18 tests, 40.4 seconds).
+Desktop and phone captures: no document overflow on any of the five pages;
+no browser page errors. The five approved references were hash-checked unchanged.
+Summary: 90 corrected issues, 2 already-correct decisions retained, 21 deliberate
+differences documented (including the shared reference/rendering limitations).
+
+Production build includes both the SpacetimeDB module and Next.js frontend.
+The final check results and capture measurements are recorded with this audit.
+New browser regressions verify full-opacity filled disabled actions, exact severity
+color, event-specific details, request/entity/conversation selection, five-page
+phone overflow and immediate mobile chat visibility. Existing security tests still
+exercise the real isolated database; authentication/permission checks are not mocked.

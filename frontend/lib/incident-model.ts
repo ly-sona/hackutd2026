@@ -34,6 +34,10 @@ export interface Finding {
   verifiedAt: string;
 }
 export interface IncidentEvent {
+  originalObservedAt?: string;
+  originalRecordedAt?: string;
+  timingCorrectionId?: string;
+  timingCorrectedAt?: string;
   id: string;
   organizationId: string;
   incidentId: string;
@@ -142,6 +146,16 @@ export function incidentTime(ms: string, full = true) {
     hour12: false,
     timeZoneName: "short",
   }).format(Number(ms));
+}
+export function businessContinuityStatus(events: IncidentEvent[], entityId: string) {
+  for (const event of sortEvents(events)) {
+    try {
+      const value = JSON.parse(event.newValue || "{}");
+      if (value.scopeEntityId === entityId &&
+        ["Restricted", "Fallback available"].includes(value.businessStatus)) return value.businessStatus as string;
+    } catch { /* Historical event values may be plain text. */ }
+  }
+  return undefined;
 }
 export const localDateValue = (ms = Date.now()) => {
   const d = new Date(ms);

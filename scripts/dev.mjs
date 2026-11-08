@@ -1,4 +1,6 @@
 import { resolve } from "node:path";
+import { createServer } from "node:net";
+import { execFileSync } from "node:child_process";
 import {
   root,
   cli,
@@ -20,7 +22,14 @@ function stop() {
   stopping = true;
   for (const child of children) {
     try {
-      process.kill(-child.pid, "SIGTERM");
+      if (process.platform === "win32") {
+        execFileSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+          stdio: "ignore",
+          windowsHide: true,
+        });
+      } else {
+        process.kill(-child.pid, "SIGTERM");
+      }
     } catch {
       /* Already exited. */
     }
@@ -31,13 +40,31 @@ for (const signal of ["SIGINT", "SIGTERM"])
     stop();
   });
 function start(args) {
-  const child = launch(cli, args, { detached: true });
+  // Unix needs a process group for cleanup; Windows uses taskkill /T instead.
+  const child = launch(cli, args, { detached: process.platform !== "win32" });
   children.add(child);
   child.once("exit", () => children.delete(child));
   return child;
 }
 try {
   localAddress();
+  const port = process.env.AEGIS_FRONTEND_PORT ?? "3000";
+  if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535)
+    throw new Error("AEGIS_FRONTEND_PORT must be a valid port number.");
+  // Fail before publishing or starting another watcher when a frontend exists.
+  await new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", (error) =>
+      reject(
+        error.code === "EADDRINUSE"
+          ? new Error(
+              `Port ${port} is already in use. If AEGIS is running, open http://127.0.0.1:${port}; otherwise stop that server before running npm run dev again.`,
+            )
+          : error,
+      ),
+    );
+    probe.listen(Number(port), "127.0.0.1", () => probe.close(resolve));
+  });
   if (!(await isDatabaseRunning())) {
     const server = start([
       "start",
@@ -70,9 +97,6 @@ try {
     console.log(`Reusing SpacetimeDB at ${endpoint}.`);
   }
   if (!stopping) {
-    const port = process.env.AEGIS_FRONTEND_PORT ?? "3000";
-    if (!/^\d+$/.test(port))
-      throw new Error("AEGIS_FRONTEND_PORT must be a port number.");
     await configureGateway();
     // Additive schema publication and idempotent development bootstrap happen before Next.js.
     await completed(
@@ -99,7 +123,7 @@ try {
           "--port",
           port,
         ],
-        { detached: true },
+        { detached: process.platform !== "win32" },
       );
       children.add(next);
       next.once("exit", () => children.delete(next));

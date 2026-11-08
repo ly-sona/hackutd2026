@@ -15,6 +15,7 @@ import {
   canReadTask,
   ensureRoom,
   responderAccess,
+  incidentResponders,
   visibleReference,
   type CoordinationAccess,
 } from "./coord-access";
@@ -531,6 +532,14 @@ export function coordinationCommand(
         "ACCESS_DENIED",
         "A private task or finding cannot be shared into another conversation.",
       );
+    if (
+      c.type === "Direct Message" &&
+      !ctx.db.conversationParticipants.id.find(`${c.id}:${who}`)
+    )
+      return p.fail(
+        "ACCESS_DENIED",
+        "Administrator oversight does not add you to this direct conversation.",
+      );
     if (c.type === "Direct Message")
       for (const participant of ctx.db.conversationParticipants.conversationId.filter(
         c.id,
@@ -566,10 +575,8 @@ export function coordinationCommand(
       createdAt: at,
       correctionOf,
     });
-    for (const membership of ctx.db.incidentMemberships.organizationId.filter(
-      org,
-    )) {
-      const recipient = responderAccess(ctx, org, inc, membership.userId, at);
+    for (const userId of incidentResponders(ctx, org, inc, at)) {
+      const recipient = responderAccess(ctx, org, inc, userId, at);
       if (
         recipient &&
         recipient.userId !== who &&
@@ -753,6 +760,7 @@ export function coordinationCommand(
     if (
       ![task.createdBy, task.assignedUserId].includes(who) &&
       auth.member.role !== "commander" &&
+      auth.member.role !== "administrator" &&
       status !== "Completed"
     )
       return p.fail(
@@ -930,7 +938,10 @@ export function coordinationCommand(
       return p.fail("NOT_FOUND", "Page unavailable.");
     const task = taskFor(page.taskId);
     if (action.endsWith("cancel")) {
-      if (page.requestedBy !== who && auth.member.role !== "commander")
+      if (
+        page.requestedBy !== who &&
+        !["commander", "administrator"].includes(auth.member.role)
+      )
         return p.fail(
           "ACCESS_DENIED",
           "Only the requester or Incident Manager can cancel this page.",
@@ -1025,26 +1036,7 @@ export function coordinationProjection(
       if (canReadConversation(ctx, a, c.id)) {
         const participants =
           c.type === "Incident Room"
-            ? [
-                ...ctx.db.incidentMemberships.organizationId.filter(
-                  a.organizationId,
-                ),
-              ]
-                .filter(
-                  (m) =>
-                    m.incidentId === a.incidentId &&
-                    permits(
-                      responderAccess(
-                        ctx,
-                        a.organizationId,
-                        a.incidentId,
-                        m.userId,
-                        at,
-                      ),
-                      "messages:view",
-                    ),
-                )
-                .map((m) => m.userId)
+            ? incidentResponders(ctx, a.organizationId, a.incidentId, at)
             : [
                 ...ctx.db.conversationParticipants.conversationId.filter(c.id),
               ].map((m) => m.userId);
@@ -1060,13 +1052,15 @@ export function coordinationProjection(
             (m) =>
               m.id > (read?.lastReadMessageId ?? 0n) && m.senderId !== a.userId,
           ).length,
-          readOnly: participants.some(
-            (id) =>
-              !permits(
-                responderAccess(ctx, a.organizationId, a.incidentId, id, at),
-                "messages:send",
-              ),
-          ),
+          readOnly:
+            (c.type === "Direct Message" && !participants.includes(a.userId)) ||
+            participants.some(
+              (id) =>
+                !permits(
+                  responderAccess(ctx, a.organizationId, a.incidentId, id, at),
+                  "messages:send",
+                ),
+            ),
         });
         for (const m of messages)
           emit("message", m.id, {
@@ -1112,32 +1106,34 @@ export function coordinationProjection(
       }
     for (const page of ctx.db.pages.incidentKey.filter(k))
       if (canReadTask(ctx, a, page.taskId)) emit("page", page.id, page);
-    for (const m of ctx.db.incidentMemberships.organizationId.filter(
+    for (const userId of incidentResponders(
+      ctx,
       a.organizationId,
-    ))
-      if (m.incidentId === a.incidentId) {
-        const member = responderAccess(
-          ctx,
-          a.organizationId,
-          a.incidentId,
-          m.userId,
-          at,
+      a.incidentId,
+      at,
+    )) {
+      const member = responderAccess(
+        ctx,
+        a.organizationId,
+        a.incidentId,
+        userId,
+        at,
+      );
+      if (permits(member, "messages:view")) {
+        const availability = ctx.db.responderAvailability.id.find(
+          `${a.organizationId}:${userId}`,
         );
-        if (permits(member, "messages:view")) {
-          const availability = ctx.db.responderAvailability.id.find(
-            `${a.organizationId}:${m.userId}`,
-          );
-          emit("responder", `${k}:${m.userId}`, {
-            id: m.userId,
-            name: ctx.db.users.id.find(m.userId)?.displayName ?? m.userId,
-            role: ctx.db.memberships.id.find(`${a.organizationId}:${m.userId}`)
-              ?.role,
-            availability: availability?.status ?? "Not declared",
-            updatedAt: availability?.updatedAt ?? 0n,
-            permissions: JSON.parse(member!.permissions),
-          });
-        }
+        emit("responder", `${k}:${userId}`, {
+          id: userId,
+          name: ctx.db.users.id.find(userId)?.displayName ?? userId,
+          role: ctx.db.memberships.id.find(`${a.organizationId}:${userId}`)
+            ?.role,
+          availability: availability?.status ?? "Not declared",
+          updatedAt: availability?.updatedAt ?? 0n,
+          permissions: JSON.parse(member!.permissions),
+        });
       }
+    }
     emit("policy", k, {
       now: at,
       acknowledgmentSeconds: pageAckSeconds(

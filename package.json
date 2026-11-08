@@ -24,6 +24,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspace @aegis/frontend",
     "test:e2e": "npm run test:e2e --workspace @aegis/frontend",
+    "test:e2e:extended": "npm run test:e2e:extended --workspace @aegis/frontend",
+    "test:e2e:restart": "npm run test:e2e:restart --workspace @aegis/frontend",
     "db:seed": "node scripts/seed.mjs",
     "demo:accounts": "node scripts/demo-accounts.mjs",
     "demo:reset": "node scripts/reset-demo.mjs",
