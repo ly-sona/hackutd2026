@@ -62,7 +62,13 @@ export function formReferences(f: FormData): Reference[] {
     return { kind: kind as Reference["kind"], id: id.join("|") };
   });
 }
-export function ReferenceLinks({ references }: { references: Reference[] }) {
+export function ReferenceLinks({
+  references,
+  compact = false,
+}: {
+  references: Reference[];
+  compact?: boolean;
+}) {
   const a = useAccess(),
     d = useCoordination(),
     incident = useIncident(),
@@ -76,15 +82,18 @@ export function ReferenceLinks({ references }: { references: Reference[] }) {
           label = option?.label ?? `${r.kind} · ${r.id}`;
         if (r.kind === "evidence") {
           const e = incident.evidence.find((e) => e.id === r.id);
-          return e ? <EvidenceButton key={r.id} evidence={e} /> : null;
+          return e ? (
+            <EvidenceButton key={r.id} evidence={e} compact={compact} />
+          ) : null;
         }
-        if (r.kind === "task") return <TaskButton key={r.id} id={r.id} />;
+        if (r.kind === "task")
+          return <TaskButton key={r.id} id={r.id} compact={compact} />;
         if (r.kind === "scope" && !a.can("scope:view"))
           return <BusinessOperationReference key={r.id} id={r.id} />;
         return (
           <Link
             key={`${r.kind}:${r.id}`}
-            className="max-w-full break-words rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
+            className={`max-w-full break-words rounded-md border border-border px-2 py-1 text-xs hover:bg-muted ${compact ? "min-h-7" : ""}`}
             href={
               r.kind === "finding"
                 ? `${base}/overview?finding=${encodeURIComponent(r.id)}`
@@ -254,7 +263,15 @@ function ResponderSelect({
     </Field>
   );
 }
-export function TaskButton({ id, plain = false }: { id: string; plain?: boolean }) {
+export function TaskButton({
+  id,
+  plain = false,
+  compact = false,
+}: {
+  id: string;
+  plain?: boolean;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false),
     d = useCoordination(),
     task = d.tasks.find((t) => t.id === id);
@@ -262,7 +279,7 @@ export function TaskButton({ id, plain = false }: { id: string; plain?: boolean 
   return (
     <>
       <button
-        className={`max-w-full whitespace-normal [overflow-wrap:anywhere] ${plain ? "text-left text-base font-semibold hover:underline underline-offset-4" : "rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted"}`}
+        className={`max-w-full whitespace-normal [overflow-wrap:anywhere] ${plain ? "text-left text-base font-semibold hover:underline underline-offset-4" : `rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted ${compact ? "min-h-7" : ""}`}`}
         onClick={() => setOpen(true)}
       >
         {task.title}

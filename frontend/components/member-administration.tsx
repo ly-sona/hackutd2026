@@ -59,7 +59,7 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <Badge
       variant="outline"
-      className={`font-normal capitalize ${["active", "accepted"].includes(status) ? "border-emerald-400/20 text-emerald-400" : ["pending", "expired"].includes(status) ? "border-amber-400/20 text-amber-300" : "text-muted-foreground"}`}
+      className={`font-normal capitalize ${["active", "accepted"].includes(status) ? "border-emerald-400/20 text-emerald-400" : status === "revoked" ? "border-red-400/20 text-red-400" : ["pending", "expired"].includes(status) ? "border-amber-400/20 text-amber-300" : "text-muted-foreground"}`}
     >
       {status}
     </Badge>

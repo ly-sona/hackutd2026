@@ -439,6 +439,7 @@ export function TeamWorkspace() {
                       <div className="mt-2">
                         <ReferenceLinks
                           references={JSON.parse(m.references) as Reference[]}
+                          compact
                         />
                       </div>
                       <details className="message-actions absolute right-0 top-0 z-10">

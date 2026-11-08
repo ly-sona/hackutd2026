@@ -98,15 +98,22 @@ export function EvidenceButton({
   evidence,
   findingId = "",
   annotations = [],
+  compact = false,
 }: {
   evidence: Evidence;
   findingId?: string;
   annotations?: { id: string; annotation: string; excerpt: string }[];
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        className={compact ? "h-auto min-h-7 px-2 py-1 text-xs font-normal" : ""}
+        onClick={() => setOpen(true)}
+      >
         Review evidence ·{" "}
         {evidence.id.startsWith("EV-0") ? evidence.id : evidence.filename}
       </Button>
