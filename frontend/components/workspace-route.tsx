@@ -1,3 +1,4 @@
+import { RecoveryDataProvider } from "./recovery-data";
 import { CoordinationDataProvider } from "./coordination-data";
 import { IncidentDataProvider } from "./incident-data";
 import { requireAccess } from "@/lib/server/session";
@@ -45,6 +46,7 @@ export async function WorkspaceRoute({
     >
       <IncidentDataProvider>
         <CoordinationDataProvider>
+          <RecoveryDataProvider>
           {children ?? (
             <WorkspaceShell section={section}>
               {section === "members" ? (
@@ -56,6 +58,7 @@ export async function WorkspaceRoute({
               )}
             </WorkspaceShell>
           )}
+          </RecoveryDataProvider>
         </CoordinationDataProvider>
       </IncidentDataProvider>
     </WorkspaceProvider>

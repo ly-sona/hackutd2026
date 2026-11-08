@@ -257,7 +257,7 @@ export function TaskButton({ id, plain = false }: { id: string; plain?: boolean 
   return (
     <>
       <button
-        className={plain ? "text-left text-base font-semibold hover:underline underline-offset-4" : "rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted"}
+        className={`max-w-full whitespace-normal [overflow-wrap:anywhere] ${plain ? "text-left text-base font-semibold hover:underline underline-offset-4" : "rounded-md border border-border px-2 py-1 text-xs text-left hover:bg-muted"}`}
         onClick={() => setOpen(true)}
       >
         {task.title}

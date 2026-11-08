@@ -42,6 +42,7 @@ import * as AccessSnapshotProcedure from "./access_snapshot_procedure";
 import * as EvidenceDescriptorProcedure from "./evidence_descriptor_procedure";
 import * as InvitationPreviewProcedure from "./invitation_preview_procedure";
 import * as LookupCredentialsProcedure from "./lookup_credentials_procedure";
+import * as RecoveryReadProcedure from "./recovery_read_procedure";
 import * as ScopeReadProcedure from "./scope_read_procedure";
 import * as TakeCommandResultProcedure from "./take_command_result_procedure";
 
@@ -54,6 +55,7 @@ import VisibleCoordinationDataRow from "./visible_coordination_data_table";
 import VisibleIncidentDataRow from "./visible_incident_data_table";
 import VisibleInvitationsRow from "./visible_invitations_table";
 import VisibleMembersRow from "./visible_members_table";
+import VisibleRecoveryDataRow from "./visible_recovery_data_table";
 import VisibleScopeDataRow from "./visible_scope_data_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -120,6 +122,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, VisibleMembersRow),
+  visibleRecoveryData: __table({
+    name: 'visible_recovery_data',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, VisibleRecoveryDataRow),
   visibleScopeData: __table({
     name: 'visible_scope_data',
     indexes: [
@@ -141,6 +150,7 @@ const proceduresSchema = __procedures(
   __procedureSchema("evidence_descriptor", EvidenceDescriptorProcedure.params, EvidenceDescriptorProcedure.returnType),
   __procedureSchema("invitation_preview", InvitationPreviewProcedure.params, InvitationPreviewProcedure.returnType),
   __procedureSchema("lookup_credentials", LookupCredentialsProcedure.params, LookupCredentialsProcedure.returnType),
+  __procedureSchema("recovery_read", RecoveryReadProcedure.params, RecoveryReadProcedure.returnType),
   __procedureSchema("scope_read", ScopeReadProcedure.params, ScopeReadProcedure.returnType),
   __procedureSchema("take_command_result", TakeCommandResultProcedure.params, TakeCommandResultProcedure.returnType),
 );
@@ -161,6 +171,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "visible_invitations": Omit<typeof tablesSchema.schemaType.tables["visibleInvitations"], "accessorName"> & { readonly accessorName: "visible_invitations" };
     /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
     readonly "visible_members": Omit<typeof tablesSchema.schemaType.tables["visibleMembers"], "accessorName"> & { readonly accessorName: "visible_members" };
+    /** @deprecated Use `visibleRecoveryData` instead. This alias will be removed in the next major version. */
+    readonly "visible_recovery_data": Omit<typeof tablesSchema.schemaType.tables["visibleRecoveryData"], "accessorName"> & { readonly accessorName: "visible_recovery_data" };
     /** @deprecated Use `visibleScopeData` instead. This alias will be removed in the next major version. */
     readonly "visible_scope_data": Omit<typeof tablesSchema.schemaType.tables["visibleScopeData"], "accessorName"> & { readonly accessorName: "visible_scope_data" };
   };
@@ -188,6 +200,7 @@ const tableAccessorAliases = {
   "visible_incident_data": "visibleIncidentData",
   "visible_invitations": "visibleInvitations",
   "visible_members": "visibleMembers",
+  "visible_recovery_data": "visibleRecoveryData",
   "visible_scope_data": "visibleScopeData",
 } as const;
 
@@ -223,6 +236,8 @@ export type DbView = __DbViewBase & {
   readonly "visible_invitations": __DbViewBase["visibleInvitations"];
   /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
   readonly "visible_members": __DbViewBase["visibleMembers"];
+  /** @deprecated Use `visibleRecoveryData` instead. This alias will be removed in the next major version. */
+  readonly "visible_recovery_data": __DbViewBase["visibleRecoveryData"];
   /** @deprecated Use `visibleScopeData` instead. This alias will be removed in the next major version. */
   readonly "visible_scope_data": __DbViewBase["visibleScopeData"];
 };
@@ -243,6 +258,8 @@ export type Tables = __TablesBase & {
   readonly "visible_invitations": __TablesBase["visibleInvitations"];
   /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
   readonly "visible_members": __TablesBase["visibleMembers"];
+  /** @deprecated Use `visibleRecoveryData` instead. This alias will be removed in the next major version. */
+  readonly "visible_recovery_data": __TablesBase["visibleRecoveryData"];
   /** @deprecated Use `visibleScopeData` instead. This alias will be removed in the next major version. */
   readonly "visible_scope_data": __TablesBase["visibleScopeData"];
 };

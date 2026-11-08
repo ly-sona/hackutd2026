@@ -37,7 +37,8 @@ import {
 import { Badge } from "./ui/badge";
 import { Avatar } from "./account-menu";
 import { PageHeading, Disclosure } from "./workspace-ui";
-import { AffectedOperations } from "./affected-operations";
+import { AffectedOperations } from "./recovery-workspace";
+import { IncidentReports, ReportHistory } from "./incident-reports";
 import { api } from "@/lib/api";
 import { incidentBase } from "@/lib/roles";
 import {
@@ -321,6 +322,7 @@ export function LiveOverview() {
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="outline">{i.status}</Badge>
             {a.can("incident:manage") && <UpdateIncident />}
+            <IncidentReports />
             {a.can("notes:create") && <AddNote />}
             {a.can("evidence:upload") && <AttachEvidence />}
             {a.can("incident:create") && (
@@ -457,7 +459,7 @@ export function LiveOverview() {
           </Disclosure>
           <section className="mt-7">
             <h2 className="mb-4 text-2xl font-semibold">Affected operations</h2>
-            <AffectedOperations />
+            <AffectedOperations embedded />
           </section>
         </div>
         <section>
@@ -612,6 +614,10 @@ export function LiveTimeline() {
           </Button>
         }
       />
+      <div className="mb-4">
+        <IncidentReports />
+        <ReportHistory />
+      </div>
       <div className="mb-6 flex flex-wrap items-center gap-8 border-b border-border pb-3">
         <select
           aria-label="Filter timeline events"

@@ -26,7 +26,8 @@
     "test:e2e": "npm run test:e2e --workspace @aegis/frontend",
     "db:seed": "node scripts/seed.mjs",
     "demo:accounts": "node scripts/demo-accounts.mjs",
-    "demo:reset": "node scripts/reset-demo.mjs"
+    "demo:reset": "node scripts/reset-demo.mjs",
+    "demo:recovery": "node scripts/recovery-demo.mjs"
   },
   "devDependencies": {
     "tsx": "^4.23.15"

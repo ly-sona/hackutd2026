@@ -1,3 +1,4 @@
+import { moduleId as coordinationId } from "./module-id";
 import type { Ctx, Reader } from "./index";
 import {
   appendEvent,
@@ -26,7 +27,7 @@ import {
   type Reference,
 } from "../../../shared/coordination";
 import { seedCoordination } from "./coord-seed";
-type Task = NonNullable<ReturnType<Ctx["db"]["tasks"]["id"]["find"]>>;
+export type Task = NonNullable<ReturnType<Ctx["db"]["tasks"]["id"]["find"]>>;
 type Page = NonNullable<ReturnType<Ctx["db"]["pages"]["id"]["find"]>>;
 const activeStatus = "Awaiting Acknowledgment";
 const terminalTask = (task: Task) =>
@@ -252,14 +253,6 @@ export function processPages(ctx: Ctx) {
       );
     }
   }
-}
-// Persisted state may outlive many publishes/restarts. Never assume a generated UUID is absent.
-function coordinationId(ctx: Ctx, exists: (id: string) => boolean) {
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const id = ctx.newUuidV7().toString();
-    if (!exists(id)) return id;
-  }
-  throw new Error("Unable to allocate a unique coordination identifier.");
 }
 function issuePage(ctx: Ctx, task: Task, actor: string, backup: string) {
   const at = time(ctx),
@@ -749,24 +742,7 @@ export function coordinationCommand(
         return p.fail("INVALID_INPUT", "Backup must be a different responder.");
     }
     const backup = d.page === true ? pagePlan(task) : "";
-    ctx.db.tasks.insert(task);
-    event(
-      ctx,
-      task,
-      who,
-      "task",
-      "Task created: " + task.title,
-      task.description,
-    );
-    notifyCoordination(
-      ctx,
-      task,
-      assignedUserId,
-      "task.assigned",
-      "Task assigned: " + task.title,
-      task.description,
-      { taskId: task.id },
-    );
+    createCoordinationTask(ctx, task, who);
     if (backup) issuePage(ctx, task, who, backup);
     return finish({ taskId: task.id });
   }
@@ -1175,4 +1151,76 @@ export function coordinationProjection(
         emit("findingSource", source.id, source);
   }
   return rows;
+}
+
+// Internal application services reuse the same Phase 4 task history and notifications after validating their own workflow policy.
+export function createCoordinationTask(ctx: Ctx, task: Task, actor: string) {
+  if (ctx.db.tasks.id.find(task.id)) return task.id;
+  ctx.db.tasks.insert(task);
+  event(
+    ctx,
+    task,
+    actor,
+    "task",
+    "Task created: " + task.title,
+    task.description,
+  );
+  notifyCoordination(
+    ctx,
+    task,
+    task.assignedUserId,
+    "task.assigned",
+    "Task assigned: " + task.title,
+    task.description,
+    { taskId: task.id },
+  );
+  return task.id;
+}
+export function linkAutomatedTaskEvidence(
+  ctx: Ctx,
+  taskId: string,
+  evidenceId: string,
+  comment: string,
+) {
+  const task = ctx.db.tasks.id.find(taskId),
+    evidence = ctx.db.evidence.id.find(evidenceId);
+  if (!task || !evidence || task.incidentKey !== evidence.incidentKey)
+    throw new Error("Invalid workflow task evidence.");
+  const references = JSON.parse(task.references) as Reference[];
+  if (!references.some((r) => r.kind === "evidence" && r.id === evidenceId))
+    references.push({ kind: "evidence", id: evidenceId });
+  ctx.db.tasks.id.update({
+    ...task,
+    references: json(references),
+    updatedAt: time(ctx),
+  });
+  ctx.db.taskUpdates.insert({
+    id: 0n,
+    organizationId: task.organizationId,
+    incidentId: task.incidentId,
+    incidentKey: task.incidentKey,
+    taskId: task.id,
+    actorId: "system",
+    previousStatus: task.status,
+    newStatus: task.status,
+    comment,
+    createdAt: time(ctx),
+  });
+  event(
+    ctx,
+    task,
+    "system",
+    "task",
+    "Workflow verification evidence available",
+    comment,
+  );
+  notifyCoordination(
+    ctx,
+    task,
+    task.assignedUserId,
+    "task.verification",
+    "Review workflow verification evidence",
+    comment,
+    { taskId: task.id },
+  );
 }

@@ -34,6 +34,62 @@ export const AccessTimer = __t.object("AccessTimer", {
 });
 export type AccessTimer = __Infer<typeof AccessTimer>;
 
+export const ApprovalDecisions = __t.object("ApprovalDecisions", {
+  id: __t.string(),
+  requestId: __t.string(),
+  userId: __t.string(),
+  role: __t.string(),
+  decision: __t.string(),
+  justification: __t.string(),
+  decidedAt: __t.u64(),
+  revisionToken: __t.string(),
+});
+export type ApprovalDecisions = __Infer<typeof ApprovalDecisions>;
+
+export const ApprovalRequests = __t.object("ApprovalRequests", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  displayReference: __t.string(),
+  title: __t.string(),
+  description: __t.string(),
+  operationId: __t.string(),
+  executionId: __t.string(),
+  actionType: __t.string(),
+  policy: __t.string(),
+  sensitivity: __t.string(),
+  requestedBy: __t.string(),
+  justification: __t.string(),
+  evidenceIds: __t.string(),
+  affectedEntityIds: __t.string(),
+  parameters: __t.string(),
+  contextFingerprint: __t.string(),
+  revisionToken: __t.string(),
+  status: __t.string(),
+  createdAt: __t.u64(),
+  expiresAt: __t.u64(),
+  completedAt: __t.u64(),
+  result: __t.string(),
+});
+export type ApprovalRequests = __Infer<typeof ApprovalRequests>;
+
+export const BusinessOperations = __t.object("BusinessOperations", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  entityId: __t.string(),
+  importance: __t.string(),
+  status: __t.string(),
+  explanation: __t.string(),
+  operatingMode: __t.string(),
+  activeExecutionId: __t.string(),
+  updatedAt: __t.u64(),
+  updatedBy: __t.string(),
+});
+export type BusinessOperations = __Infer<typeof BusinessOperations>;
+
 export const CommandResults = __t.object("CommandResults", {
   id: __t.string(),
   result: __t.string(),
@@ -146,6 +202,22 @@ export const EvidenceLinks = __t.object("EvidenceLinks", {
 });
 export type EvidenceLinks = __Infer<typeof EvidenceLinks>;
 
+export const FallbackAccess = __t.object("FallbackAccess", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  executionId: __t.string(),
+  userId: __t.string(),
+  allowedGroupId: __t.string(),
+  accessLevel: __t.string(),
+  activatedAt: __t.u64(),
+  expiresAt: __t.u64(),
+  revokedAt: __t.u64(),
+  reason: __t.string(),
+});
+export type FallbackAccess = __Infer<typeof FallbackAccess>;
+
 export const FindingReads = __t.object("FindingReads", {
   id: __t.string(),
   organizationId: __t.string(),
@@ -230,6 +302,50 @@ export const IncidentMemberships = __t.object("IncidentMemberships", {
 });
 export type IncidentMemberships = __Infer<typeof IncidentMemberships>;
 
+export const IncidentReportingMetadata = __t.object("IncidentReportingMetadata", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  detectionSource: __t.string(),
+  reportedAt: __t.u64(),
+  initialReporterId: __t.string(),
+  initialObservation: __t.string(),
+  attackVector: __t.string(),
+  actorCategory: __t.string(),
+  actionCategory: __t.string(),
+  assetCategory: __t.string(),
+  impactCategory: __t.string(),
+  classificationEvidenceIds: __t.string(),
+  mitreMappings: __t.string(),
+  rootCause: __t.string(),
+  lessonsLearned: __t.string(),
+  updatedBy: __t.string(),
+  updatedAt: __t.u64(),
+});
+export type IncidentReportingMetadata = __Infer<typeof IncidentReportingMetadata>;
+
+export const IncidentReports = __t.object("IncidentReports", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  type: __t.string(),
+  version: __t.u32(),
+  generatedBy: __t.string(),
+  generatedAt: __t.u64(),
+  sourceCutoff: __t.u64(),
+  audience: __t.string(),
+  requiredPermissions: __t.string(),
+  includeLegal: __t.bool(),
+  storageReference: __t.string(),
+  sha256: __t.string(),
+  size: __t.u64(),
+  status: __t.string(),
+  snapshot: __t.string(),
+});
+export type IncidentReports = __Infer<typeof IncidentReports>;
+
 export const IncidentStubs = __t.object("IncidentStubs", {
   id: __t.string(),
   organizationId: __t.string(),
@@ -283,6 +399,27 @@ export const Invitations = __t.object("Invitations", {
   status: __t.string(),
 });
 export type Invitations = __Infer<typeof Invitations>;
+
+export const LegalReviews = __t.object("LegalReviews", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  jurisdictions: __t.string(),
+  informationCategories: __t.string(),
+  obligations: __t.string(),
+  notificationAssessment: __t.string(),
+  legalHold: __t.string(),
+  evidencePreservation: __t.string(),
+  clientNotification: __t.string(),
+  regulatoryNotification: __t.string(),
+  confidentiality: __t.string(),
+  privilegeDesignation: __t.string(),
+  reviewStatus: __t.string(),
+  reviewedBy: __t.string(),
+  reviewedAt: __t.u64(),
+});
+export type LegalReviews = __Infer<typeof LegalReviews>;
 
 export const LoginAttempts = __t.object("LoginAttempts", {
   login: __t.string(),
@@ -366,6 +503,112 @@ export const Pages = __t.object("Pages", {
 });
 export type Pages = __Infer<typeof Pages>;
 
+export const RecoveryExecutionInternals = __t.object("RecoveryExecutionInternals", {
+  id: __t.string(),
+  fixtureId: __t.string(),
+  safeRecords: __t.string(),
+});
+export type RecoveryExecutionInternals = __Infer<typeof RecoveryExecutionInternals>;
+
+export const RecoveryExecutions = __t.object("RecoveryExecutions", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  templateId: __t.string(),
+  templateVersion: __t.u32(),
+  kind: __t.string(),
+  operationId: __t.string(),
+  requestedBy: __t.string(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+  completedAt: __t.u64(),
+  state: __t.string(),
+  failureReason: __t.string(),
+  approvalId: __t.string(),
+  taskId: __t.string(),
+  parentExecutionId: __t.string(),
+  parameters: __t.string(),
+  contextFingerprint: __t.string(),
+  triggerEvidenceIds: __t.string(),
+  triggerAssessmentIds: __t.string(),
+  result: __t.string(),
+  step: __t.u32(),
+  nextAt: __t.u64(),
+  attempt: __t.u32(),
+  retryOfExecutionId: __t.string(),
+});
+export type RecoveryExecutions = __Infer<typeof RecoveryExecutions>;
+
+export const RecoveryFixtures = __t.object("RecoveryFixtures", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  outcome: __t.string(),
+  evidenceId: __t.string(),
+  filename: __t.string(),
+  storageReference: __t.string(),
+  sha256: __t.string(),
+  size: __t.u64(),
+  integrity: __t.bool(),
+  availability: __t.bool(),
+  createdAt: __t.u64(),
+  safeRecords: __t.string(),
+});
+export type RecoveryFixtures = __Infer<typeof RecoveryFixtures>;
+
+export const RecoveryOperations = __t.object("RecoveryOperations", {
+  id: __t.string(),
+  action: __t.string(),
+  fingerprint: __t.string(),
+  result: __t.string(),
+  createdAt: __t.u64(),
+});
+export type RecoveryOperations = __Infer<typeof RecoveryOperations>;
+
+export const RecoverySimulationState = __t.object("RecoverySimulationState", {
+  id: __t.string(),
+  profile: __t.string(),
+  updatedAt: __t.u64(),
+});
+export type RecoverySimulationState = __Infer<typeof RecoverySimulationState>;
+
+export const RecoverySteps = __t.object("RecoverySteps", {
+  id: __t.string(),
+  executionId: __t.string(),
+  order: __t.u32(),
+  type: __t.string(),
+  state: __t.string(),
+  startedAt: __t.u64(),
+  completedAt: __t.u64(),
+  result: __t.string(),
+  evidenceId: __t.string(),
+});
+export type RecoverySteps = __Infer<typeof RecoverySteps>;
+
+export const RecoveryTemplates = __t.object("RecoveryTemplates", {
+  id: __t.string(),
+  templateId: __t.string(),
+  version: __t.u32(),
+  kind: __t.string(),
+  name: __t.string(),
+  description: __t.string(),
+  policy: __t.string(),
+  steps: __t.string(),
+  verificationConditions: __t.string(),
+  fallbackTemplateId: __t.string(),
+  expectedResult: __t.string(),
+  approved: __t.bool(),
+});
+export type RecoveryTemplates = __Infer<typeof RecoveryTemplates>;
+
+export const ReportSnapshots = __t.object("ReportSnapshots", {
+  id: __t.string(),
+  snapshot: __t.string(),
+});
+export type ReportSnapshots = __Infer<typeof ReportSnapshots>;
+
 export const ResponderAvailability = __t.object("ResponderAvailability", {
   id: __t.string(),
   organizationId: __t.string(),
@@ -374,6 +617,16 @@ export const ResponderAvailability = __t.object("ResponderAvailability", {
   updatedAt: __t.u64(),
 });
 export type ResponderAvailability = __Infer<typeof ResponderAvailability>;
+
+export const SafeSupportRecords = __t.object("SafeSupportRecords", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  groupId: __t.string(),
+  label: __t.string(),
+  serviceTier: __t.string(),
+  instruction: __t.string(),
+});
+export type SafeSupportRecords = __Infer<typeof SafeSupportRecords>;
 
 export const ScenarioSeeds = __t.object("ScenarioSeeds", {
   id: __t.string(),
@@ -531,6 +784,22 @@ export const Tasks = __t.object("Tasks", {
 });
 export type Tasks = __Infer<typeof Tasks>;
 
+export const TrustRestrictions = __t.object("TrustRestrictions", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  entityId: __t.string(),
+  category: __t.string(),
+  reason: __t.string(),
+  evidenceIds: __t.string(),
+  active: __t.bool(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+  updatedBy: __t.string(),
+});
+export type TrustRestrictions = __Infer<typeof TrustRestrictions>;
+
 export const Users = __t.object("Users", {
   id: __t.string(),
   authSubject: __t.string(),
@@ -606,6 +875,9 @@ export type VisibleMember = __Infer<typeof VisibleMember>;
 
 export const VisibleMembers = __t.object("VisibleMembers", {});
 export type VisibleMembers = __Infer<typeof VisibleMembers>;
+
+export const VisibleRecoveryData = __t.object("VisibleRecoveryData", {});
+export type VisibleRecoveryData = __Infer<typeof VisibleRecoveryData>;
 
 export const VisibleScopeData = __t.object("VisibleScopeData", {});
 export type VisibleScopeData = __Infer<typeof VisibleScopeData>;

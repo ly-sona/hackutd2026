@@ -42,6 +42,14 @@ export const permissions = [
   "findings:edit",
   "findings:verify",
   "notes:create",
+  "trust:manage",
+  "recovery:start",
+  "recovery:manage",
+  "approvals:decide",
+  "fallback:read",
+  "classification:edit",
+  "legal:view",
+  "legal:edit",
 ] as const;
 export type Permission = (typeof permissions)[number];
 const coordination: Permission[] = [
@@ -77,6 +85,14 @@ export const matrix: Record<Role, readonly Permission[]> = {
   commander: [
     ...common,
     ...coordination,
+    "trust:manage",
+    "recovery:start",
+    "recovery:manage",
+    "approvals:decide",
+    "fallback:read",
+    "classification:edit",
+    "legal:view",
+    "legal:edit",
     "tasks:assign",
     "pages:create",
     "findings:create",
@@ -97,6 +113,12 @@ export const matrix: Record<Role, readonly Permission[]> = {
   analyst: [
     ...common,
     ...coordination,
+    "trust:manage",
+    "recovery:start",
+    "approvals:decide",
+    "fallback:read",
+    "classification:edit",
+    "reports:export",
     "tasks:assign",
     "pages:create",
     "findings:create",
@@ -113,6 +135,10 @@ export const matrix: Record<Role, readonly Permission[]> = {
   legal: [
     ...common,
     ...coordination,
+    "approvals:decide",
+    "legal:view",
+    "legal:edit",
+    "classification:edit",
     "scope:records",
     "findings:create",
     "scope:view",
@@ -122,6 +148,9 @@ export const matrix: Record<Role, readonly Permission[]> = {
   operations: [
     ...common,
     ...coordination,
+    "recovery:start",
+    "approvals:decide",
+    "fallback:read",
     "findings:create",
     "operations:request",
   ],

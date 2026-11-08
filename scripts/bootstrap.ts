@@ -69,3 +69,6 @@ await seedIncidents();
 
 console.log(await command("scope.seed", "", {}));
 console.log(await command("coord.seed", "", {}));
+
+const { seedRecovery } = await import('./seed-recovery');
+await seedRecovery();
