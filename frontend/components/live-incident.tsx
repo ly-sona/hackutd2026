@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
-  Play,
   ChevronRight,
   MoreHorizontal,
   Check,
@@ -603,16 +602,6 @@ export function LiveTimeline() {
         className="mb-4"
         title="Timeline"
         description="What happened, what matters, and what comes next."
-        actions={
-          <Button
-            variant="outline"
-            disabled
-            title="Timeline replay is not implemented"
-          >
-            <Play size={18} />
-            Replay
-          </Button>
-        }
       />
       <div className="mb-4">
         <IncidentReports />
