@@ -4,6 +4,7 @@ import { UrgentPages } from "./urgent-pages";
 import { IncidentSelector } from "./incident-header";
 import { Brand } from "./brand";
 import { AccountMenu } from "./account-menu";
+import { PageHelp } from "./page-help";
 import { useAccess } from "./workspace-provider";
 import { roleLabels, incidentBase, sections } from "@/lib/roles";
 export type Section = (typeof sections)[number] | "members" | "invitations";
@@ -41,6 +42,7 @@ export function WorkspaceShell({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-3 sm:gap-6">
+            <PageHelp />
             <AccountMenu
               name={access.userName}
               role={roleLabels[access.role]}

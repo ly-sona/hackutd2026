@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Building2, ChevronRight } from "lucide-react";
 import { Brand, BrandMark } from "@/components/brand";
 import { AccountMenu } from "@/components/account-menu";
+import { PageHelp } from "@/components/page-help";
 import { AccessState } from "@/components/access-state";
 import { requireAccess } from "@/lib/server/session";
 import { AccessError } from "@/lib/server/gateway";
@@ -31,6 +32,7 @@ export default async function OrganizationsPage() {
             Your response workspace
           </span>
           <AccountMenu name={account.user.name} />
+          <PageHelp />
         </div>
       </header>
 
