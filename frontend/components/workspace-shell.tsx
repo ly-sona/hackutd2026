@@ -1,7 +1,7 @@
 "use client";
 import Link from "./workspace-link";
 import { UrgentPages } from "./urgent-pages";
-import { IncidentSelector, NotificationCenter } from "./incident-header";
+import { IncidentSelector } from "./incident-header";
 import { Brand } from "./brand";
 import { AccountMenu } from "./account-menu";
 import { useAccess } from "./workspace-provider";
@@ -41,7 +41,6 @@ export function WorkspaceShell({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-3 sm:gap-6">
-            <NotificationCenter />
             <AccountMenu
               name={access.userName}
               role={roleLabels[access.role]}

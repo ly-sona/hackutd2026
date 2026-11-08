@@ -125,6 +125,8 @@ export const visitWindows = table(
     openedAt: t.u64(),
   },
 );
+// Retired notification-center storage. Keep this private schema to preserve
+// existing databases; no commands, seeds or browser projections use these rows.
 export const notifications = table(
   {},
   {
