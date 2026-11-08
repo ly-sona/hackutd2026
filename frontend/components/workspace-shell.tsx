@@ -3,7 +3,7 @@ import Link from "./workspace-link";
 import { useEffect, useState } from "react";
 import { Search, Command, ArrowUpRight } from "lucide-react";
 import { UrgentPages } from "./urgent-pages";
-import { IncidentSelector, NotificationCenter } from "./incident-header";
+import { IncidentSelector } from "./incident-header";
 import { Brand } from "./brand";
 import { AccountMenu } from "./account-menu";
 import { useAccess } from "./workspace-provider";
@@ -75,7 +75,6 @@ export function WorkspaceShell({
                 <Command size={12} />K
               </span>
             </button>
-            <NotificationCenter />
             <AccountMenu
               name={access.userName}
               role={roleLabels[access.role]}
