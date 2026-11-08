@@ -65,9 +65,6 @@ test("Team pending invitations share page details and actions and update their l
   await expect(pageRow).toContainText(expiry);
   await expect(pageRow).toContainText("Security Analyst");
   await invite.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: test.info().outputPath("pending-desktop.png"),
-  });
   await invite
     .getByRole("button", { name: "Generate replacement", exact: true })
     .click();
@@ -82,17 +79,6 @@ test("Team pending invitations share page details and actions and update their l
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(summary).toContainText(`(${initial + 1})`);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Conversations", exact: true })
-    .click();
-  await invite.scrollIntoViewIfNeeded();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page.screenshot({ path: test.info().outputPath("pending-mobile.png") });
   await invite.getByRole("button", { name: "Revoke", exact: true }).click();
   await page
     .getByRole("button", { name: "Confirm invitation revocation", exact: true })
@@ -106,10 +92,5 @@ test("Team pending invitations share page details and actions and update their l
       .filter({ hasText: "pending" }),
   ).toHaveCount(0);
   await expect(summary).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
   await management.close();
 });

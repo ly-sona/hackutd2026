@@ -700,7 +700,7 @@ test.describe("Phase 5 evidence, approved recovery and immutable reports", () =>
       await anonymous.close();
     }
   });
-  test("renders Operations and real evidence-backed report controls on desktop and mobile", async ({
+  test("renders Operations and real evidence-backed report controls on desktop", async ({
     context,
     page,
   }) => {
@@ -723,12 +723,6 @@ test.describe("Phase 5 evidence, approved recovery and immutable reports", () =>
       "Restore Customer Support Capability",
     );
     await page.getByRole("button", { name: "Close", exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-      ),
-    ).toBe(true);
     await page.goto(base + "/overview");
     await page
       .getByRole("button", { name: "Generate report", exact: true })

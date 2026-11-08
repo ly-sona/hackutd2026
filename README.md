@@ -146,10 +146,14 @@ npm run build           # Backend type-check/bundle + production Next.js build
 npm run lint
 npm run typecheck       # Both workspaces, including generated bindings
 npm run test            # Unit/component and shared domain-rule tests
-npm run test:e2e        # Real SpacetimeDB + Chromium security/integration flows
+npm run test:e2e        # Seven critical desktop flows against real SpacetimeDB
+npm run test:e2e:extended # Opt-in recovery, administrator and invitation regressions
+npm run test:e2e:restart # Opt-in real database restart durability
 ```
 
-Playwright owns ports **3100/3101**, database `aegis-e2e`, `.spacetime/e2e/`, and `.next-e2e/`. The test runner creates fresh synthetic state in an OS temporary directory for each run, points the ignored `.spacetime/e2e` symlink at it, and records all previous state locations in `.spacetime/e2e-runs.jsonl`. It never deletes or resets previous state and rejects an occupied test database port. It does not modify the developer environment file. It verifies independent login/logout, spoofed sessions, corporate-account denial, private table/direct reducer restrictions, cross-tenant and incident isolation, invitation acceptance/expiry/reuse/replacement/revocation, role changes in an open second session, last-admin protection, membership/session expiry, live revocation and phone-recipient enrollment. Phase 0 tests still verify cross-browser real-time health-check writes and connection failure/recovery at `/development`.
+The default suite covers access boundaries/live revocation, incident documentation/private evidence, record-specific scope, live messages/DM privacy, independent task review, server paging and desktop navigation. Mobile automation, exact styling/chronology checks, public health diagnostics and duplicate workflow tours have been removed. Newer recovery/administrator/invitation regressions remain opt-in. See [the current testing guide](docs/testing.md) for coverage, tradeoffs and focused commands; the earlier [test audit](docs/test-suite-audit.md) is historical.
+
+Playwright owns ports **3100/3101**, database `aegis-e2e`, `.spacetime/e2e/`, and `.next-e2e/`. Its npm commands acquire an exclusive host-wide `aegis-browser-tests.lock` in the OS temporary directory through server teardown. Do not bypass the wrapper for browser execution. The runner creates fresh synthetic state in an OS temporary directory for each run, points the ignored `.spacetime/e2e` symlink at it, and records all previous state locations in `.spacetime/e2e-runs.jsonl`. It never deletes or resets previous state and rejects occupied test ports. It does not modify the developer environment file. The optional restart test also owns port **3201**.
 
 Expiry fixtures require **both** the trusted service identity and database `AEGIS_TEST_MODE=true`; the local runner enables them only in its isolated E2E mode. There is no HTTP fixture endpoint. Do not enable this flag on a shared demo deployment. Tests use local credential files instead of authentication bypasses.
 
@@ -236,7 +240,7 @@ Data model: incidents retain current lifecycle/metadata; findings retain investi
 
 Documentation follows capture and review principles from [NIST SP 800-61 Rev. 3](https://csrc.nist.gov/pubs/sp/800/61/r3/final): observations, actors, timestamps, affected systems, assessments, supporting evidence, response decisions and recovery status. This MVP makes no NIST compliance claim.
 
-Phase 2 tests add real incident/finding writes, two-session updates, status history/corrections, unread/visit behavior, evidence integrity/safe previews/size/type/permission checks, recipient privacy, seed preservation and reset guards. Run the unchanged root build, lint, typecheck, unit and browser commands above.
+The minimal default integration suite retains incident/finding writes, evidence-backed verification, original-byte retrieval, private access and append-only corrections. Pure incident/evidence rules remain unit-tested. Detailed visit/notification, seed/reset and presentation permutations are no longer automated integration scenarios; see [testing coverage](docs/testing.md).
 
 ## Phase 3 compromise scope and Context Graph
 
@@ -260,7 +264,7 @@ Deterministic traversal follows documented access, containment, storage and depe
 
 New private tables: `scope_entities`, `scope_associations`, `scope_relationships`, `scope_assessments`, `scope_records`, `scope_record_memberships` and `scope_evidence_links`. `scope.*` actions extend the existing service-gated command reducer; `scope_read` provides fresh authorized record/inventory queries, and `visible_scope_data` provides caller-restricted live graph projections. `shared/scope.ts` contains pure counting/traversal rules used by the backend and unit tests. No additional service, dependency or graph database was introduced.
 
-Run the same build/lint/typecheck/unit/browser commands above. Phase 3 tests exercise real graph/record mutations, two-session synchronization, evidence reuse, independent impacts, unique counts, corrections, seed preservation and access revocation. Optional general baseline/record comparison, anomaly detection and automated cleaning remain unimplemented. Phases 4 and 5 follow below.
+The minimal Scope integration scenario verifies paginated record lookup, evidence-backed single-record impact, independent dimensions, count changes and role restrictions. Unit tests retain overlapping-group counting and deterministic traversal checks. Detailed graph-control and seed tours are no longer integration scenarios. Optional general baseline/record comparison, anomaly detection and automated cleaning remain unimplemented. Phases 4 and 5 follow below.
 
 
 ## Phase 4 communication and coordination
@@ -279,7 +283,7 @@ The existing private one-second SpacetimeDB scheduled reducer owns deadlines. De
 
 **Seed and tests:** `acme-phase4-v1` adds 3 incident rooms, 3 DMs, 37 synthetic messages, 11 tasks, 4 terminal historical page records, manual availability. Repeated `npm run db:seed` preserves user work and original evidence; the existing disposable IR-2043 read-state reset remains unchanged. New actions use `coord.*` through the existing service-gated command boundary and `/api/coordination`; `visible_coordination_data` is a caller-filtered SDK subscription. References are validated structured JSON within message/task rows; no replacement incident/event tables or external service were added.
 
-Run `npm run test:e2e` for real-backend chat, privacy, conversion, task verification, availability and paging tests alongside all previous phases. A separate disposable restart test temporarily owns **3201** and verifies durable pending pages, messages and one-time escalation across a real standalone restart; it cleans up only its own temporary state. The trusted `coord.test.page_due` fixture can move a pending original deadline into the past only in the isolated test module and is excluded from HTTP routes. No normal client can choose or accelerate a page deadline. For a local visual demo only, set `AEGIS_PAGE_ACK_SECONDS=15` in root `.env.local`, restart `npm run dev`, and use Page responder. Remove the override to restore five minutes.
+Run `npm run test:e2e` for the seven critical scenarios, including real-backend message delivery/retry, private-source conversion, task verification and server paging. Detailed availability permutations are outside this minimal suite; the notification center is retired. Run `npm run test:e2e:restart` separately for the disposable restart test: it temporarily owns **3201**, verifies durable pages and recovery progression across a real standalone restart, and cleans up only its own temporary state. The trusted `coord.test.page_due` fixture can move a pending original deadline into the past only in the isolated test module and is excluded from HTTP routes. No normal client can choose or accelerate a page deadline. For a local visual demo only, set `AEGIS_PAGE_ACK_SECONDS=15` in root `.env.local`, restart `npm run dev`, and use Page responder. Remove the override to restore five minutes.
 
 Deployment requires independent HTTPS/WSS hosting, private service credentials and backed-up database/evidence state. Chat is access-controlled and transport-protected by TLS when deployed; **end-to-end encryption is not implemented**. Phase 5 approvals, simulated recovery, trust warnings and immutable report generation are described below.
 
