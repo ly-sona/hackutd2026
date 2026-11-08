@@ -1,12 +1,12 @@
 # Addition A: incident intake and deterministic processing
 
-Addition A adds a contextual Investigation workspace and synthetic snapshot processing. It does not include a model, proposals, proposal review, continuous collection, task generation, recovery recommendations, or new report formats. Addition B now supplies the separate model/review workflow described in [investigation-b.md](investigation-b.md). Addition C remains unimplemented.
+Addition A adds a contextual Investigation workspace and synthetic snapshot processing. It does not include a model, proposals, proposal review, continuous collection, task generation, recovery recommendations, or new report formats. Addition B now supplies the separate model/review workflow described in [investigation-b.md](investigation-b.md). Addition C now adds the separate incremental workflow in [investigation-c.md](investigation-c.md).
 
 ## Using the workspace
 
 Run the existing `npm run dev` command. It preserves the current database, publishes additions non-destructively, generates bindings, runs idempotent seeds, and starts one supervised investigation runner alongside Next.js. Create an incident with the existing New Incident form, follow **Start Investigation** from Overview, open **Evidence**, select implemented connectors, and choose **Collect Sources**. Overview stays available throughout; the existing five primary tabs are unchanged.
 
-Four P0 connectors are implemented: Customer Records / CRM, Identity and Access, Network Activity, and Business Services and Dependencies. They read actual versioned UTF-8 JSON fixture bytes from the repository-owned allowlist in `backend/seed/investigation-connectors.json`. Each has baseline, initial, and later fixture versions. Only baseline/initial acquisition is exposed in A; later files are comparison test inputs, not a continuous collection feature. HR/Payroll are planned P1 connectors; the other six catalog entries are planned P2. Disabled entries cannot be submitted through the backend.
+Four P0 connectors are implemented: Customer Records / CRM, Identity and Access, Network Activity, and Business Services and Dependencies. They read actual versioned UTF-8 JSON fixture bytes from the repository-owned allowlist in `backend/seed/investigation-connectors.json`. Each has baseline, initial, and later fixture versions. Addition A exposes baseline/initial acquisition; Addition C now enables the later fixture through a separate authorized subsequent-collection action. HR/Payroll are planned P1 connectors; the other six catalog entries are planned P2. Disabled entries cannot be submitted through the backend.
 
 Collection is explicitly simulated. Parsing, validation, hashes, original preservation, comparison, domain rules, progress, subscriptions, and authorization are functional. No corporate connection, arbitrary file/path/URL selection, upload requirement, OAuth credential, or external service is involved.
 

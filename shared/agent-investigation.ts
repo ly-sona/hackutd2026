@@ -213,7 +213,7 @@ export function groundProposal(
     canonical(expected.sort((a, b) => canonical(a).localeCompare(canonical(b))))
   )
     throw new Error(
-      "Citations must exactly resolve every selected observation.",
+      `Citations must exactly resolve every selected observation. Copy this complete citations array unchanged: ${canonical(expected)}`,
     );
   p.citations.forEach(record);
   const primary = selected[0];
@@ -222,7 +222,7 @@ export function groundProposal(
     p.interpretation === "Investigate source change"
       ? ["unexplained-field-change", "missing-export-entry"]
       : p.interpretation === "Investigate account activity"
-        ? ["new-signin-source"]
+        ? ["new-signin-source", "new-access-context"]
         : p.interpretation === "Investigate containment"
           ? ["traffic-after-reported-isolation"]
           : ["reported-service-interruption"];

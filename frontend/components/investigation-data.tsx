@@ -37,5 +37,6 @@ export function useInvestigationData() {
     runs,
     run: runs[0],
     sources: get<InvestigationSource>("source"),
+    historicalSources: get<InvestigationSource>("source_history"),
   };
 }

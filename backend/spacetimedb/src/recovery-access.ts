@@ -1,3 +1,4 @@
+import { recoveryContextEntities } from "../../../shared/recovery-context";
 import type { Ctx, Reader } from "./index";
 import { json, key, time, type Ports } from "./incident-domain";
 import { scopeGraph } from "./scope-domain";
@@ -74,19 +75,87 @@ export function checkedEvidence(
     if (ctx.db.evidence.id.find(id)?.incidentKey !== key(org, inc))
       return p.fail("INVALID_INPUT", "Evidence must belong to this incident.");
 }
-export function incidentContext(ctx: Reader, org: string, inc: string) {
-  const k = key(org, inc);
+export function incidentContext(
+  ctx: Reader,
+  org: string,
+  inc: string,
+  targets?: string[],
+  evidenceIds: string[] = [],
+) {
+  const k = key(org, inc),
+    relationships = [...ctx.db.scopeRelationships.incidentKey.filter(k)],
+    assessments = [...ctx.db.scopeAssessments.incidentKey.filter(k)],
+    restrictions = [...ctx.db.trustRestrictions.incidentKey.filter(k)];
+  const sorted = <T extends { id: string }>(rows: T[]) =>
+    rows.sort((a, b) => a.id.localeCompare(b.id));
+  // Existing persisted fingerprints retain their original comparison semantics.
+  if (targets === undefined)
+    return json({
+      assessments: sorted(assessments),
+      relationships: sorted(relationships),
+      restrictions: sorted(restrictions),
+    });
+  const relevant = targets.length
+    ? recoveryContextEntities(
+        targets,
+        relationships,
+        [...ctx.db.scopeRecords.iter()].filter((r) => r.organizationId === org),
+      )
+    : undefined;
+  const included = (id: string) => !relevant || relevant.has(id);
+  const scopedAssessments = assessments.filter((a) => included(a.entityId));
+  const scopedRestrictions = restrictions.filter((r) => included(r.entityId));
+  const scopedRelationships = relationships.filter(
+    (r) => included(r.sourceId) && included(r.targetId),
+  );
+  const links = [...ctx.db.scopeEvidenceLinks.incidentKey.filter(k)].filter(
+    (l) => included(l.entityId),
+  );
+  const ids = new Set([
+    ...evidenceIds,
+    ...scopedRestrictions.flatMap((r) => JSON.parse(r.evidenceIds) as string[]),
+    ...links.map((l) => l.evidenceId),
+  ]);
   return json({
-    assessments: [...ctx.db.scopeAssessments.incidentKey.filter(k)].sort(
-      (a, b) => a.id.localeCompare(b.id),
+    contextVersion: 2,
+    targets: [...targets].sort(),
+    assessments: sorted(scopedAssessments),
+    relationships: sorted(scopedRelationships),
+    restrictions: sorted(scopedRestrictions),
+    sources: sorted(
+      [...ctx.db.investigationSources.incidentKey.filter(k)]
+        .filter(
+          (s) =>
+            !relevant || [...relevant].some((id) => id.startsWith(`${s.id}:`)),
+        )
+        .map((s) => ({ id: s.id, snapshotId: s.latestSnapshotId })),
     ),
-    relationships: [...ctx.db.scopeRelationships.incidentKey.filter(k)].sort(
-      (a, b) => a.id.localeCompare(b.id),
-    ),
-    restrictions: [...ctx.db.trustRestrictions.incidentKey.filter(k)].sort(
-      (a, b) => a.id.localeCompare(b.id),
-    ),
+    evidence: [...ids].sort().map((id) => {
+      const e = ctx.db.evidence.id.find(id);
+      return {
+        id,
+        sha256: e?.sha256 ?? "Missing",
+        status: e?.status ?? "Missing",
+      };
+    }),
   });
+}
+export function currentApprovalContext(
+  ctx: Reader,
+  org: string,
+  inc: string,
+  previous: string,
+  targets: string[],
+  evidenceIds: string[] = [],
+) {
+  const v = JSON.parse(previous || "{}");
+  return incidentContext(
+    ctx,
+    org,
+    inc,
+    v.contextVersion === 2 ? targets : undefined,
+    evidenceIds,
+  );
 }
 export function deriveWarnings(ctx: Reader, org: string, inc: string) {
   const k = key(org, inc),

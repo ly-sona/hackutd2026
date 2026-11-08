@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     if (
       ![
         "start",
+        "refresh",
         "cancel",
         "read",
         "agent.start",
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
         "agent.review",
         "agent.assess",
         "agent.inspect",
+        "agent.task",
       ].includes(String(data.action))
     )
       throw new AccessError("INVALID_INPUT", "Unknown investigation action.");

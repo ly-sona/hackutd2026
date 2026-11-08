@@ -1,3 +1,13 @@
+import {
+  analyzeIncremental,
+  collectionManifest,
+} from "../../../shared/investigation-monitoring";
+import {
+  comparisonSnapshots,
+  finishReassessment,
+  monitoringSummary,
+  registerDependencyContext,
+} from "./investigation-monitoring";
 import type { Ctx, Reader } from "./index";
 import { appendEvent, json, key, time, type Ports } from "./incident-domain";
 import { ensureRoom } from "./coord-access";
@@ -155,6 +165,9 @@ export function investigationCommand(
       limit > 50
     )
       return p.fail("INVALID_INPUT", "Invalid page.");
+    if (d.kind === "monitoring") {
+      return monitoringSummary(ctx, run);
+    }
     if (d.kind === "observations") {
       const rows = [...ctx.db.analysisObservations.runId.filter(run.id)];
       return { rows: rows.slice(offset, offset + limit), total: rows.length };
@@ -167,7 +180,7 @@ export function investigationCommand(
         !(JSON.parse(run.sourceIds) as string[]).includes(source.id)
       )
         return p.fail("NOT_FOUND", "Source unavailable.");
-      const pair = [...ctx.db.sourceSnapshots.runId.filter(run.id)].filter(
+      const pair = comparisonSnapshots(ctx, run).filter(
         (s) => s.sourceId === source.id && s.status === "Finalized",
       );
       const baseline = pair.find((s) => s.role === "baseline"),
@@ -234,12 +247,33 @@ export function investigationCommand(
     );
     return { runId: run.id };
   }
-  if (action !== "investigation.start")
+  if (!["investigation.start", "investigation.refresh"].includes(action))
     return p.fail("INVALID_INPUT", "Unknown investigation action.");
   const operationId = text(d, "operationId");
   if (!uuid.test(operationId))
     return p.fail("INVALID_INPUT", "A stable operation UUID is required.");
-  const selected = d.connectorIds;
+  const previous = [...ctx.db.analysisRuns.incidentKey.filter(k)]
+    .filter((r) => r.status === "Complete")
+    .sort((a, b) => Number(b.createdAt - a.createdAt))[0];
+  const refresh = action === "investigation.refresh";
+  const previousSources = previous
+    ? (JSON.parse(previous.sourceIds) as string[])
+    : [];
+  const selected = refresh
+    ? previousSources.map(
+        (id) => ctx.db.investigationSources.id.find(id)!.connectorId,
+      )
+    : d.connectorIds;
+  const revision =
+    refresh && previous ? collectionManifest(previous).revision + 1 : 1;
+  const previousSnapshots =
+    refresh && previous
+      ? Object.fromEntries(
+          comparisonSnapshots(ctx, previous)
+            .filter((s) => s.role === "current")
+            .map((s) => [s.sourceId, s.id]),
+        )
+      : undefined;
   if (
     !Array.isArray(selected) ||
     !selected.length ||
@@ -254,19 +288,26 @@ export function investigationCommand(
     return p.fail("INVALID_INPUT", "Select implemented P0 connectors only.");
   if (d.useBaseline !== undefined && typeof d.useBaseline !== "boolean")
     return p.fail("INVALID_INPUT", "Invalid baseline choice.");
-  const useBaseline = d.useBaseline !== false;
+  const useBaseline = refresh || d.useBaseline !== false;
   const ids = [...selected].sort() as string[],
     fingerprint = json({
       k,
       ids,
       version: CONNECTOR_VERSION,
-      revision: 1,
+      revision,
+      previousRunId: refresh ? previous?.id : undefined,
+      previousSnapshots,
       useBaseline,
     }),
     operationKey = `${actor.userId}:${operationId}`;
   const old = ctx.db.analysisRuns.operationKey.find(operationKey);
   if (old) {
-    if (old.fingerprint !== fingerprint)
+    if (
+      refresh
+        ? collectionManifest(old).previousRunId !== d.runId ||
+          old.incidentKey !== k
+        : old.fingerprint !== fingerprint
+    )
       return p.fail(
         "CONFLICT",
         "Operation UUID already used for different content.",
@@ -278,14 +319,29 @@ export function investigationCommand(
       "UNAVAILABLE",
       "HR and Payroll are planned P1 connectors; this scenario is not runnable in Addition A.",
     );
+  if (refresh && previous && d.runId !== previous.id)
+    return p.fail(
+      "CONFLICT",
+      "Refresh must identify the latest completed collection.",
+    );
+  if (refresh && (!previous || revision > 2))
+    return p.fail(
+      "UNAVAILABLE",
+      "No later allowlisted synthetic snapshot is available. Complete initial collection first; this demo supplies revisions 1 and 2.",
+    );
+  if (!refresh && previous)
+    return p.fail(
+      "CONFLICT",
+      "Use subsequent snapshot collection for an established investigation.",
+    );
   if (
     [...ctx.db.analysisRuns.incidentKey.filter(k)].some(
-      (r) => !["Failed", "Revoked", "Canceled"].includes(r.status),
+      (r) => !["Complete", "Failed", "Revoked", "Canceled"].includes(r.status),
     )
   )
     return p.fail(
       "CONFLICT",
-      "An initial investigation already exists. Later collection is not implemented in Addition A.",
+      "Another collection is active; finish or cancel it before collecting again.",
     );
   const member = ctx.db.memberships.id.find(`${org}:${actor.userId}`)!,
     assignment = ctx.db.incidentMemberships.id.find(`${k}:${actor.userId}`);
@@ -323,7 +379,7 @@ export function investigationCommand(
     deterministicStatus: "Not started",
     agentStatus: "Not configured",
     completedSnapshots: 0,
-    expectedSnapshots: sourceIds.length * (useBaseline ? 2 : 1),
+    expectedSnapshots: sourceIds.length * (useBaseline && !refresh ? 2 : 1),
     analyzedSources: 0,
     leaseToken: "",
     leaseUntil: 0n,
@@ -338,8 +394,10 @@ export function investigationCommand(
     inc,
     actor.userId,
     "action",
-    "Synthetic connector collection queued",
-    `${ids.length} sources authorized for a bounded initial run. Model investigation is not configured.`,
+    refresh
+      ? "Subsequent snapshot collection queued"
+      : "Synthetic connector collection queued",
+    `${ids.length} sources authorized for snapshot revision ${revision}. Deterministic results remain independent of model availability.`,
     { newValue: json({ runId }) },
   );
   return { runId };
@@ -542,7 +600,7 @@ export function investigationWorker(
       runId: run.id,
       sourceId,
       role,
-      revision: role === "baseline" ? 0 : 1,
+      revision: role === "baseline" ? 0 : collectionManifest(run).revision,
       evidenceId: `EV-SNAP-${id}`,
       storageReference: id,
       sha256: "",
@@ -763,7 +821,7 @@ export function investigationWorker(
       ctx.db.sourceSnapshots.id.find(source.latestSnapshotId)?.runId === run.id
     )
       return {};
-    const pair = [...ctx.db.sourceSnapshots.runId.filter(run.id)].filter(
+    const pair = comparisonSnapshots(ctx, run).filter(
       (s) => s.sourceId === sourceId && s.status === "Finalized",
     );
     const baseline = pair.find((s) => s.role === "baseline"),
@@ -776,7 +834,10 @@ export function investigationWorker(
       return p.fail("CONFLICT", "Missing source snapshot.");
     const b = baseline ? snapshotInput(ctx, baseline) : undefined,
       c = snapshotInput(ctx, current),
-      analysis = analyzeSnapshot(b, c);
+      analysis =
+        collectionManifest(run).previousRunId && b
+          ? analyzeIncremental(b, c)
+          : analyzeSnapshot(b, c);
     for (const o of analysis.observations) {
       const refs = pair.flatMap((s) => {
         const r = ctx.db.snapshotRecordVersions.id.find(`${s.id}:${o.key}`);
@@ -830,6 +891,10 @@ export function investigationWorker(
       leaseUntil: complete ? 0n : at + 60_000n,
       updatedAt: at,
     });
+    if (complete) {
+      registerDependencyContext(ctx, run);
+      finishReassessment(ctx, run);
+    }
     const counts = Object.fromEntries(
       ["added", "modified", "missing", "unchanged", "uncompared"].map(
         (kind) => [
@@ -845,7 +910,7 @@ export function investigationWorker(
       run.actorId,
       "observation",
       "Deterministic source analysis complete",
-      `${source.connectorId}: ${json(counts)}. ${analysis.observations.length} observations require human investigation; no findings or impact confirmations created. Agent not configured.`,
+      `${source.connectorId}: ${json(counts)}. ${analysis.observations.length} observations require human investigation; no findings or impact confirmations created. Agent investigation remains a separate milestone.`,
       {
         evidenceIds: json(pair.map((s) => s.evidenceId)),
         newValue: json({
@@ -866,7 +931,7 @@ function workerState(ctx: Reader, run: Run) {
     sources: (JSON.parse(run.sourceIds) as string[]).map((id) =>
       ctx.db.investigationSources.id.find(id),
     ),
-    snapshots: [...ctx.db.sourceSnapshots.runId.filter(run.id)],
+    snapshots: comparisonSnapshots(ctx, run),
   };
 }
 
@@ -969,6 +1034,20 @@ function registerInventory(
         recordId: id,
       });
   }
+  // Inventory retains records seen in earlier exports; current export coverage
+  // is displayed separately. A missing entry never deletes historical inventory.
+  const inventoryCount = [...ctx.db.scopeRecords.iter()].filter(
+    (r) => r.organizationId === run.organizationId && r.datasetId === datasetId,
+  ).length;
+  for (const id of [datasetId, groupId]) {
+    const row = ctx.db.scopeEntities.id.find(id)!;
+    if (row.recordCount !== inventoryCount)
+      ctx.db.scopeEntities.id.update({
+        ...row,
+        recordCount: inventoryCount,
+        updatedAt: at,
+      });
+  }
   for (const [source, target, type] of [
     [datasetId, groupId, "CONTAINS"],
     [
@@ -1047,6 +1126,8 @@ export function investigationProjection(
       }) =>
         emit("run", r.id, {
           ...r,
+          revision: collectionManifest({ fingerprint }).revision,
+          previousRunId: collectionManifest({ fingerprint }).previousRunId,
           observationCount: [...ctx.db.analysisObservations.runId.filter(r.id)]
             .length,
         }),
@@ -1054,6 +1135,24 @@ export function investigationProjection(
     return [
       ...(meta ? [emit("metadata", k, meta)] : []),
       ...runs,
+      ...rawRuns.flatMap((run) =>
+        (JSON.parse(run.sourceIds) as string[]).map((id) => {
+          const source = ctx.db.investigationSources.id.find(id)!;
+          const snapshots = comparisonSnapshots(ctx, run).filter(
+            (s) => s.sourceId === id && s.status === "Finalized",
+          );
+          const current = snapshots.find((s) => s.role === "current");
+          return emit("source_history", `${run.id}:${id}`, {
+            ...source,
+            runId: run.id,
+            status:
+              run.status === "Complete" ? "Complete" : run.collectionStatus,
+            collectedSnapshots: snapshots.length,
+            recordCount: current?.recordCount,
+            snapshotTime: current?.collectedAt,
+          });
+        }),
+      ),
       ...[...ctx.db.investigationSources.incidentKey.filter(k)].map((s) =>
         emit("source", s.id, {
           ...s,

@@ -193,6 +193,26 @@ function ProposalReview({
       setBusy(false);
     }
   }
+  async function followUp() {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api<{ taskId: string }>("investigation", {
+        action: "agent.task",
+        organizationId: a.organizationId,
+        incidentId: a.incidentId,
+        agentRunId: p.agentRunId,
+        proposalId: p.id,
+      });
+      setResult(
+        `Follow-up investigation task created: ${result.taskId}. Open Team to continue; recovery approvals remain separate.`,
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <DialogContent
       data-testid="agent-proposal"
@@ -312,7 +332,7 @@ function ProposalReview({
               : ""}
           </p>
         )}
-        {impact && inspection?.manualReason && (
+        {inspection?.manualReason && (
           <p className="mt-2 text-sm text-amber-300">
             {inspection.manualReason}{" "}
             <Link
@@ -368,7 +388,7 @@ function ProposalReview({
                   busy ||
                   !justification.trim() ||
                   !inspection ||
-                  (impact && !!inspection.manualReason)
+                  !!inspection.manualReason
                 }
                 onClick={() => review("Accept")}
               >
@@ -392,6 +412,39 @@ function ProposalReview({
             {p.status === "Pending" &&
               !canReview &&
               " · Your current permissions do not allow this review."}
+            {p.status === "Accepted" && (
+              <div className="my-3 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Recommended next step: verify relevant source authenticity,
+                  access and dependencies before requesting recovery. This
+                  review does not establish restoration safety.
+                </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  {a.can("tasks:create") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={followUp}
+                    >
+                      Create follow-up task for me
+                    </Button>
+                  )}
+                  <Link
+                    className="underline"
+                    href={`${incidentBase(a.organizationId, a.incidentId)}/team`}
+                  >
+                    Open Team
+                  </Link>
+                  <Link
+                    className="underline"
+                    href={`${incidentBase(a.organizationId, a.incidentId)}/operations`}
+                  >
+                    Recovery and report workflows
+                  </Link>
+                </div>
+              </div>
+            )}
             <div className="mt-2 flex gap-4">
               <Link
                 className="underline"

@@ -1,6 +1,6 @@
 # Addition B: bounded agent investigation and human review
 
-Addition B extends A's actual fixture bytes, private evidence, immutable snapshots and deterministic observations. The implemented desktop path is collection → deterministic observations → a real model's validated tool calls → grounded proposal → human Accept/Reject → persisted Unverified/Suspected finding → existing Overview, Timeline and optional Scope relationship. No Addition C functionality is included.
+Addition B extends A's actual fixture bytes, private evidence, immutable snapshots and deterministic observations. The implemented desktop path is collection → deterministic observations → a real model's validated tool calls → grounded proposal → human Accept/Reject → persisted Unverified/Suspected finding → existing Overview, Timeline and optional Scope relationship. Addition B itself adds no incremental collection; [Addition C](investigation-c.md) now supplies that extension.
 
 ## Run the demonstration
 
@@ -19,7 +19,7 @@ Five strict tools are available: `detect_anomalies`, `compare_snapshots`, `parse
 
 The MVP uses a closed proposal schema. The model selects observation IDs, exact citations, priority and a cautious interpretation. Backend validation compiles the factual claim and limitations from those immutable observations. Arbitrary model-authored factual assertions, confirmed exfiltration claims and unsupported record exposure cannot enter review. Every citation resolves its evidence ID, frozen snapshot, record/event key, JSON pointer, fields, observed timestamp, rule version and record hash. Supported cross-source correlation requires explicit matching account and source values within thirty observed minutes. Missing exports, baseline trust, confidentiality exposure, availability, investigation state and restoration safety remain separate.
 
-This is one focused initial investigation, not an exhaustive model review of every record. HR/Payroll and optional domains retain A's availability. Task generation, follow-up model passes, subsequent snapshots, recovery integration, reports integration and automatic paging/closure remain deferred.
+This is one focused initial investigation, not an exhaustive model review of every record. HR/Payroll and optional domains retain A's availability. Addition C now supplies subsequent snapshots, a fresh bounded investigation of changed evidence, explicit human-created follow-up tasks, recovery-context relevance and report-history integration. Automatic paging/closure and production monitoring remain outside scope.
 
 ## Persistence and authorization
 
@@ -46,4 +46,4 @@ Final production build passed using the isolated `.next-build-check` output dire
 
 ## Investigation UX and impact assessment extension
 
-The results-first workspace and evidence-derived impact candidates are documented in [investigation-impact.md](investigation-impact.md). These candidates share the existing proposal table but remain distinct from model-generated finding proposals. Human acceptance uses existing Phase 3 assessment validation; the model has no authoritative assessment write tool. This does not implement Addition C. The validation record above describes the original B gate; the extension has its own focused test record.
+The results-first workspace and evidence-derived impact candidates are documented in [investigation-impact.md](investigation-impact.md). These candidates share the existing proposal table but remain distinct from model-generated finding proposals. Human acceptance uses existing Phase 3 assessment validation; the model has no authoritative assessment write tool. This historical UX extension did not implement Addition C; the later implementation is documented separately. The validation record above describes the original B gate; the extension has its own focused test record.

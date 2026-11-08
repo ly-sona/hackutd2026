@@ -336,6 +336,63 @@ test("migrates an existing main database non-destructively and resumes scoped wo
         role: "current",
       }),
     ).rejects.toThrow();
+    // Addition C: interrupt the later snapshot before metadata, then resume the
+    // same frozen prior-version comparison in a new worker after a DB restart.
+    const later = await command<{ runId: string }>(
+      "investigation.refresh",
+      fresh,
+      { ...scope, runId: queued.runId, operationId: randomUUID() },
+    );
+    const laterJob = await workerCall<WorkerJob>("claim");
+    expect(laterJob.run.id).toBe(later.runId);
+    const laterBase = {
+      runId: later.runId,
+      leaseToken: laterJob.run.leaseToken,
+      sourceId,
+    };
+    const laterSnapshot = await workerCall<{ id: string; revision: number }>(
+      "reserve",
+      { ...laterBase, role: "current" },
+    );
+    expect(laterSnapshot.revision).toBe(2);
+    await command("test_expire_session", fresh, {});
+    await stop();
+    await start();
+    await command("investigation.test.expireLease", "", { runId: later.runId });
+    await promisify(execFile)(
+      process.execPath,
+      [
+        join(root, "node_modules/tsx/dist/cli.mjs"),
+        join(root, "scripts/investigation-runner.ts"),
+        "--once",
+      ],
+      {
+        cwd: root,
+        env: {
+          ...process.env,
+          SPACETIMEDB_SERVER_TOKEN: "",
+          AEGIS_GATEWAY_IDENTITY: "",
+        },
+        timeout: 30000,
+      },
+    );
+    const after = await command<{
+      rows: { key: string; kind: string }[];
+      snapshots: { id: string }[];
+    }>("investigation.read", await login("maya"), {
+      ...scope,
+      kind: "differences",
+      runId: later.runId,
+      sourceId,
+      limit: 50,
+    });
+    expect(after.snapshots).toHaveLength(2);
+    expect(after.snapshots.some((s) => s.id === laterSnapshot.id)).toBe(true);
+    expect(
+      after.snapshots.some((s) => page.snapshots.some((p) => p.id === s.id)),
+    ).toBe(true);
+    expect(after.rows.find((r) => r.key === "C-1042")?.kind).toBe("modified");
+    expect(after.rows.find((r) => r.key === "C-1044")?.kind).toBe("unchanged");
   } finally {
     await stop();
     process.chdir(previousCwd);

@@ -110,7 +110,7 @@ export function InvestigationEvidence({
           trust remains unverified.
         </p>
       </div>
-      {!run || retry ? (
+      {!run || (retry && !run.previousRunId) ? (
         <>
           <div className="divide-y divide-border border-y border-border">
             {connectors
@@ -211,9 +211,11 @@ export function InvestigationEvidence({
                   <td>{s.collectedSnapshots ?? 0}</td>
                   <td>{s.recordCount ?? "Awaiting collection"}</td>
                   <td>
-                    {run.expectedSnapshots > JSON.parse(run.sourceIds).length
-                      ? "Supplied baseline"
-                      : "No baseline"}
+                    {run.previousRunId
+                      ? "Prior snapshot"
+                      : run.expectedSnapshots > JSON.parse(run.sourceIds).length
+                        ? "Supplied baseline"
+                        : "No baseline"}
                   </td>
                 </tr>
               ))}

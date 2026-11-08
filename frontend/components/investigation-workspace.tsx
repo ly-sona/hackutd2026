@@ -14,6 +14,7 @@ import {
   observationTitle,
   type ProposalPage,
 } from "./agent-investigation-panel";
+import { InvestigationMonitoring } from "./investigation-monitoring";
 import { InvestigationEvidence } from "./investigation-evidence";
 import {
   isImpact,
@@ -29,9 +30,10 @@ type View = (typeof views)[number];
 export function InvestigationWorkspace() {
   const a = useAccess(),
     incident = useIncident(),
-    d = useInvestigationData(),
-    run = d.run,
-    agent = d.agent;
+    d = useInvestigationData();
+  const [selectedRunId, setSelectedRunId] = useState<string>();
+  const run = d.runs.find((r) => r.id === selectedRunId) ?? d.run,
+    agent = d.agents.find((j) => j.collectionRunId === run?.id);
   const [view, setView] = useState<View>("Findings"),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -125,9 +127,11 @@ export function InvestigationWorkspace() {
   const shownObservations = observations.filter(
     (o) => !dimension || observationDimension(o) === dimension,
   );
-  const currentSources = d.sources.filter(
-      (s) => run && JSON.parse(run.sourceIds).includes(s.id),
-    ),
+  const currentSources = (
+      d.historicalSources.filter((s) => s.runId === runId).length
+        ? d.historicalSources.filter((s) => s.runId === runId)
+        : d.sources
+    ).filter((s) => run && JSON.parse(run.sourceIds).includes(s.id)),
     entries = currentSources.reduce((n, s) => n + (s.recordCount ?? 0), 0);
   const activeCollection =
       run && ["Queued", "Collecting", "Analyzing"].includes(run.status),
@@ -245,12 +249,20 @@ export function InvestigationWorkspace() {
             canStart &&
             run?.deterministicStatus === "Complete" &&
             (!agent || retryAgent) && (
-              <Button disabled={busy} onClick={launch}>
+              <Button disabled={busy || run.id !== d.run?.id} onClick={launch}>
                 {retryAgent ? "Retry investigation" : "Run Investigation"}
               </Button>
             )}
         </div>
       </header>
+      {!protectedCase && run && (
+        <InvestigationMonitoring
+          run={run}
+          runs={d.runs}
+          canCollect={canStart}
+          onSelect={setSelectedRunId}
+        />
+      )}
       {protectedCase ? (
         <section className="border-y border-border py-8">
           <h2 className="text-lg font-medium">Established case</h2>
@@ -533,7 +545,7 @@ export function InvestigationWorkspace() {
           >
             <InvestigationEvidence
               run={run}
-              sources={d.sources}
+              sources={currentSources}
               canCollect={canStart}
               observations={observations}
             />

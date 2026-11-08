@@ -49,6 +49,7 @@ export const observationLabels: Record<string, string> = {
     "Network activity after reported isolation",
   "reported-service-interruption": "Reported service interruption",
   "comparison-unavailable": "No baseline available",
+  "new-access-context": "New access context for a reviewed record",
 };
 export function sourceName(sourceId: string) {
   return (
@@ -68,6 +69,7 @@ export function observationDimension(
     {
       "missing-export-entry": "Deletion",
       "new-signin-source": "Compromise",
+      "new-access-context": "Compromise",
       "traffic-after-reported-isolation": "Exfiltration",
       "reported-service-interruption": "Availability",
     } as Record<string, ImpactDimension>
@@ -142,6 +144,15 @@ export function deriveImpactCandidates(
         "This is a source-reported outage, not independently verified availability or proof of compromise.";
       missingInformation =
         "Independently verify the service state and affected dependencies.";
+    } else if (dimension === "Compromise" && o.rule === "new-access-context") {
+      proposedStatus = "Investigating";
+      entityId = `${o.sourceId}:record:${o.key}`;
+      title = `Reassess access context: ${o.key}`;
+      claim = o.description;
+      uncertainty =
+        "A shared account identifier establishes a potential access path only. The record is unchanged; no observed record read, exposure or new integrity impact is established.";
+      missingInformation =
+        "Review the prior human decision and obtain record-specific access evidence. Preserve independent impact dimensions.";
     } else if (dimension === "Compromise") {
       proposedStatus = "Investigating";
       title = `Unusual sign-in: ${o.key}`;

@@ -2,6 +2,8 @@
 
 This extension builds on Additions A and B on `codex/investigation-a`. It changes the dedicated Investigation workspace, not the five primary screen components, navigation, reference incident, recovery or reports. It adds no dependencies, tables, model tools or Addition C feeder/reassessment machinery.
 
+Addition C now extends these initial rules with versioned subsequent collection and reviewed-record access-context leads; see [investigation-c.md](investigation-c.md). The validation record below describes the earlier UX/impact pass.
+
 ## Desktop workflow
 
 Investigation opens on **Findings**: real source/export coverage, deterministic observation counts, pending reviews and assessed entities precede compact Needs Review rows. **Potential Impact** links to supported review items or observations; counts describe leads/review items, never compromised records. Reviewed decisions and technical identifiers are secondary.

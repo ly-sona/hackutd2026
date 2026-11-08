@@ -1,3 +1,9 @@
+import { comparisonSnapshots } from "./investigation-monitoring";
+import {
+  collectionManifest,
+  analyzeIncremental,
+} from "../../../shared/investigation-monitoring";
+import { coordinationCommand } from "./coord-domain";
 import {
   deriveImpactCandidates,
   isImpact,
@@ -86,7 +92,10 @@ function citationRecord(ctx: Reader, job: Job, ref: Citation): SourceRecord {
     !s ||
     !r ||
     s.status !== "Finalized" ||
-    s.runId !== job.collectionRunId ||
+    !comparisonSnapshots(
+      ctx,
+      ctx.db.analysisRuns.id.find(job.collectionRunId)!,
+    ).some((x) => x.id === s.id) ||
     s.incidentKey !== job.incidentKey ||
     s.evidenceId !== ref.evidenceId ||
     frozen.sha256 !== s.sha256 ||
@@ -187,6 +196,18 @@ function human(
         "CONFLICT",
         "Complete deterministic collection before launching the agent.",
       );
+    if (
+      comparisonSnapshots(ctx, parent).some(
+        (s) =>
+          s.role === "current" &&
+          ctx.db.investigationSources.id.find(s.sourceId)?.latestSnapshotId !==
+            s.id,
+      )
+    )
+      return p.fail(
+        "CONFLICT",
+        "Start an agent only against current source snapshots. Historical results remain available.",
+      );
     const operation = text(d, "operationId");
     if (!/^[a-f0-9-]{36}$/i.test(operation))
       return p.fail("INVALID_INPUT", "Stable operation UUID required.");
@@ -207,9 +228,10 @@ function human(
         "CONFLICT",
         "An active or successful investigation already exists for this collection.",
       );
-    const snapshots = [...ctx.db.sourceSnapshots.runId.filter(parent.id)];
+    const snapshots = comparisonSnapshots(ctx, parent);
     if (
-      snapshots.length !== parent.expectedSnapshots ||
+      snapshots.filter((s) => s.runId === parent.id).length !==
+        parent.expectedSnapshots ||
       snapshots.some((s) => s.status !== "Finalized")
     )
       return p.fail("CONFLICT", "Incomplete source manifest.");
@@ -351,6 +373,46 @@ function human(
     p.authorize(ctx, hash, org, inc, "scope:edit", at);
     return { created: ensureImpactProposals(ctx, job, actor.userId) };
   }
+  if (action === "investigation.agent.task") {
+    p.authorize(ctx, hash, org, inc, "tasks:create", at);
+    const proposal = ctx.db.analysisProposals.id.find(text(d, "proposalId"));
+    if (
+      !proposal ||
+      proposal.agentRunId !== job.id ||
+      proposal.status !== "Accepted"
+    )
+      return p.fail(
+        "CONFLICT",
+        "Accept a proposal before creating follow-up work.",
+      );
+    const content = JSON.parse(proposal.content) as InvestigationProposal;
+    const references = [
+      ...new Set(content.citations.map((c) => c.evidenceId)),
+    ].map((id) => ({ kind: "evidence", id }));
+    if (proposal.findingId)
+      references.push({ kind: "finding", id: proposal.findingId });
+    return coordinationCommand(
+      ctx,
+      "coord.task.create",
+      hash,
+      {
+        organizationId: org,
+        incidentId: inc,
+        clientRequestId: proposal.id,
+        kind: "Investigation",
+        title: `Follow up: ${content.title}`.slice(0, 200),
+        description: `Review investigation proposal ${proposal.id}.\n${content.claim}\nLimitations: ${content.uncertainty}\nRecovery recommendation: verify relevant source, access and dependency evidence before requesting any existing recovery procedure. No restoration safety or approval is implied.`,
+        assignedUserId: actor.userId,
+        backupUserId: "",
+        priority: "High",
+        dueAt: 0,
+        relatedFindingId: proposal.findingId,
+        references,
+        page: false,
+      },
+      p,
+    );
+  }
   if (action === "investigation.agent.inspect") {
     const proposal = ctx.db.analysisProposals.id.find(text(d, "proposalId"));
     if (!proposal || proposal.agentRunId !== job.id)
@@ -362,7 +424,7 @@ function human(
       return {
         ...ref,
         record: row,
-        role: snapshot.role,
+        role: manifest(job).snapshots.find((s) => s.id === snapshot.id)!.role,
         coverage: snapshot.coverage,
         collectedAt: snapshot.collectedAt,
         sourceId: snapshot.sourceId,
@@ -375,8 +437,12 @@ function human(
       citations,
       currentAssessment: current,
       manualReason:
-        isImpact(content) && proposal.status === "Pending"
-          ? assessmentManualReason(ctx, content)
+        proposal.status === "Pending"
+          ? staleSources(ctx, job)
+            ? "New source snapshots are available. Review the latest investigation or use manual Scope review."
+            : isImpact(content)
+              ? assessmentManualReason(ctx, content)
+              : ""
           : "",
     };
   }
@@ -385,6 +451,15 @@ function human(
   const proposal = ctx.db.analysisProposals.id.find(text(d, "proposalId"));
   if (!proposal || proposal.agentRunId !== job.id)
     return p.fail("NOT_FOUND", "Proposal unavailable.");
+  if (
+    proposal.status === "Pending" &&
+    d.decision === "Accept" &&
+    staleSources(ctx, job)
+  )
+    return p.fail(
+      "CONFLICT",
+      "New source snapshots are available. Review the latest investigation or reassess manually in Scope; earlier proposals remain historical.",
+    );
   const proposedContent = JSON.parse(proposal.content) as InvestigationProposal;
   if (isImpact(proposedContent))
     return reviewImpact(
@@ -684,10 +759,14 @@ export function agentWorker(
       }
       const current = pair.find((s) => s.role === "current")!,
         baseline = pair.find((s) => s.role === "baseline");
-      const analysis = analyzeSnapshot(
-        baseline ? input(baseline.id) : undefined,
-        input(current.id),
-      );
+      const parent = ctx.db.analysisRuns.id.find(j.collectionRunId)!;
+      const analysis =
+        baseline && collectionManifest(parent).previousRunId
+          ? analyzeIncremental(input(baseline.id), input(current.id))
+          : analyzeSnapshot(
+              baseline ? input(baseline.id) : undefined,
+              input(current.id),
+            );
       result = {
         coverage: current.coverage,
         baselineAvailable: !!baseline,
@@ -733,6 +812,11 @@ export function agentWorker(
         "Inventory and potential paths do not confirm compromise or observed access.",
     };
   } else {
+    if (staleSources(ctx, j))
+      return p.fail(
+        "CONFLICT",
+        "New source snapshots supersede this run; no stale proposals may be published.",
+      );
     const inputs = args.proposals as unknown[],
       all = observations(ctx, j);
     if (
@@ -901,6 +985,14 @@ function impactBases(ctx: Reader, job: Job) {
           );
   });
 }
+function staleSources(ctx: Reader, job: Job) {
+  return manifest(job).snapshots.some(
+    (s) =>
+      s.role === "current" &&
+      ctx.db.investigationSources.id.find(s.sourceId)?.latestSnapshotId !==
+        s.id,
+  );
+}
 function assessmentManualReason(ctx: Reader, c: ImpactProposal) {
   const current = ctx.db.scopeAssessments.id.find(c.assessmentId);
   if (json(current ?? null) !== c.previousAssessment)
@@ -1046,6 +1138,19 @@ function reviewImpact(
       p,
     ) as { assessmentId: string };
     assessmentId = result.assessmentId;
+    if (content.dimension === "Availability") {
+      const operation = ctx.db.businessOperations.id.find(
+        `${job.incidentKey}:${content.entityId}`,
+      );
+      if (operation && !operation.activeExecutionId)
+        ctx.db.businessOperations.id.update({
+          ...operation,
+          status: "Disrupted",
+          explanation: `Human-reviewed source report: ${content.claim} ${content.uncertainty}`,
+          updatedBy: actor,
+          updatedAt: at,
+        });
+    }
   }
   ctx.db.analysisProposals.id.update({
     ...proposal,

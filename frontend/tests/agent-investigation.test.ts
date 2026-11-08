@@ -83,6 +83,17 @@ function scenario() {
   return { p, ground, records };
 }
 describe("evidence-grounded agent contract", () => {
+  it("returns exact authorized citations for a bounded model correction without accepting the invalid claim", () => {
+    const { p, ground } = scenario();
+    const bad = structuredClone(p);
+    bad.citations[0].observationId = "fiction";
+    expect(() => ground(bad)).toThrow(
+      "Copy this complete citations array unchanged",
+    );
+    expect(() => ground(bad)).toThrow(p.citations[0].recordHash);
+    expect(ground(p).citations).toEqual(p.citations);
+  });
+
   it("requires a supported matching source to be retained in the proposal", () => {
     const { p, ground } = scenario();
     expect(() =>

@@ -9,6 +9,7 @@ interface WorkerSnapshot {
   role: string;
   revision: number;
   storageReference: string;
+  sha256: string;
   status: string;
 }
 export interface WorkerJob {
@@ -123,6 +124,8 @@ export async function processJob(
         await readEvidence(snapshot.storageReference, digest);
         await workerCall("finalize", { ...args, snapshotId: snapshot.id });
       }
+    for (const s of job.snapshots.filter((s) => s.status === "Finalized"))
+      await readEvidence(s.storageReference, s.sha256);
     for (const source of job.sources) {
       sourceId = source.id;
       await workerCall("analyze", { ...base, sourceId: source.id });

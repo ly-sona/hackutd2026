@@ -327,6 +327,8 @@ export function analyzeSnapshot(
   return { changes, observations };
 }
 export interface InvestigationRun {
+  revision?: number;
+  previousRunId?: string;
   observationCount?: number;
   id: string;
   status: string;
@@ -343,6 +345,7 @@ export interface InvestigationRun {
   actorId: string;
 }
 export interface InvestigationSource {
+  runId?: string;
   id: string;
   connectorId: string;
   latestSnapshotId: string;
