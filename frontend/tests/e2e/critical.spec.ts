@@ -172,7 +172,26 @@ test("server paging escalates once after requester closes and acknowledgment lea
 
 test("desktop demo opens all five live pages and essential controls", async ({ context, page }) => {
   await login(context, "maya");
+  const title = `Attention handoff ${randomUUID()}`;
+  const created = await ok(context.request, "incident/findings", { ...scope, ...findingData(title) });
   await page.goto(`${base}/overview`);
+  const attention = page.getByTestId("needs-attention");
+  await attention.getByTestId(`finding-${created.findingId}`).click();
+  const detail = page.getByRole("dialog", { name: title, exact: true });
+  await expect(detail.getByRole("button")).toHaveCount(2); // Create task + close.
+  await detail.getByRole("button", { name: "Create task", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Create task", exact: true });
+  await form.getByRole("combobox", { name: "Assignee", exact: true }).selectOption("alex");
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(attention.getByTestId(`finding-${created.findingId}`)).toHaveCount(0);
+  await page.reload();
+  await expect(attention).toBeVisible();
+  await expect(attention.getByTestId(`finding-${created.findingId}`)).toHaveCount(0);
+  await page.locator("summary").filter({ hasText: "View all work" }).click();
+  const work = page.getByTestId("all-work");
+  await expect(work.getByRole("button", { name: `Investigate: ${title}`, exact: true })).toBeVisible();
+  await expect(work.getByTestId(`finding-${created.findingId}`)).toContainText("Suspected");
   const navigation = page.getByRole("navigation", { name: "Incident navigation" });
   await expect(page.getByRole("heading", { name: "Ransomware response", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add finding", exact: true }).click();

@@ -105,6 +105,7 @@ export function TaskForm({
   description = "",
   trigger = "Create task",
   primary = false,
+  onCreated,
 }: {
   source?: Message;
   references?: Reference[];
@@ -112,6 +113,7 @@ export function TaskForm({
   description?: string;
   trigger?: string;
   primary?: boolean;
+  onCreated?: () => void;
 }) {
   const a = useAccess(),
     d = useCoordination(),
@@ -130,8 +132,8 @@ export function TaskForm({
           : "Assign work and record evidence-backed progress. Completing a task never resolves a finding automatically."
       }
       trigger={trigger}
-      onSubmit={async (f) =>
-        command("task.create", {
+      onSubmit={async (f) => {
+        const result = await command("task.create", {
           sourceMessageId: source?.id,
           title: value(f, "title"),
           description: value(f, "description"),
@@ -143,8 +145,10 @@ export function TaskForm({
           references: formReferences(f),
           page: f.get("page") === "on",
           confirmAvailability: f.get("confirmAvailability") === "on",
-        })
-      }
+        });
+        onCreated?.();
+        return result;
+      }}
     >
       <Field label="Task title">
         <Input
@@ -591,71 +595,6 @@ export function TaskList({ assignedOnly = false, embedded = false }: { assignedO
         ))}
       </div>
     </section>
-  );
-}
-
-export function CoordinationAttention() {
-  const a = useAccess(),
-    d = useCoordination(),
-    incident = useIncident();
-  if (!a.can("tasks:view")) return null;
-  const tasks = d.tasks.filter(
-    (t) =>
-      t.assignedUserId === a.userId &&
-      !["Completed", "Canceled"].includes(t.status),
-  );
-  const pages = d.pages.filter(
-    (p) => p.pagedUserId === a.userId && p.status === "Awaiting Acknowledgment",
-  );
-  const count = attentionCount(
-    tasks,
-    incident.findings.filter((f) => f.priority === "Critical"),
-  );
-  return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <p
-          className="text-xs text-muted-foreground"
-          data-testid="coordination-attention-count"
-        >
-          {count} work items · assigned tasks + unresolved critical findings,
-          linked items counted once · {pages.length} urgent pages
-        </p>
-        <TaskForm />
-      </div>
-      {pages.map((p) => (
-        <Link
-          key={p.id}
-          href={`${incidentBase(a.organizationId, a.incidentId)}/team?task=${encodeURIComponent(p.taskId)}&page=${encodeURIComponent(p.id)}`}
-          className="block border-l-2 border-red-400 px-4 py-3 text-sm text-red-300"
-        >
-          Urgent receipt requested ·{" "}
-          {d.tasks.find((t) => t.id === p.taskId)?.title ?? "Open paged task"}
-        </Link>
-      ))}
-      {tasks.map((t) => (
-        <div
-          key={t.id}
-          className="flex flex-wrap justify-between gap-3 p-4"
-          data-testid="attention-task"
-        >
-          <div>
-            <TaskButton id={t.id} />
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t.priority} · {t.status} · {d.name(t.assignedUserId)}
-            </p>
-          </div>
-          {t.dueAt !== "0" && (
-            <span
-              className={`text-xs ${Number(t.dueAt) < Number(d.policy?.now ?? 0) ? "text-red-400" : "text-muted-foreground"}`}
-            >
-              {Number(t.dueAt) < Number(d.policy?.now ?? 0) ? "Overdue" : "Due"}{" "}
-              · {incidentTime(t.dueAt)}
-            </span>
-          )}
-        </div>
-      ))}
-    </>
   );
 }
 

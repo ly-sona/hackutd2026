@@ -110,6 +110,13 @@ export const incidentTypes = [
 export function unresolved(f: Finding) {
   return !["Resolved", "Ruled Out"].includes(f.status);
 }
+export function findingsNeedingTasks(
+  findings: readonly Finding[],
+  tasks: readonly { relatedFindingId: string }[],
+) {
+  const tracked = new Set(tasks.map((task) => task.relatedFindingId));
+  return findings.filter((finding) => unresolved(finding) && !tracked.has(finding.id));
+}
 export function isUnread(f: Finding, reads: readonly FindingRead[]) {
   const r = reads.find((r) => r.findingId === f.id);
   return !r || BigInt(r.readAt) < BigInt(f.updatedAt);

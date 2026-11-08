@@ -5,6 +5,7 @@ import {
   sortEvents,
   highlightExcerpt,
   incidentTime,
+  findingsNeedingTasks,
   type Finding,
   type IncidentEvent,
 } from "../lib/incident-model";
@@ -27,6 +28,16 @@ describe("readable incident times", () => {
 });
 
 describe("incident investigation and personal attention", () => {
+  it("moves a finding with a persisted task out of attention without resolving it", () => {
+    expect(findingsNeedingTasks([finding], [])).toEqual([finding]);
+    expect(findingsNeedingTasks([finding], [{ relatedFindingId: finding.id }])).toEqual([]);
+    expect(finding.status).toBe("Suspected");
+  });
+  it("does not promote addressed findings into attention to fill empty slots", () => {
+    const resolved = { ...finding, id: "resolved", status: "Resolved" };
+    const ruledOut = { ...finding, id: "ruled-out", status: "Ruled Out" };
+    expect(findingsNeedingTasks([resolved, ruledOut, finding], [])).toEqual([finding]);
+  });
   it("reading a finding changes new state without resolving its investigation", () => {
     expect(isUnread(finding, [])).toBe(true);
     expect(
