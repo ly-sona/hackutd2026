@@ -203,7 +203,7 @@ export function NewIncident({
       <Field label="Known data impact (optional)">
         <Input name="impact" maxLength={2000} />
       </Field>
-      <Field label="Incident Commander (optional)">
+      <Field label="Incident Manager (optional)">
         <select className={fieldClass} name="commanderId">
           <option value="">Unassigned</option>
           {responders
@@ -229,7 +229,7 @@ export function NewIncident({
         </fieldset>
       )}
       <p className="text-xs text-muted-foreground">
-        You and the selected commander are assigned automatically. Initial
+        You and the selected incident manager are assigned automatically. Initial
         evidence can be attached immediately after creation.
       </p>
     </Editor>
@@ -447,7 +447,7 @@ export function UpdateIncident() {
         values={severities}
         value={i.severity}
       />
-      <Field label="Incident Commander">
+      <Field label="Incident Manager">
         <select
           name="commanderId"
           defaultValue={i.commanderId}

@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import {
   ReactFlow,
   Background,
+  BaseEdge,
+  getSmoothStepPath,
   Controls,
   Handle,
   Position,
@@ -14,6 +16,7 @@ import {
   type Node,
   type NodeProps,
   type Edge,
+  type EdgeProps,
 } from "@xyflow/react";
 import {
   Database,
@@ -54,6 +57,34 @@ type GraphNode = Node<
   "scope"
 >;
 const nodeTypes = { scope: EntityNode };
+const edgeTypes = { scope: RelationshipEdge };
+const columnGap = 128;
+const columnWidth = 192 + columnGap;
+function RelationshipEdge(props: EdgeProps) {
+  // Keep labels in the gutter even when a relationship skips a column.
+  const labelX =
+    props.sourceX +
+    (props.sourcePosition === Position.Left ? -columnGap / 2 : columnGap / 2);
+  const [path, , labelY] = getSmoothStepPath({
+    ...props,
+    centerX: labelX,
+    offset: columnGap / 2,
+  });
+  return (
+    <BaseEdge
+      id={props.id}
+      path={path}
+      markerEnd={props.markerEnd}
+      style={props.style}
+      label={props.label}
+      labelX={labelX}
+      labelY={labelY}
+      labelStyle={props.labelStyle}
+      labelBgStyle={props.labelBgStyle}
+      labelBgPadding={[6, 4]}
+    />
+  );
+}
 function EntityNode({ data, selected }: NodeProps<GraphNode>) {
   const e = data.entity,
     Icon =
@@ -72,12 +103,40 @@ function EntityNode({ data, selected }: NodeProps<GraphNode>) {
       data-entity-kind={e.kind}
       className={`w-48 rounded-md border bg-[#0d0d0f] p-3 ${selected ? "border-2 border-white" : "border-neutral-600"}`}
     >
-      <Handle type="target" position={Position.Left} className="opacity-0" />
-      <Handle type="source" position={Position.Right} className="opacity-0" />
+      <Handle
+        id="target-left"
+        type="target"
+        position={Position.Left}
+        style={{ top: "30%" }}
+        className="opacity-0"
+      />
+      <Handle
+        id="source-right"
+        type="source"
+        position={Position.Right}
+        style={{ top: "30%" }}
+        className="opacity-0"
+      />
+      <Handle
+        id="source-left"
+        type="source"
+        position={Position.Left}
+        style={{ top: "70%" }}
+        className="opacity-0"
+      />
+      <Handle
+        id="target-right"
+        type="target"
+        position={Position.Right}
+        style={{ top: "70%" }}
+        className="opacity-0"
+      />
       <div className="flex items-start gap-2">
         <Icon size={19} className="shrink-0" />
-        <div>
-          <p className="text-sm font-semibold">{e.name}</p>
+        <div className="min-w-0 flex-1 break-words">
+          <p className="line-clamp-2 text-sm font-semibold" title={e.name}>
+            {e.name}
+          </p>
           <p className="mt-1 text-[10px] uppercase text-muted-foreground">
             {e.kind}
           </p>
@@ -248,7 +307,7 @@ function ScopeCanvas() {
       return {
         id: e.id,
         type: "scope",
-        position: { x: col * 265, y: row * 175 },
+        position: { x: col * columnWidth, y: row * 200 },
         selected: e.id === selected?.id,
         data: {
           entity: e,
@@ -261,13 +320,22 @@ function ScopeCanvas() {
         },
       };
     });
+    const columns = new Map(limited.map((e) => [e.id, positions[e.kind] ?? 0]));
     const edges: Edge[] = d.relationships
       .filter((r) => ids.has(r.sourceId) && ids.has(r.targetId))
       .map((r) => ({
         id: r.id,
         source: r.sourceId,
         target: r.targetId,
-        type: "smoothstep",
+        type: "scope",
+        sourceHandle:
+          columns.get(r.sourceId)! > columns.get(r.targetId)!
+            ? "source-left"
+            : "source-right",
+        targetHandle:
+          columns.get(r.sourceId)! >= columns.get(r.targetId)!
+            ? "target-right"
+            : "target-left",
         label: r.type.toLowerCase().replaceAll("_", " "),
         markerEnd: { type: MarkerType.ArrowClosed, color: "#a1a1aa" },
         style: {
@@ -416,6 +484,7 @@ function ScopeCanvas() {
             nodes={graph.nodes}
             edges={graph.edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             colorMode="dark"
             fitView
             fitViewOptions={{ padding: 0.1 }}

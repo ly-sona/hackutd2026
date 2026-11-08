@@ -158,6 +158,33 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
   test.afterEach(async () => {
     await command("test_restore_memberships", "", {});
   });
+  test("keeps chat action buttons consistent on desktop", async ({ context, page }) => {
+    await login(context, "maya");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(base + "/team");
+    const actions = page.getByTestId("message-actions");
+    await expect(actions.first().getByRole("button", { name: "Create task", exact: true })).toBeAttached();
+    const sizes = await actions.locator("button").evaluateAll((buttons) => buttons.map((button) => ({
+      width: button.getBoundingClientRect().width,
+      height: button.getBoundingClientRect().height,
+    })));
+    expect(sizes.length).toBeGreaterThan(1);
+    for (const size of sizes) expect(size).toEqual(sizes[0]);
+    const addReferences = page.getByRole("button", { name: "Add references", exact: true });
+    const send = page.getByRole("button", { name: "Send", exact: true });
+    const referencesBox = await addReferences.boundingBox();
+    const sendBox = await send.boundingBox();
+    expect(referencesBox?.width).toBe(sizes[0].width);
+    expect(referencesBox?.height).toBe(sizes[0].height);
+    expect(sendBox?.width).toBe(sizes[0].width);
+    expect(sendBox?.height).toBe(sizes[0].height);
+    await addReferences.click();
+    await expect(addReferences).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByLabel("References (hold ⌘ or Ctrl to select several)")).toBeVisible();
+    await addReferences.click();
+    await expect(addReferences).toHaveAttribute("aria-expanded", "false");
+    await page.screenshot({ path: "/tmp/aegis-team-desktop.png", fullPage: true });
+  });
   test("seeds idempotently and reuses original evidence, graph entity, inventory and incident rooms", async ({
     context,
   }) => {
@@ -1163,7 +1190,7 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
       .selectOption("alex");
     await form
       .getByRole("combobox", {
-        name: "Backup responder (optional; otherwise Incident Commander)",
+        name: "Backup responder (optional; otherwise Incident Manager)",
         exact: true,
       })
       .selectOption("maya");

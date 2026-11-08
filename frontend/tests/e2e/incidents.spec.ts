@@ -107,6 +107,23 @@ test.describe("Phase 2 real incident documentation", () => {
   test.afterAll(async () => {
     await command("test_restore_memberships", "", {});
   });
+  test("shows severity and status beneath the incident title on desktop", async ({ context, page }) => {
+    await login(context, "maya");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(`${base}/overview`);
+    const heading = page.getByRole("heading", { name: "Ransomware response", exact: true });
+    const metadata = page.getByLabel("Incident severity and status", { exact: true });
+    await expect(metadata).toBeVisible();
+    await expect(metadata).toContainText("Severity:");
+    await expect(metadata).toContainText("Status:");
+    await expect(metadata.getByRole("button")).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Incident actions", exact: true })
+      .getByRole("button", { name: "Add finding", exact: true })).toBeVisible();
+    const titleBox = await heading.boundingBox();
+    const metadataBox = await metadata.boundingBox();
+    expect(metadataBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height);
+    await page.getByRole("main").screenshot({ path: "/tmp/aegis-incident-header.png" });
+  });
   test("creates an incident in the UI with memberships and immutable history, validates input and enforces update permissions", async ({
     browser,
   }) => {
@@ -123,7 +140,7 @@ test.describe("Phase 2 real incident documentation", () => {
     await form
       .getByLabel("Description", { exact: true })
       .fill("Initial synthetic report, progressive documentation.");
-    await form.getByLabel("Incident Commander (optional)").selectOption("maya");
+    await form.getByLabel("Incident Manager (optional)").selectOption("maya");
     await form.getByLabel("Alex Rivera", { exact: true }).check();
     await form.getByRole("button", { name: "Save", exact: true }).click();
     await expect(
@@ -132,8 +149,8 @@ test.describe("Phase 2 real incident documentation", () => {
     const incidentId = /incidents\/(IR-\d+)/.exec(page.url())![1];
       await page.setViewportSize({width:390,height:844});
       const selector = await page.getByLabel("Select incident",{exact:true}).boundingBox();
-      const search = await page.getByRole("button",{name:"Search workspace",exact:true}).boundingBox();
-      expect(selector!.x + selector!.width).toBeLessThanOrEqual(search!.x);
+      const notifications = await page.getByRole("button",{name:"Notifications",exact:true}).boundingBox();
+      expect(selector!.x + selector!.width).toBeLessThanOrEqual(notifications!.x);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
     const live = await dataConnection(c);

@@ -171,6 +171,9 @@ test.describe("independent access controls against real SpacetimeDB", () => {
       socket = route;
     });
     await openWorkspace(page);
+    await expect(page.getByRole("button", { name: "Search workspace", exact: true })).toHaveCount(0);
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(page.getByRole("dialog", { name: "Search workspace", exact: true })).toHaveCount(0);
     await socket!.close({
       code: 1012,
       reason: "Testing protected connection recovery",
@@ -190,7 +193,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
         page.getByRole("navigation", { name: "Incident navigation" }),
       ).toBeVisible();
       await expect(page.getByTestId("access-summary")).toContainText(
-        "Administrator",
+        "System Administrator",
       );
     }
   });
@@ -327,6 +330,35 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     ).resolves.toContain("UNAVAILABLE");
   });
 
+  test("previews a temporary pending invitation on desktop and revokes it afterward", async ({ context, page }) => {
+    await login(context, "sam");
+    const response = await post(context.request, "invitations", {
+      organizationId: "acme",
+      incidentId: "IR-2041",
+      role: "analyst",
+      phone: "+12145550188",
+      contactVerified: true,
+    });
+    expect(response.status()).toBe(201);
+    const invitation = await response.json() as { id: string };
+    try {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto("/org/acme/invitations");
+      const row = page.getByRole("row").filter({ hasText: "+12145550188" });
+      await expect(row.getByText("pending", { exact: true })).toBeVisible();
+      await expect(row.getByRole("button", { name: "Revoke", exact: true })).toBeVisible();
+      await page.getByRole("main").screenshot({ path: "/tmp/aegis-pending-invitation.png" });
+    } finally {
+      const revoked = await post(context.request, "invitations/revoke", {
+        organizationId: "acme",
+        id: invitation.id,
+      });
+      expect(revoked.status()).toBe(200);
+    }
+    await expect(
+      page.getByRole("row").filter({ hasText: "+12145550188" }).getByText("revoked", { exact: true }),
+    ).toBeVisible();
+  });
   test("creates an admin invitation in the UI, accepts it as the intended account and rejects reuse", async ({
     page,
     context,
@@ -375,7 +407,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await page.getByRole("link", { name: "Manage organization members", exact: true }).click();
     const membership = page.getByRole("row").filter({ hasText: "Taylor Morgan" });
-    await expect(membership).toContainText("Security Analyst");
+    await expect(membership).toContainText("Security Engineer");
     await expect(membership).toContainText("Temporary");
     await command("test_expire_membership", "", { id: "acme:taylor" });
     await expect(guestPage.getByRole("heading", { name: "Access revoked", exact: true })).toBeVisible();
@@ -554,7 +586,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
       .click();
     await expect(page.getByRole("status")).toContainText("Member role updated");
     await expect(analystPage.getByTestId("access-summary")).toContainText(
-      "Legal/Compliance",
+      "Legal & Compliance Officer",
     );
     expect(
       (

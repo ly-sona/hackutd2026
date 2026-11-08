@@ -130,7 +130,7 @@ export function TeamWorkspace() {
       {!a.can("messages:view") ? (
         <section className="space-y-5">
           <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">
-            Administrator access manages memberships and invitations. Incident
+            System Administrator access manages memberships and invitations. Incident
             chat requires an operational responder role and current incident
             assignment.
           </p>
@@ -376,7 +376,10 @@ export function TeamWorkspace() {
                           references={JSON.parse(m.references) as Reference[]}
                         />
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      <div
+                        data-testid="message-actions"
+                        className="mt-2 flex flex-wrap items-center gap-2 [&>button]:w-28"
+                      >
                         <TaskForm source={m} />
                         {a.can("findings:create") && (
                           <FindingForm sourceMessage={m} />
@@ -455,13 +458,16 @@ export function TeamWorkspace() {
                 />
                 {references && <ReferenceSelector />}
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <button
+                  <Button
                     type="button"
-                    className="text-xs underline"
+                    variant="outline"
+                    size="sm"
+                    className="w-28"
+                    aria-expanded={references}
                     onClick={() => setReferences((v) => !v)}
                   >
-                    Reference evidence, finding, scope or task
-                  </button>
+                    Add references
+                  </Button>
                   <span className="text-xs text-muted-foreground">
                     {c?.type === "Direct Message"
                       ? "Two participants only"
@@ -470,6 +476,7 @@ export function TeamWorkspace() {
                   <Button
                     type="submit"
                     size="sm"
+                    className="w-28"
                     disabled={sending || !c || c.readOnly}
                   >
                     <Send size={14} />

@@ -151,6 +151,38 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
   test.afterAll(async () => {
     await command("test_restore_memberships", "", {});
   });
+  test("keeps scope graph labels clear of nodes on desktop", async ({ context, page }) => {
+    await login(context, "alex");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(`${base}/scope`);
+    await expect(page.getByTestId("scope-node-EV-018")).toBeVisible();
+    await expect(page.locator(".react-flow__edge-textwrapper").first()).toBeVisible();
+    for (const expanded of [false, true]) {
+      if (expanded) {
+        await page.getByLabel("Find scope entity").selectOption("acme:scope:A-09");
+        await page.getByRole("button", { name: "Expand related", exact: true }).click();
+        await expect(page.getByTestId("scope-node-APP-PORTAL")).toBeAttached();
+      }
+      await expect.poll(async () => page.getByTestId("scope-graph").evaluate((graph) => {
+        const nodes = [...graph.querySelectorAll(".react-flow__node")].map((node) => ({
+          name: node.textContent,
+          rect: node.getBoundingClientRect(),
+        }));
+        const labels = [...graph.querySelectorAll(".react-flow__edge-textwrapper")];
+        return labels.flatMap((label) => {
+          const r = label.getBoundingClientRect();
+          return nodes.filter(({ rect: n }) =>
+            r.left < n.right && r.right > n.left && r.top < n.bottom && r.bottom > n.top,
+          ).map(({ name }) => `${label.textContent} overlaps ${name}`);
+        });
+      })).toEqual([]);
+      const overflowingCards = await page.locator(".react-flow__node [data-entity-kind]").evaluateAll((cards) =>
+        cards.filter((card) => card.scrollWidth > card.clientWidth).map((card) => card.textContent),
+      );
+      expect(overflowingCards).toEqual([]);
+      await page.getByTestId("scope-graph").screenshot({ path: `/tmp/aegis-scope-graph-${expanded ? "expanded" : "default"}.png` });
+    }
+  });
   test("renders connected entities and real EV-018, browses the 1,240 inventory and opens C-1044 without inventing confirmed impacts", async ({
     context,
     page,

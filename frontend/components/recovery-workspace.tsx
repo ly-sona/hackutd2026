@@ -11,7 +11,7 @@ import { Badge } from "./ui/badge";
 import { Editor, Field, fieldClass } from "./incident-forms";
 import { EvidenceButton } from "./evidence-panel";
 import { TaskButton } from "./coordination-tasks";
-import { incidentBase } from "@/lib/roles";
+import { incidentBase, roleLabels } from "@/lib/roles";
 import { incidentTime } from "@/lib/incident-model";
 import type {
   RecoveryExecution,
@@ -167,8 +167,8 @@ export function RecoveryStart({
       }
     >
       <p className="text-sm">
-        Version {template.version} · Two independent approvals: Security Analyst
-        and Incident Commander. The requester cannot approve. Infrastructure
+        Version {template.version} · Two independent approvals: Security Engineer
+        and Incident Manager. The requester cannot approve. Infrastructure
         actions and verification are simulated.
       </p>
       <p className="text-sm text-muted-foreground">{template.expectedResult}</p>
@@ -543,8 +543,9 @@ export function RecoveryWorkspace() {
                 <dd>{incidentTime(r.expiresAt)}</dd>
                 <dt>Policy</dt>
                 <dd>
-                  {r.policyDefinition.roles.join(" + ")} · distinct from
-                  requester
+                  {r.policyDefinition.roles
+                    .map((role) => roleLabels[role])
+                    .join(" + ")} · distinct from requester
                 </dd>
               </dl>
               <section
@@ -608,7 +609,7 @@ export function RecoveryWorkspace() {
                     className="py-3 border-b border-border text-sm flex justify-between gap-3"
                     key={role}
                   >
-                    <span>{role}</span>
+                    <span>{roleLabels[role]}</span>
                     <span>
                       {decision
                         ? `${c.name(decision.userId)} · ${decision.decision}${decision.eligible ? "" : " (no longer eligible)"}`
@@ -666,7 +667,7 @@ export function RequestClosure() {
     <Editor
       title="Request independent incident closure"
       trigger="Request incident closure"
-      description="Closure is separate from recovery and does not resolve findings or clear impact assessments. A different authorized analyst and commander must approve. Request as an independent reviewer, such as Legal, when there is only one analyst and commander."
+      description="Closure is separate from recovery and does not resolve findings or clear impact assessments. A different authorized Security Engineer and Incident Manager must approve. Request as an independent reviewer, such as the Legal & Compliance Officer, when there is only one Security Engineer and Incident Manager."
       onSubmit={(f) =>
         run("close", {
           justification: String(f.get("justification")),

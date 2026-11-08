@@ -30,7 +30,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { Badge } from "./ui/badge";
 import { api } from "@/lib/api";
 import { incidentBase } from "@/lib/roles";
 import {
@@ -254,6 +253,21 @@ export function LiveOverview() {
           <h1 className="text-3xl font-semibold tracking-tight sm:text-[40px]">
             {i.title}
           </h1>
+          <dl
+            aria-label="Incident severity and status"
+            className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm"
+          >
+            <div className="flex items-center gap-2">
+              <dt className="text-muted-foreground">Severity:</dt>
+              <dd className={`font-medium ${tone(i.severity)}`}>
+                {i.severity}
+              </dd>
+            </div>
+            <div className="flex items-center gap-2">
+              <dt className="text-muted-foreground">Status:</dt>
+              <dd className="font-medium">{i.status}</dd>
+            </div>
+          </dl>
           <p className="mt-2 text-sm text-muted-foreground">
             {i.systems || i.type} · Opened {incidentTime(i.createdAt)}
           </p>
@@ -261,11 +275,11 @@ export function LiveOverview() {
             {i.description}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 pt-2">
-          <Badge variant="outline" className={tone(i.severity)}>
-            {i.severity}
-          </Badge>
-          <Badge variant="outline">{i.status}</Badge>
+        <div
+          role="group"
+          aria-label="Incident actions"
+          className="flex flex-wrap items-center gap-3 pt-2"
+        >
           {a.can("findings:create") && <FindingForm />}
           {a.can("incident:create") && (
             <NewIncident
@@ -304,14 +318,13 @@ export function LiveOverview() {
       <ScopeSummaryStrip summary={d.scopeSummary} />
       <AffectedOperations />
       <div className="mb-7 flex flex-wrap gap-3">
-        <IncidentReports />
         {a.can("incident:manage") && <UpdateIncident />}
         {a.can("notes:create") && <AddNote />}
         {a.can("evidence:upload") && <AttachEvidence />}
       </div>
       <dl className="mb-8 flex flex-wrap gap-x-8 gap-y-3 text-xs text-muted-foreground">
         <div>
-          <dt className="text-foreground">Commander</dt>
+          <dt className="text-foreground">Incident Manager</dt>
           <dd className="mt-1">
             {d.members.find((m) => m.userId === i.commanderId)?.name ??
               (i.commanderId || "Unassigned")}
