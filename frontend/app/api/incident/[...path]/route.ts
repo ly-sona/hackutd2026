@@ -24,7 +24,6 @@ const routes: Record<string, string> = {
   note: "note",
   read: "read",
   visit: "visit",
-  "notifications/read": "notification.read",
   link: "link",
 };
 export async function POST(

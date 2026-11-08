@@ -445,49 +445,9 @@ export function seedScenario(
     "08:43",
     "maya",
   );
-  for (const [n, userId] of [
-    "maya",
-    "alex",
-    "priya",
-    "jordan",
-    "sam",
-    "maya",
-    "alex",
-    "priya",
-  ].entries()) {
-    const member = p.activeMember(
-      ctx,
-      "acme",
-      userId,
-      ctx.timestamp.microsSinceUnixEpoch / 1000n,
-    );
-    if (member && isAssigned(ctx, userId, "IR-2041"))
-      ctx.db.notifications.insert({
-        id: 0n,
-        organizationId: "acme",
-        incidentId: "IR-2041",
-        incidentKey: "acme:IR-2041",
-        recipientId: userId,
-        type: n < 5 ? "finding" : "evidence",
-        title:
-          n < 5
-            ? "Containment remains unverified"
-            : "Network evidence available",
-        description: "Review IR-2041 observations and their bounded claims.",
-        findingId: "IR-2041:F-04",
-        createdAt: at("09:26"),
-        readAt: 0n,
-      });
-  }
   ctx.db.scenarioSeeds.insert({
     id: version,
     createdAt: ctx.timestamp.microsSinceUnixEpoch / 1000n,
   });
   return { seeded: true, version };
-}
-function isAssigned(ctx: Ctx, user: string, incident: string) {
-  return (
-    ctx.db.incidentMemberships.id.find(`acme:${incident}:${user}`)
-      ?.membershipStatus === "active"
-  );
 }

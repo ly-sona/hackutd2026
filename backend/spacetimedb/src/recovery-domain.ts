@@ -3,7 +3,6 @@ import { appendEvent, type Ports } from "./incident-domain";
 import {
   createCoordinationTask,
   linkAutomatedTaskEvidence,
-  notifyCoordination,
 } from "./coord-domain";
 import {
   has,
@@ -66,36 +65,6 @@ function event(
     title,
     description,
   );
-}
-function notify(
-  ctx: Ctx,
-  r: Request | Execution,
-  title: string,
-  description: string,
-  roles?: readonly string[],
-) {
-  const at = time(ctx);
-  for (const m of ctx.db.incidentMemberships.organizationId.filter(
-    r.organizationId,
-  ))
-    if (m.incidentId === r.incidentId) {
-      const a = currentAccess(
-          ctx,
-          r.organizationId,
-          r.incidentId,
-          m.userId,
-          at,
-        ),
-        role = ctx.db.memberships.id.find(
-          `${r.organizationId}:${m.userId}`,
-        )?.role;
-      if (
-        a &&
-        has(a, "operations:view") &&
-        (!roles || roles.includes(role ?? ""))
-      )
-        notifyCoordination(ctx, r, m.userId, "recovery", title, description);
-    }
 }
 function eligible(ctx: Reader, r: Request, at: bigint) {
   return [...ctx.db.approvalDecisions.requestId.filter(r.id)].map((d) => {
@@ -163,13 +132,6 @@ function newApproval(
     completedAt: 0n,
     result: "",
   });
-  notify(
-    ctx,
-    r,
-    "Approval required: " + title,
-    `Request ${r.displayReference}. Separate authorized reviewers are required.`,
-    approvalPolicies[policy].roles,
-  );
   event(
     ctx,
     r,
@@ -330,13 +292,6 @@ export function recoveryCommand(
       result: "",
     });
     event(ctx, r, who, "approval", "Incident closure requested", reason);
-    notify(
-      ctx,
-      r,
-      "Incident closure requires independent approval",
-      reason,
-      approvalPolicies.close_incident.roles,
-    );
     return done({ requestId: id });
   }
   if (action === "recovery.start") {
@@ -605,12 +560,6 @@ export function recoveryCommand(
       `${r.displayReference}: ${decision}`,
       `${justification}. Request state: ${status}.`,
     );
-    notify(
-      ctx,
-      r,
-      "Approval decision recorded",
-      `${r.displayReference}: ${status}.`,
-    );
     return done({ status });
   }
   if (action === "recovery.cancel") {
@@ -864,7 +813,6 @@ function cancelExecution(
     "Recovery or fallback canceled",
     `${e.id}: ${reason}. History preserved.`,
   );
-  notify(ctx, e, "Recovery canceled", reason);
 }
 function fail(ctx: Ctx, e: Execution, reason: string, at: bigint) {
   ctx.db.recoveryExecutions.id.update({
@@ -946,7 +894,6 @@ function fail(ctx: Ctx, e: Execution, reason: string, at: bigint) {
       "system",
     );
   }
-  notify(ctx, e, "Recovery failed; fallback available", reason);
 }
 export function processRecovery(ctx: Ctx) {
   const at = time(ctx);
@@ -1356,7 +1303,6 @@ export function processRecovery(ctx: Ctx) {
       `${state}: customer-support capability`,
       `${e.id}: ${result} Original system compromise remains unchanged; incident and investigation task remain open.`,
     );
-    notify(ctx, e, state, result);
   }
 }
 export function recoveryProjection(ctx: Reader, access: Access[]) {

@@ -48,10 +48,12 @@ export default async function OrganizationsPage() {
                   {roleLabels[access.role]}
                 </span>
                 {access.permissions.includes("incident:create") && (
-                  <NewIncident
-                    organizationId={access.organizationId}
-                    responders={access.responders}
-                  />
+                  <div className="shrink-0 [&>button]:h-8 [&>button]:px-3 [&>button]:text-sm">
+                    <NewIncident
+                      organizationId={access.organizationId}
+                      responders={access.responders}
+                    />
+                  </div>
                 )}
               </div>
               {access.incidents.map((incident) => (

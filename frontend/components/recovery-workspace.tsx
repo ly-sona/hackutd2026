@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import Link from "./workspace-link";
 import { PageHeading } from "./workspace-ui";
 import { Avatar } from "./account-menu";
@@ -9,7 +10,6 @@ import { useCoordination } from "./coordination-data";
 import { useIncident } from "./incident-data";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
 import { Editor, Field, fieldClass } from "./incident-forms";
 import { EvidenceButton } from "./evidence-panel";
 import { TaskButton } from "./coordination-tasks";
@@ -32,87 +32,150 @@ const tone = (s: string) =>
         ].includes(s)
       ? "text-emerald-400"
       : "text-amber-300";
-export function TrustWarning({ warning: w }: { warning: Warning }) {
+// Approval state is independent of recovery progress and trust restrictions.
+const requestTone = (status: string) => {
+  if (["Approved", "Executed", "Recorded"].includes(status))
+    return "text-emerald-400";
+  if (["Rejected", "Invalidated"].includes(status)) return "text-red-400";
+  if (status === "Pending") return "text-amber-300";
+  return "text-muted-foreground";
+};
+export function TrustWarning({
+  warning: w,
+  expanded = true,
+}: {
+  warning: Warning;
+  expanded?: boolean;
+}) {
   const a = useAccess(),
+    c = useCoordination(),
     run = useRecoveryCommand();
   return (
-    <div className="grid gap-3 border border-border rounded-md p-4">
-      <div className="flex gap-3 justify-between">
-        <strong>{w.name}</strong>
-        <Badge className={tone(w.category)} variant="outline">
-          {w.category}
-        </Badge>
-      </div>
-      <p className="text-sm text-muted-foreground">{w.explanation}</p>
-      <div className="flex flex-wrap gap-2">
-        {w.evidenceIds.map((id) => (
-          <RecoveryEvidence key={id} id={id} />
-        ))}
-        {w.findingIds.map((id) => (
-          <Link
-            className="text-xs underline"
-            key={id}
-            href={`${incidentBase(a.organizationId, a.incidentId)}/overview?finding=${encodeURIComponent(id)}`}
-          >
-            Related finding
-          </Link>
-        ))}
-      </div>
-      <details className="text-xs text-muted-foreground">
-        <summary>Basis and ownership</summary>
-        <p>
-          {w.explicit
-            ? "Explicit incident usage decision"
-            : "Deterministic assessment/dependency warning"}{" "}
-          · {w.updatedBy} · {incidentTime(w.updatedAt)}
-        </p>
-        <p>
-          Source entities: {w.sourceEntityIds.join(", ") || "None recorded"}
-        </p>
-        <p>
-          Relationships: {w.relationshipIds.join(" → ") || "No dependency path"}
-        </p>
-        <p>
-          Assessments: {w.assessmentIds.join(", ") || "No assessment claimed"}
-        </p>
-      </details>
-      {a.can("trust:manage") && (
-        <Editor
-          title="Update trust restriction"
-          description="Usage restrictions are separate from compromise and individual impact assessments. Linked evidence and justification are required."
-          trigger="Review trust restriction"
-          onSubmit={(f) =>
-            run("trust", {
-              entityId: w.entityId,
-              category: String(f.get("category")),
-              justification: String(f.get("justification")),
-              evidenceIds: f.getAll("evidenceIds"),
-            })
-          }
+    <details open={expanded} className="min-w-0 border-b border-border">
+      <summary className="flex min-h-16 cursor-pointer flex-wrap items-center gap-x-5 gap-y-2 py-4 focus-visible:outline-2 focus-visible:outline-offset-4">
+        <span className="min-w-0 flex-1 basis-44">
+          <span className="block text-lg font-semibold break-words">
+            {w.name}
+          </span>
+          <span className="mt-1 block text-sm text-muted-foreground">
+            {w.kind}
+          </span>
+        </span>
+        <span
+          className={`flex items-center gap-2 text-base font-medium ${tone(w.category)}`}
         >
-          <Field label="Usage decision">
-            <select
-              className={fieldClass}
-              name="category"
-              defaultValue={w.category}
+          <span
+            aria-hidden="true"
+            className="size-2 shrink-0 rounded-full bg-current"
+          />
+          {w.category}
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          size={18}
+          className="disclosure-chevron shrink-0"
+        />
+      </summary>
+      <div className="grid min-w-0 gap-3 pb-5">
+        <p className="text-base leading-6 text-muted-foreground">
+          {w.explanation}
+        </p>
+        <p className="text-sm leading-6">
+          {w.category === "Do Not Use"
+            ? "Stop using this route. Review the supporting evidence and coordinate an approved alternative."
+            : w.category === "Use With Caution"
+              ? "Confirm the intended use with the incident team before proceeding. This warning does not confirm compromise."
+              : "No usage restriction is recorded. This does not establish that the resource is verified safe."}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {w.evidenceIds.map((id) => (
+            <RecoveryEvidence key={id} id={id} />
+          ))}
+          {w.findingIds.map((id) => (
+            <Link
+              className="text-sm underline underline-offset-4"
+              key={id}
+              href={`${incidentBase(a.organizationId, a.incidentId)}/overview?finding=${encodeURIComponent(id)}`}
             >
-              {["Do Not Use", "Use With Caution", "Available"].map((v) => (
-                <option key={v}>{v}</option>
-              ))}
-            </select>
-          </Field>
-          <EvidenceSelection />
-          <Field label="Justification">
-            <textarea
-              name="justification"
-              required
-              maxLength={3000}
-              className={fieldClass}
+              Finding {id}
+            </Link>
+          ))}
+        </div>
+        {!w.evidenceIds.length && !w.findingIds.length && (
+          <p className="text-sm text-muted-foreground">
+            No direct evidence or findings linked. Review the dependency basis
+            below.
+          </p>
+        )}
+        <details className="min-w-0 text-sm text-muted-foreground">
+          <summary className="flex min-h-10 cursor-pointer items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-4">
+            Basis and ownership
+            <ChevronDown
+              aria-hidden="true"
+              size={16}
+              className="disclosure-chevron shrink-0"
             />
-          </Field>
-        </Editor>
-      )}
-    </div>
+          </summary>
+          <div className="grid gap-2 pt-2 break-words">
+            <p>
+              {w.explicit
+                ? "Explicit incident usage decision"
+                : "Deterministic assessment/dependency warning"}{" "}
+              · {c.name(w.updatedBy)} · {incidentTime(w.updatedAt)}
+            </p>
+            <p>
+              Source entities: {w.sourceEntityIds.join(", ") || "None recorded"}
+            </p>
+            <p>
+              Relationships:{" "}
+              {w.relationshipIds.join(" → ") || "No dependency path"}
+            </p>
+            <p>
+              Assessments:{" "}
+              {w.assessmentIds.join(", ") || "No assessment claimed"}
+            </p>
+          </div>
+        </details>
+        {a.can("trust:manage") && (
+          <div className="[&>button]:h-auto [&>button]:min-h-10 [&>button]:whitespace-normal [&>button]:text-sm">
+            <Editor
+              title="Update trust restriction"
+              description="Usage restrictions are separate from compromise and individual impact assessments. Linked evidence and justification are required."
+              trigger="Review trust restriction"
+              onSubmit={(f) =>
+                run("trust", {
+                  entityId: w.entityId,
+                  category: String(f.get("category")),
+                  justification: String(f.get("justification")),
+                  evidenceIds: f.getAll("evidenceIds"),
+                })
+              }
+            >
+              <Field label="Usage decision">
+                <select
+                  className={fieldClass}
+                  name="category"
+                  defaultValue={w.category}
+                >
+                  {["Do Not Use", "Use With Caution", "Available"].map((v) => (
+                    <option key={v}>{v}</option>
+                  ))}
+                </select>
+              </Field>
+              <EvidenceSelection />
+              <Field label="Justification">
+                <textarea
+                  name="justification"
+                  required
+                  maxLength={3000}
+                  className={fieldClass}
+                />
+              </Field>
+            </Editor>
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 function RecoveryEvidence({ id }: { id: string }) {
@@ -521,7 +584,15 @@ export function RecoveryWorkspace() {
     r.status === "Pending" &&
     Number(r.expiresAt) > Number(d.now) &&
     !decisions.some((decision) => decision.userId === a.userId);
-  const warnings = d.warnings.filter((item) => item.category !== "Available");
+  const warnings = d.warnings
+    .filter((item) => item.category !== "Available")
+    .sort((left, right) =>
+      left.category === right.category
+        ? left.name.localeCompare(right.name)
+        : left.category === "Do Not Use"
+          ? -1
+          : 1,
+    );
   return (
     <>
       <PageHeading
@@ -560,7 +631,8 @@ export function RecoveryWorkspace() {
             <button
               key={request.id}
               onClick={() => setSelected(request.id)}
-              className={`flex w-full items-center justify-between gap-4 border-b border-border px-4 py-3 text-left ${r?.id === request.id ? "border-l-[3px] border-l-white bg-muted/35" : "border-l-[3px] border-l-transparent hover:bg-muted/15"}`}
+              aria-pressed={r?.id === request.id}
+              className={`flex w-full flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 text-left ${r?.id === request.id ? "border-l-[3px] border-l-white bg-muted/35" : "border-l-[3px] border-l-transparent hover:bg-muted/15"}`}
             >
               <span className="min-w-0">
                 <span className="block text-lg font-semibold break-words">
@@ -571,21 +643,60 @@ export function RecoveryWorkspace() {
                 </span>
               </span>
               <span
-                className={`flex shrink-0 items-center gap-2 text-base ${tone(request.status)}`}
+                className={`flex shrink-0 items-center gap-2 text-base ${requestTone(request.status)}`}
               >
-                <span className="size-2 rounded-full bg-current" />
+                <span
+                  aria-hidden="true"
+                  className="size-2 rounded-full bg-current"
+                />
                 {request.status}
               </span>
             </button>
           ))}
-          <details className="mt-6 border-t border-border pt-4">
-            <summary className="cursor-pointer text-base text-muted-foreground">
+          <details
+            className="mt-6 border-t border-border pt-4"
+            data-testid="recovery-tools"
+          >
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-4">
               Recovery tools
+              <ChevronDown
+                aria-hidden="true"
+                size={18}
+                className="disclosure-chevron shrink-0"
+              />
             </summary>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <RecoveryStart />
-              <RecoveryStart fallback />
-              <RequestClosure />
+            <div className="mt-2 grid gap-5">
+              <p className="text-sm leading-6 text-muted-foreground">
+                Choose a procedure to create a request. Recovery and fallback
+                require fresh, independent approvals.
+              </p>
+              {a.can("recovery:start") && (
+                <>
+                  <div className="grid gap-2 border-t border-border pt-4 [&>button]:h-auto [&>button]:min-h-11 [&>button]:whitespace-normal [&>button]:text-base">
+                    <h3 className="font-medium">Restore the primary service</h3>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Run the predefined customer support restoration and
+                      integrity checks. Infrastructure actions are simulated.
+                    </p>
+                    <RecoveryStart trigger="Request restoration" />
+                  </div>
+                  <div className="grid gap-2 border-t border-border pt-4 [&>button]:h-auto [&>button]:min-h-11 [&>button]:whitespace-normal [&>button]:text-base">
+                    <h3 className="font-medium">Use an independent fallback</h3>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Request one hour of read-only access to the separate safe
+                      support subset for named responders.
+                    </p>
+                    <RecoveryStart fallback />
+                  </div>
+                </>
+              )}
+              <ClosureTool />
+              {!a.can("recovery:start") && !a.can("reports:export") && (
+                <p className="text-sm text-muted-foreground">
+                  Your role can review requests. An authorized responder must
+                  request recovery or incident closure.
+                </p>
+              )}
             </div>
           </details>
         </aside>
@@ -604,7 +715,9 @@ export function RecoveryWorkspace() {
                 <h2 className="text-[34px] leading-tight font-semibold break-words">
                   {r.title}
                 </h2>
-                <span className={`text-2xl font-semibold ${tone(r.status)}`}>
+                <span
+                  className={`text-2xl font-semibold ${requestTone(r.status)}`}
+                >
                   {r.status}
                 </span>
               </div>
@@ -798,14 +911,35 @@ export function RecoveryWorkspace() {
           )}
         </section>
       </div>
-      <details className="mt-8 border-t border-border py-5">
-        <summary className="cursor-pointer text-base text-muted-foreground">
+      <details
+        className="mt-8 border-t border-border py-5"
+        data-testid="trust-warnings"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-lg font-semibold focus-visible:outline-2 focus-visible:outline-offset-4">
           Trust warnings ({warnings.length})
+          <ChevronDown
+            aria-hidden="true"
+            size={18}
+            className="disclosure-chevron shrink-0"
+          />
         </summary>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <p className="mt-2 max-w-3xl text-base leading-6 text-muted-foreground">
+          Check restrictions before using a normal business route. Usage
+          decisions and dependency warnings are separate from verified
+          compromise and recovery readiness. Open a resource to review its
+          evidence and next steps.
+        </p>
+        <div className="mt-4 border-t border-border">
           {warnings.map((warning) => (
-            <TrustWarning key={warning.id} warning={warning} />
+            <TrustWarning key={warning.id} warning={warning} expanded={false} />
           ))}
+          {!warnings.length && (
+            <p className="py-5 text-muted-foreground">
+              {d.ready
+                ? "No active trust warnings recorded. This does not establish that resources are verified safe."
+                : "Loading trust warnings…"}
+            </p>
+          )}
         </div>
       </details>
       <p className="mt-4 text-sm leading-6 text-muted-foreground">
@@ -814,6 +948,22 @@ export function RecoveryWorkspace() {
         is performed.
       </p>
     </>
+  );
+}
+
+function ClosureTool() {
+  const a = useAccess(),
+    d = useIncident();
+  if (!a.can("reports:export") || d.incident?.status === "Closed") return null;
+  return (
+    <div className="grid gap-2 border-t border-border pt-4 [&>button]:h-auto [&>button]:min-h-11 [&>button]:whitespace-normal [&>button]:text-base">
+      <h3 className="font-medium">Close the incident</h3>
+      <p className="text-sm leading-6 text-muted-foreground">
+        Request a separate, evidence-backed closure review. Recovery does not
+        resolve findings or close the incident.
+      </p>
+      <RequestClosure />
+    </div>
   );
 }
 
