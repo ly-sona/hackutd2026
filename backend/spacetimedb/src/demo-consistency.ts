@@ -1,6 +1,36 @@
 import type { Ctx } from "./index";
 import { appendEvent, json, time } from "./incident-domain";
 
+// Rename recognizable demo labels without changing tenant IDs or original bytes.
+// Called only through the existing trusted bootstrap command.
+export function renameDemoCompany(ctx: Ctx) {
+  const organization = ctx.db.organizations.id.find("acme");
+  if (!organization || organization.name !== "Acme") return;
+  ctx.db.organizations.id.update({ ...organization, name: "Techniq" });
+  const changes: { kind: string; id: string; previous: string; current: string }[] = [];
+  for (const entity of ctx.db.scopeEntities.organizationId.filter("acme")) {
+    if (entity.owner !== "Acme synthetic response team") continue;
+    const owner = "Techniq synthetic response team";
+    ctx.db.scopeEntities.id.update({ ...entity, owner, updatedAt: time(ctx) });
+    changes.push({ kind: "owner", id: entity.id, previous: entity.owner, current: owner });
+  }
+  for (const evidence of ctx.db.evidence.iter()) {
+    if (evidence.organizationId !== "acme" ||
+        evidence.source !== "Synthetic Acme responder fixture" ||
+        !ctx.db.evidenceLinks.id.find(`seed:${evidence.id}`)) continue;
+    const source = "Synthetic Techniq responder fixture";
+    ctx.db.evidence.id.update({ ...evidence, source });
+    changes.push({ kind: "evidence source", id: evidence.id, previous: evidence.source, current: source });
+  }
+  for (const incident of ctx.db.incidents.iter()) {
+    if (incident.organizationId !== "acme") continue;
+    appendEvent(ctx, "acme", incident.incidentId, "system", "fixture_context",
+      "Demo company renamed to Techniq",
+      "Synthetic company labels updated. Organization identifiers, original evidence bytes and prior history are preserved.",
+      { previousValue: json({ name: organization.name }), newValue: json({ name: "Techniq", changes }) });
+  }
+}
+
 // Reconcile only recognizable, unchanged seed records. Preserve message/event history.
 export function reconcileDemoConsistency(ctx: Ctx) {
   if (ctx.env.AEGIS_DEVELOPMENT_MODE !== "true" && ctx.env.AEGIS_TEST_MODE !== "true") return;

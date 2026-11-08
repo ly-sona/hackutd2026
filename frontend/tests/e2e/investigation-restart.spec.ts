@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { command, withGateway, unwrap } from "../../lib/server/gateway";
 import { hashPassword, newToken, tokenHash } from "../../lib/server/password";
 import { seedIncidents } from "../../../scripts/seed-incidents";
+import { localSigningKeyArgs } from "../../../scripts/local-signing-keys.mjs";
 import { collectSnapshot } from "../../lib/server/investigation/collector";
 import {
   processNextJob,
@@ -46,6 +47,7 @@ test("migrates an existing main database non-destructively and resumes scoped wo
         "127.0.0.1:3201",
         "--data-dir",
         join(state, "db"),
+        ...localSigningKeyArgs(join(state, "db")),
         "--non-interactive",
       ],
       { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
@@ -75,6 +77,14 @@ test("migrates an existing main database non-destructively and resumes scoped wo
   async function stop() {
     if (!server || server.exitCode !== null) return;
     const child = server;
+    if (process.platform === "win32") {
+      await promisify(execFile)(
+        "taskkill.exe",
+        ["/PID", String(child.pid), "/T", "/F"],
+        { windowsHide: true },
+      );
+      return;
+    }
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         child.kill("SIGKILL");
@@ -161,7 +171,7 @@ test("migrates an existing main database non-destructively and resumes scoped wo
     await symlink(
       join(root, "node_modules"),
       join(legacy, "node_modules"),
-      "dir",
+      process.platform === "win32" ? "junction" : "dir",
     );
     await publish(join(legacy, "backend/spacetimedb"));
     const passwordHash = await hashPassword(newToken());

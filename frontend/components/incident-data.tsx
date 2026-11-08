@@ -13,7 +13,6 @@ import {
   type Evidence,
   type EvidenceLink,
   type FindingRead,
-  type Notification,
 } from "@/lib/incident-model";
 const visits = new Map<
   string,
@@ -88,10 +87,6 @@ function useData() {
       evidence: get<Evidence>("evidence"),
       links: get<EvidenceLink>("link"),
       reads: get<FindingRead>("read"),
-      notifications: rows
-        .filter((r) => r.kind === "notification")
-        .map((r) => JSON.parse(r.body) as Notification)
-        .sort((a, b) => Number(b.createdAt) - Number(a.createdAt)),
       members: members.filter(
         (m) =>
           m.organizationId === access.organizationId &&

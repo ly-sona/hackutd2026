@@ -11,7 +11,6 @@ import {
 import { matrix, isRole, type Permission } from "./permissions";
 import {
   canReadConversation,
-  canReadFinding,
   canReadTask,
   ensureRoom,
   responderAccess,
@@ -35,35 +34,6 @@ const terminalTask = (task: Task) =>
   ["Completed", "Canceled"].includes(task.status);
 const permits = (a: CoordinationAccess | undefined, p: string) =>
   !!a && (JSON.parse(a.permissions) as string[]).includes(p);
-export function notifyCoordination(
-  ctx: Ctx,
-  task: { organizationId: string; incidentId: string },
-  recipientId: string,
-  type: string,
-  title: string,
-  description: string,
-  target: { conversationId?: string; taskId?: string; pageId?: string } = {},
-) {
-  const row = ctx.db.notifications.insert({
-    id: 0n,
-    organizationId: task.organizationId,
-    incidentId: task.incidentId,
-    incidentKey: key(task.organizationId, task.incidentId),
-    recipientId,
-    type,
-    title,
-    description,
-    createdAt: time(ctx),
-    readAt: 0n,
-    findingId: "",
-  });
-  ctx.db.coordinationNotificationTargets.insert({
-    id: row.id,
-    conversationId: target.conversationId ?? "",
-    taskId: target.taskId ?? "",
-    pageId: target.pageId ?? "",
-  });
-}
 function event(
   ctx: Ctx,
   task: Task,
@@ -151,15 +121,6 @@ function cancelPage(ctx: Ctx, page: Page, actor: string, reason: string) {
   ctx.db.pages.id.update({ ...page, status: "Canceled", reason });
   const task = ctx.db.tasks.id.find(page.taskId)!;
   event(ctx, task, actor, "page", "Page canceled", reason, { pageId: page.id });
-  notifyCoordination(
-    ctx,
-    task,
-    page.requestedBy,
-    "page.canceled",
-    "Page canceled",
-    reason,
-    { taskId: task.id, pageId: page.id },
-  );
 }
 export function processPages(ctx: Ctx) {
   const at = time(ctx);
@@ -195,7 +156,7 @@ export function processPages(ctx: Ctx) {
         ctx,
         page,
         "",
-        "No eligible backup or Incident Commander remains. Requester must reassign the task.",
+        "No eligible backup or Incident Manager remains. Requester must reassign the task.",
       );
       continue;
     }
@@ -225,24 +186,6 @@ export function processPages(ctx: Ctx) {
         reason:
           "One-level escalation. Explicit acknowledgment required; no further automatic escalation.",
       });
-      notifyCoordination(
-        ctx,
-        task,
-        backup,
-        "page.escalated",
-        "Urgent page escalated: " + task.title,
-        "Please acknowledge receipt. Task and finding verification remain separate.",
-        { taskId: task.id, pageId: childId },
-      );
-      notifyCoordination(
-        ctx,
-        task,
-        page.requestedBy,
-        "page.escalated",
-        "Page escalated",
-        `Backup responder: ${ctx.db.users.id.find(backup)?.displayName ?? backup}.`,
-        { taskId: task.id, pageId: childId },
-      );
       event(
         ctx,
         task,
@@ -281,15 +224,6 @@ function issuePage(ctx: Ctx, task: Task, actor: string, backup: string) {
     parentPageId: "",
     reason: "Acknowledgment confirms receipt only.",
   });
-  notifyCoordination(
-    ctx,
-    task,
-    task.assignedUserId,
-    "page.issued",
-    "Urgent page: " + task.title,
-    "Acknowledge receipt explicitly. This does not complete the task.",
-    { taskId: task.id, pageId: id },
-  );
   event(
     ctx,
     task,
@@ -308,7 +242,7 @@ export function coordinationCommand(
   d: Record<string, unknown>,
   p: Ports,
 ): unknown {
-  if (action === "coord.seed") return seedCoordination(ctx, notifyCoordination);
+  if (action === "coord.seed") return seedCoordination(ctx);
   const text = (field: string, max = 200, optional = false) => {
     const v = d[field];
     if (optional && (v === undefined || v === "")) return "";
@@ -489,7 +423,7 @@ export function coordinationCommand(
     if (!backup)
       return p.fail(
         "INVALID_INPUT",
-        "Select an eligible backup or Incident Commander distinct from the recipient.",
+        "Select an eligible backup or Incident Manager distinct from the recipient.",
       );
     return backup;
   };
@@ -575,23 +509,6 @@ export function coordinationCommand(
       createdAt: at,
       correctionOf,
     });
-    for (const userId of incidentResponders(ctx, org, inc, at)) {
-      const recipient = responderAccess(ctx, org, inc, userId, at);
-      if (
-        recipient &&
-        recipient.userId !== who &&
-        canReadConversation(ctx, recipient, c.id)
-      )
-        notifyCoordination(
-          ctx,
-          c,
-          recipient.userId,
-          "message",
-          "New message",
-          `${ctx.db.users.id.find(who)?.displayName ?? who} sent a message in ${c.type}.`,
-          { conversationId: c.id },
-        );
-    }
     return finish({ messageId: message.id });
   }
   if (action === "coord.message.read") {
@@ -666,15 +583,6 @@ export function coordinationCommand(
           id: e.id,
           conversationId: source.conversationId,
         });
-    for (const n of ctx.db.notifications.incidentKey.filter(k))
-      if (n.findingId === result.findingId) {
-        const recipient = responderAccess(ctx, org, inc, n.recipientId, at);
-        if (
-          !recipient ||
-          !canReadConversation(ctx, recipient, source.conversationId)
-        )
-          ctx.db.notifications.id.delete(n.id);
-      }
     return finish(result);
   }
   if (action === "coord.task.create") {
@@ -765,7 +673,7 @@ export function coordinationCommand(
     )
       return p.fail(
         "ACCESS_DENIED",
-        "Only the assignee, creator or Incident Commander may change this task.",
+        "Only the assignee, creator or Incident Manager may change this task.",
       );
     if (!canTransition(task.status, status))
       return p.fail("INVALID_INPUT", "Invalid task status transition.");
@@ -881,39 +789,6 @@ export function coordinationCommand(
         verifiedAt: next.verifiedAt,
       },
     );
-    for (const userId of new Set([task.createdBy, assignedUserId]))
-      notifyCoordination(
-        ctx,
-        next,
-        userId,
-        status === "Awaiting Verification"
-          ? "task.verification"
-          : "task.updated",
-        `${task.title}: ${status}`,
-        comment,
-        { taskId: task.id },
-      );
-    if (status === "Awaiting Verification")
-      for (const m of ctx.db.incidentMemberships.organizationId.filter(org)) {
-        const reviewer = targetAccess(ctx, next, m.userId, at);
-        if (
-          reviewer &&
-          next.assignedUserId !== m.userId &&
-          permits(
-            reviewer,
-            next.kind === "Investigation" ? "findings:verify" : "tasks:verify",
-          )
-        )
-          notifyCoordination(
-            ctx,
-            next,
-            m.userId,
-            "task.verification",
-            "Verification requested: " + task.title,
-            comment,
-            { taskId: task.id },
-          );
-      }
     if (terminalTask(next) || assignedUserId !== task.assignedUserId)
       for (const page of ctx.db.pages.incidentKey.filter(k))
         if (page.taskId === task.id)
@@ -944,7 +819,7 @@ export function coordinationCommand(
       )
         return p.fail(
           "ACCESS_DENIED",
-          "Only the requester or Incident Commander can cancel this page.",
+          "Only the requester or Incident Manager can cancel this page.",
         );
       const reason = text("reason", 2000);
       cancelPage(ctx, page, who, reason);
@@ -979,15 +854,6 @@ export function coordinationCommand(
       "Page acknowledged",
       `${ctx.db.users.id.find(who)?.displayName ?? who} acknowledged receipt. Task and linked finding remain independently tracked.`,
       { pageId: page.id },
-    );
-    notifyCoordination(
-      ctx,
-      task,
-      page.requestedBy,
-      "page.acknowledged",
-      "Page acknowledged",
-      task.title,
-      { taskId: task.id, pageId: page.id },
     );
     return finish({ pageId: page.id });
   }
@@ -1149,7 +1015,7 @@ export function coordinationProjection(
   return rows;
 }
 
-// Internal application services reuse the same Phase 4 task history and notifications after validating their own workflow policy.
+// Internal application services reuse the same Phase 4 task history after validating their own workflow policy.
 export function createCoordinationTask(ctx: Ctx, task: Task, actor: string) {
   if (ctx.db.tasks.id.find(task.id)) return task.id;
   ctx.db.tasks.insert(task);
@@ -1160,15 +1026,6 @@ export function createCoordinationTask(ctx: Ctx, task: Task, actor: string) {
     "task",
     "Task created: " + task.title,
     task.description,
-  );
-  notifyCoordination(
-    ctx,
-    task,
-    task.assignedUserId,
-    "task.assigned",
-    "Task assigned: " + task.title,
-    task.description,
-    { taskId: task.id },
   );
   return task.id;
 }
@@ -1209,14 +1066,5 @@ export function linkAutomatedTaskEvidence(
     "task",
     "Workflow verification evidence available",
     comment,
-  );
-  notifyCoordination(
-    ctx,
-    task,
-    task.assignedUserId,
-    "task.verification",
-    "Review workflow verification evidence",
-    comment,
-    { taskId: task.id },
   );
 }

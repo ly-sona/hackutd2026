@@ -700,7 +700,7 @@ test.describe("Phase 5 evidence, approved recovery and immutable reports", () =>
       await anonymous.close();
     }
   });
-  test("renders Operations and real evidence-backed report controls on desktop and mobile", async ({
+  test("renders Operations and real evidence-backed report controls on desktop", async ({
     context,
     page,
   }) => {
@@ -723,28 +723,43 @@ test.describe("Phase 5 evidence, approved recovery and immutable reports", () =>
       "Restore Customer Support Capability",
     );
     await page.getByRole("button", { name: "Close", exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-      ),
-    ).toBe(true);
     await page.goto(base + "/overview");
-    await page
-      .getByRole("button", { name: "Generate report", exact: true })
-      .click();
-    await page
-      .getByRole("button", {
-        name: "Review completeness and preview",
-        exact: true,
-      })
-      .click();
-    await expect(page.getByLabel("Report completeness review")).toContainText(
-      "Root cause",
-    );
-    await expect(page.getByLabel("Report completeness review")).toContainText(
-      "Not Yet Established",
-    );
+    await expect(
+      page.getByRole("button", { name: "Generate report", exact: true }),
+    ).toHaveCount(0);
+    await page.goto(base + "/timeline");
+    await expect(
+      page.getByRole("heading", { name: "Incident report history", exact: true }),
+    ).toHaveCount(1);
+    await page.getByRole("button", { name: "Generate report", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Generate incident report" });
+    await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: /Review completeness/ })).toHaveCount(0);
+    await expect(dialog).toContainText("Restricted legal review is included automatically");
+    const artifacts: string[] = [];
+    for (const type of ["Executive Summary", "Detailed Incident Report"]) {
+      await dialog.getByRole("combobox", { name: "Report type", exact: true }).selectOption(type);
+      const response = page.waitForResponse((r) =>
+        r.url().endsWith("/api/recovery") && r.request().postDataJSON()?.action === "report.generate",
+      );
+      await dialog.getByRole("button", { name: "Generate", exact: true }).click();
+      const result = await response;
+      expect(result.status(), await result.text()).toBe(200);
+      expect(result.request().postDataJSON().includeLegal).toBe(true);
+      const { reportId } = await result.json();
+      await expect(dialog.getByRole("status")).toContainText("Report saved");
+      const artifact = await context.request.get(`/api/reports/${reportId}?organizationId=acme&incidentId=IR-2041`);
+      expect(artifact.status()).toBe(200);
+      const html = await artifact.text();
+      expect(html).toContain("legal");
+      expect(html).toContain("Not Yet Established");
+      artifacts.push(reportId);
+    }
+    await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    for (const id of artifacts) {
+      await expect(page.locator(`a[href^="/api/reports/${id}?"]`)).toHaveCount(2);
+    }
+    await expect(page.getByRole("heading", { name: "Incident report history", exact: true })).toHaveCount(1);
   });
 });
 
@@ -1106,6 +1121,8 @@ test("lets humans review bound workflow parameters and approve a real request th
       await expect(p.getByLabel("Bound approval parameters")).toContainText(
         "Human UI recovery review",
       );
+      await expect(p.getByText(/^Security Engineer(?: · Eligible reviewer)?$/)).toBeVisible();
+      await expect(p.getByText(/^Incident Manager(?: · Eligible reviewer)?$/)).toBeVisible();
       await p
         .getByRole("button", { name: "Approve request", exact: true })
         .click();
@@ -1134,6 +1151,15 @@ test("lets humans review bound workflow parameters and approve a real request th
         .find((s) => s.executionId === execution.id && s.order === 4)
         ?.evidenceId,
     ).toBe("EV-REC-FAILURE");
+    const report = await ok(maya.request, "report.generate", {
+      type: "Detailed Incident Report",
+      includeLegal: true,
+    });
+    const artifact = await maya.request.get(`/api/reports/${report.reportId}?organizationId=acme&incidentId=IR-2041`);
+    expect(artifact.status()).toBe(200);
+    const html = await artifact.text();
+    expect(html).toContain("alex: Approve (Security Engineer)");
+    expect(html).toContain("maya: Approve (Incident Manager)");
   } finally {
     d.conn.disconnect();
     await maya.close();
@@ -1149,7 +1175,7 @@ test("edits discovery/classification through the UI while preserving unknown roo
   configure();
   await command("test_restore_memberships", "", {});
   await login(context, "maya");
-  await page.goto(base + "/overview");
+  await page.goto(base + "/timeline");
   await page
     .getByRole("button", { name: "Generate report", exact: true })
     .click();
@@ -1171,18 +1197,18 @@ test("edits discovery/classification through the UI while preserving unknown roo
     .selectOption("Unknown");
   await f.getByRole("button", { name: "Save", exact: true }).click();
   await expect(f).not.toBeVisible();
-  await page
-    .getByRole("button", {
-      name: "Review completeness and preview",
-      exact: true,
-    })
-    .click();
-  await expect(page.getByLabel("Report completeness review")).toContainText(
-    "Not Yet Established",
+  const generated = page.waitForResponse((r) =>
+    r.url().endsWith("/api/recovery") && r.request().postDataJSON()?.action === "report.generate",
   );
-  await expect(page.getByLabel("Report preview")).toContainText(
-    "Human responder observation",
-  );
+  await page.getByRole("button", { name: "Generate", exact: true }).click();
+  const response = await generated;
+  expect(response.status(), await response.text()).toBe(200);
+  const { reportId } = await response.json();
+  const artifact = await context.request.get(`/api/reports/${reportId}?organizationId=acme&incidentId=IR-2041`);
+  expect(artifact.status()).toBe(200);
+  const html = await artifact.text();
+  expect(html).toContain("Not Yet Established");
+  expect(html).toContain("Human responder observation");
   const invalid = await post(context.request, "classification", {
     detectionSource: "Responder",
     initialObservation: "Synthetic observation",

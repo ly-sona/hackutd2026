@@ -448,7 +448,10 @@ export function TeamWorkspace() {
                         >
                           <MoreHorizontal size={20} />
                         </summary>
-                        <div className="absolute right-0 mt-1 flex min-w-44 flex-col gap-3 rounded-md border border-border bg-card p-4 shadow-xl">
+                        <div
+                          data-testid="message-actions"
+                          className="absolute right-0 mt-1 flex min-w-44 flex-col gap-3 rounded-md border border-border bg-card p-4 shadow-xl [&>button]:w-full"
+                        >
                           <TaskForm source={m} />
                           {a.can("findings:create") && (
                             <FindingForm sourceMessage={m} />
@@ -542,15 +545,17 @@ export function TeamWorkspace() {
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-3">
-                  <button
+                  <Button
                     type="button"
-                    aria-label="Reference evidence, finding, scope or task"
-                    title="Reference evidence, finding, scope or task"
-                    className="text-sm underline"
+                    variant="outline"
+                    size="sm"
+                    className="w-44"
+                    aria-expanded={references}
                     onClick={() => setReferences((v) => !v)}
                   >
-                    <Paperclip size={20} />
-                  </button>
+                    <Paperclip size={16} />
+                    Add references
+                  </Button>
                   <span className="hidden text-sm text-muted-foreground sm:inline">
                     {c?.type === "Direct Message"
                       ? "Administrator oversight available"
@@ -559,6 +564,7 @@ export function TeamWorkspace() {
                   <Button
                     type="submit"
                     size="sm"
+                    className="w-44"
                     disabled={sending || !c || c.readOnly}
                   >
                     {sending ? "Sending…" : "Send"}

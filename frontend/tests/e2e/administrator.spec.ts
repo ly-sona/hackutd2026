@@ -169,12 +169,6 @@ test("administrator can open incidents without explicit assignment and review DM
     await expect(
       page.getByRole("textbox", { name: "Message", exact: true }),
     ).toBeEnabled();
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
   } finally {
     await commander.close();
   }

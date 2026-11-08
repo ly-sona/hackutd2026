@@ -131,6 +131,18 @@
   html {
     @apply font-sans;
   }
+  select {
+    color-scheme: dark;
+    color: var(--foreground);
+  }
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
+  select option:disabled {
+    color: var(--muted-foreground);
+  }
 }
 html {
   color-scheme: dark;

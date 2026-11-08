@@ -227,11 +227,15 @@ test("later actual evidence drives a real agent review, Scope, follow-up task an
           [...live.conn.db.visibleIncidentData.iter()].filter(
             (r) =>
               r.incidentId === scope.incidentId &&
-              r.kind === "notification" &&
-              JSON.parse(r.body).type === "investigation.reassessment",
+              r.kind === "event" &&
+              JSON.parse(r.body).title === "Incremental reassessment ready" &&
+              JSON.parse(JSON.parse(r.body).newValue).revision === 2,
           ).length,
       )
       .toBeGreaterThan(0);
+    expect([...live.conn.db.visibleIncidentData.iter()].filter(
+      (r) => r.incidentId === scope.incidentId && r.kind === "notification",
+    )).toHaveLength(0);
     await expect
       .poll(() => live.rows<{ id: string }>("agent", scope.incidentId).length)
       .toBe(1);
@@ -467,6 +471,27 @@ test("subsequent collection preserves authorization, rejects stale parents and b
   expect(await ok(await post(context.request, "investigation", data))).toEqual(
     later,
   );
+  const live = await connection(context);
+  try {
+    await expect.poll(() => [...live.conn.db.visibleIncidentData.iter()].some((row) => {
+      if (row.incidentId !== scope.incidentId || row.kind !== "event") return false;
+      const event = JSON.parse(row.body);
+      return event.title === "Incremental reassessment ready" && JSON.parse(event.newValue).revision === 2;
+    })).toBe(true);
+    expect([...live.conn.db.visibleIncidentData.iter()].filter(
+      (row) => row.incidentId === scope.incidentId && row.kind === "notification",
+    )).toHaveLength(0);
+  } finally { live.conn.disconnect(); }
+  const report = await ok<{ reportId: string }>(await post(context.request, "recovery", {
+    ...scope, action: "report.generate", type: "Detailed Incident Report",
+    includeLegal: false, operationId: randomUUID(),
+  }));
+  const artifact = await context.request.get(`/api/reports/${report.reportId}?organizationId=acme&incidentId=${scope.incidentId}`);
+  expect(artifact.status()).toBe(200);
+  const html = (await artifact.body()).toString();
+  expect(html).toContain("Snapshot history");
+  expect(html).toContain(r.runId);
+  expect(html).toContain(later.runId);
   expect(
     (
       await post(context.request, "investigation", {

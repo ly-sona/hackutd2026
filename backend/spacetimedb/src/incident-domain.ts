@@ -2,7 +2,6 @@ import { moduleId } from "./module-id";
 import { investigationMetadata } from "./investigation-metadata";
 import {
   canReadFinding,
-  canReadConversation,
   canReadCoordinationEvent,
   ensureRoom,
 } from "./coord-access";
@@ -141,40 +140,6 @@ export function appendEvent(
     ...options,
   });
 }
-function recipients(ctx: Ctx, org: string, inc: string, ports: Ports) {
-  return [...ctx.db.memberships.organizationId.filter(org)].filter(
-    (m) => ports.activeMember(ctx, org, m.userId, time(ctx)) &&
-      (m.role === "administrator" || ctx.db.incidentMemberships.id.find(`${org}:${inc}:${m.userId}`)?.membershipStatus === "active"),
-  );
-}
-function notify(
-  ctx: Ctx,
-  org: string,
-  inc: string,
-  actor: string,
-  title: string,
-  description: string,
-  type: string,
-  findingId: string,
-  ports: Ports,
-  only?: string[],
-) {
-  for (const m of recipients(ctx, org, inc, ports))
-    if (m.userId !== actor && (!only || only.includes(m.userId)))
-      ctx.db.notifications.insert({
-        id: 0n,
-        organizationId: org,
-        incidentId: inc,
-        incidentKey: key(org, inc),
-        recipientId: m.userId,
-        title,
-        description,
-        type,
-        findingId,
-        createdAt: time(ctx),
-        readAt: 0n,
-      });
-}
 export function incidentAccessEvent(
   ctx: Ctx,
   org: string,
@@ -308,7 +273,7 @@ function execute(
       return p.fail(
         "INVALID_INPUT",
         commander
-          ? "Select an active Incident Commander in this organization."
+          ? "Select an active Incident Manager in this organization."
           : "Select an active responder.",
       );
     if (
@@ -405,17 +370,6 @@ function execute(
       status: "Open",
       observedAt: discoveredAt,
     });
-    notify(
-      ctx,
-      org,
-      id,
-      who,
-      "New incident: " + title,
-      description,
-      "incident",
-      "",
-      p,
-    );
     return { incidentId: id };
   }
   if (action === "incident.update") {
@@ -450,21 +404,9 @@ function execute(
         inc,
         who,
         field === "status" || field === "severity" ? "status" : "incident",
-        `${field === "commanderId" ? "Commander" : field} changed`,
+        `${field === "commanderId" ? "Incident Manager" : field} changed`,
         reason,
         { previousValue: existing![field], newValue: next[field], status },
-      );
-    if (changes.includes("status") || severity === "Critical")
-      notify(
-        ctx,
-        org,
-        inc,
-        who,
-        `${inc}: ${status} · ${severity}`,
-        reason,
-        "status",
-        "",
-        p,
       );
     return { changed: true };
   }
@@ -588,12 +530,6 @@ function execute(
         newValue: json(row),
       },
     );
-    if (
-      priority === "High" ||
-      priority === "Critical" ||
-      old?.status !== status
-    )
-      notify(ctx, org, inc, who, eventTitle, description, "finding", id, p);
     return { findingId: id };
   }
   if (action === "incident.evidence") {
@@ -672,21 +608,6 @@ function execute(
       createdBy: who,
       createdAt: at,
     });
-    if (findingId) {
-      const f = finding(findingId);
-      notify(
-        ctx,
-        org,
-        inc,
-        who,
-        "Evidence added: " + f.title,
-        description,
-        "evidence",
-        findingId,
-        p,
-        [f.assignedTo, f.reportedBy],
-      );
-    }
     return { evidenceId: id };
   }
   if (action === "incident.link") {
@@ -841,16 +762,6 @@ function execute(
     else ctx.db.incidentVisits.insert(row);
     return { cutoff };
   }
-  if (action === "incident.notification.read") {
-    const id = str(d, "notificationId", 30);
-    if (!/^\d+$/.test(id))
-      return p.fail("INVALID_INPUT", "Invalid notification.");
-    const n = ctx.db.notifications.id.find(BigInt(id));
-    if (!n || n.incidentKey !== k || n.recipientId !== who)
-      return p.fail("NOT_FOUND", "Notification is unavailable.");
-    ctx.db.notifications.id.update({ ...n, readAt: at });
-    return { read: true };
-  }
   return p.fail("INVALID_INPUT", "Unknown incident action.");
 }
 export function incidentProjection(ctx: Reader, access: Access[]) {
@@ -971,32 +882,6 @@ export function incidentProjection(ctx: Reader, access: Access[]) {
     }
     for (const r of ctx.db.findingReads.incidentKey.filter(k))
       if (r.userId === a.userId) emit("read", r.id, r);
-    for (const n of ctx.db.notifications.recipientId.filter(a.userId))
-      if (
-        n.incidentKey === k &&
-        (!n.findingId || canReadFinding(ctx, a, n.findingId))
-      ) {
-        const target = ctx.db.coordinationNotificationTargets.id.find(n.id);
-        if (
-          target?.conversationId &&
-          !canReadConversation(ctx, a, target.conversationId)
-        )
-          continue;
-        const targetTask = target?.taskId
-          ? ctx.db.tasks.id.find(target.taskId)
-          : undefined;
-        if (
-          targetTask?.sourceConversationId &&
-          !canReadConversation(ctx, a, targetTask.sourceConversationId)
-        )
-          continue;
-        emit("notification", n.id, {
-          ...n,
-          conversationId: target?.conversationId ?? "",
-          taskId: target?.taskId ?? "",
-          pageId: target?.pageId ?? "",
-        });
-      }
   }
   return rows;
 }

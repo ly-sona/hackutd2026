@@ -68,7 +68,7 @@ export function seedScope(ctx: Ctx, p: Ports): unknown {
         description:
           options.description ??
           "Synthetic inventory context. Membership and connectivity do not establish compromise.",
-        owner: options.owner ?? "Acme synthetic response team",
+        owner: options.owner ?? "Techniq synthetic response team",
         assetType: options.assetType ?? "",
         parentId: options.parent ? id(options.parent) : "",
         datasetId: options.dataset

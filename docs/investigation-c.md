@@ -29,7 +29,7 @@ New runs preserve earlier assessments and append a reassessment event with prior
 
 Current source-declared service dependencies populate existing unverified DEPENDS_ON relationships and existing business-operation metadata. Source inventory retains historically seen records; per-snapshot export coverage remains separate. Inventory totals include retained historical records, never imply affected/safe counts, and missing entries do not delete inventory. Availability acceptance updates an inactive operation only through the human review transaction, preserving independent verification and recovery approvals.
 
-Eligible current responders receive existing private incident notifications for new observations. Notifications contain bounded incident-level counts and a review prompt, not private record content. Source/detail permissions remain enforced by existing fresh commands and caller-scoped views.
+Current responders can review the append-only reassessment event and Investigation activity for new observations. The header notification center and its writers remain retired. Source/detail permissions remain enforced by existing fresh commands and caller-scoped views; explicit follow-up tasks reuse Team.
 
 ## Recovery context and reports
 
@@ -58,6 +58,6 @@ Deliberately not run: full unit/E2E suites, mobile/tablet/cross-browser, load/pe
 - [x] An unchanged reviewed record receives a new access-context lead when supported.
 - [x] A real model creates a non-preseeded, exactly grounded proposal for human review.
 - [x] Reviewed findings/assessments update the existing incident and Context Graph models.
-- [x] Notifications, explicit follow-up tasks, recovery recommendations and report v2 use existing workflows.
+- [x] Reassessment activity, explicit follow-up tasks, recovery recommendations and report v2 use existing workflows.
 - [x] Relevant recovery context is bound without blanket invalidation from unrelated sources.
 - [x] IR-2041 and all five primary screen components remain preserved.

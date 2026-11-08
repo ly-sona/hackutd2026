@@ -276,7 +276,7 @@ export function InvestigationEvidence({
             {selection.page.snapshots.map((s) => {
               const e = incident.evidence.find((e) => e.id === s.evidenceId);
               return (
-                <div key={s.id}>
+                <div key={s.id} className="min-w-0 max-w-full">
                   <p className="mb-2 text-xs text-muted-foreground">
                     {s.role === "baseline"
                       ? "Supplied baseline"

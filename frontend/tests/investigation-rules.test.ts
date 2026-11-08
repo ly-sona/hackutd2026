@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFile, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
@@ -19,6 +19,14 @@ async function input(id: ConnectorId, revision: number) {
   return (await collectSnapshot(id, revision, root)).data;
 }
 describe("Addition A actual synthetic connector processing", () => {
+  it("resolves fixture paths from the frontend working directory on the host platform", async () => {
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(resolve(root, "frontend"));
+    try {
+      const { data } = await collectSnapshot("customers", 1);
+      expect(data.connectorId).toBe("customers");
+      expect(data.revision).toBe(1);
+    } finally { cwd.mockRestore(); }
+  });
   for (const id of ids)
     for (const revision of [0, 1, 2])
       it(`parses actual ${id} revision ${revision} with stable keys and provenance`, async () => {

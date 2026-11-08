@@ -106,9 +106,16 @@ export function EvidenceButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        Review evidence ·{" "}
-        {evidence.id.startsWith("EV-0") ? evidence.id : evidence.filename}
+      <Button
+        variant="outline"
+        size="sm"
+        className="max-w-full"
+        onClick={() => setOpen(true)}
+      >
+        <span className="truncate">
+          Review evidence ·{" "}
+          {evidence.id.startsWith("EV-0") ? evidence.id : evidence.filename}
+        </span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">

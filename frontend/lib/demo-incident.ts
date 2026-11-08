@@ -24,7 +24,7 @@ export interface IncidentFixture {
 }
 export const demoIncident: IncidentFixture = {
   id: "IR-2041",
-  organization: "Acme",
+  organization: "Techniq",
   title: "Ransomware response",
   severity: "Critical",
   summary: "Customer platform · Opened Nov 7, 2026 at 09:04 CST",

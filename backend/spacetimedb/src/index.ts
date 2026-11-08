@@ -13,6 +13,7 @@ import {
   processInvestigations,
   InvestigationInputError,
 } from "./investigation-domain";
+import { renameDemoCompany } from "./demo-consistency";
 import {
   recoveryCommand,
   recoveryProjection,
@@ -552,6 +553,7 @@ function execute(
       },
     });
   if (action === "bootstrap") {
+    renameDemoCompany(ctx);
     if (ctx.db.users.count() > 0n) return { seeded: false };
     const seed = data.users;
     if (!Array.isArray(seed) || seed.length !== 6)
@@ -570,7 +572,7 @@ function execute(
       validHash(data, `invitationHash${i}`),
     );
     for (const org of [
-      { id: "acme", name: "Acme" },
+      { id: "acme", name: "Techniq" },
       { id: "northstar", name: "Northstar — restricted demonstration" },
     ]) {
       ctx.db.organizations.insert({
@@ -621,7 +623,7 @@ function execute(
         createdAt: ctx.timestamp,
       });
     }
-    // No Acme member belongs to Northstar. This fixture demonstrates cross-tenant denial.
+    // No Techniq member belongs to Northstar. This fixture demonstrates cross-tenant denial.
     for (const [i, status] of ["pending", "expired", "revoked"].entries())
       ctx.db.invitations.insert({
         id: `seed-invitation-${i}`,

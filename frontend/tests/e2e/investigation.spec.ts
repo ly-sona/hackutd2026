@@ -51,7 +51,7 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
     .fill(
       "Customer service disruption; scope and confidentiality impact unknown.",
     );
-  await dialog.getByLabel("Incident Commander (optional)").selectOption("maya");
+  await dialog.getByLabel("Incident Manager (optional)").selectOption("maya");
   await dialog.getByLabel("Alex Rivera", { exact: true }).check();
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
@@ -107,12 +107,13 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
       .getByRole("link", { name: "Return to Dashboard", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", { name: title, exact: true }),
+      page.getByRole("heading", { name: "No data yet", exact: true }),
     ).toBeVisible();
     expect(await processNextJob()).toBe(true);
     await expect
       .poll(() => live.rows<InvestigationRun>("run", incidentId)[0]?.status)
       .toBe("Complete");
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
     expect(live.rows<InvestigationRun>("run", incidentId)[0]).toMatchObject({
       completedSnapshots: 8,
       analyzedSources: 4,
@@ -185,10 +186,10 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
       .getByRole("button", { name: "Customer Records / CRM", exact: true })
       .click();
     await expect(page.getByTestId("source-differences")).toContainText(
-      "C-1044 · modified",
+      /C-1044\s+modified/,
     );
     await expect(page.getByTestId("source-differences")).toContainText(
-      "C-1051 · missing",
+      /C-1051\s+missing/,
     );
     const run = live.rows<InvestigationRun>("run", incidentId)[0];
     const observations = await post(context.request, "investigation", {
@@ -514,14 +515,8 @@ test("enforces scopes, role permissions, immutable operation identities, and pri
     await privatePage
       .getByText("Source snapshots and comparisons", { exact: false })
       .click();
-    await expect(
-      privatePage.getByText(
-        "Collection requires current evidence and Scope permissions.",
-        {
-          exact: false,
-        },
-      ),
-    ).toBeVisible();
+    await expect(privatePage.getByRole("checkbox", { name: "Customer Records / CRM", exact: true })).toBeDisabled();
+    await expect(privatePage.getByRole("button", { name: /^(Start investigation|Retry collection)$/i })).toBeDisabled();
     expect(
       (
         await post(operations.request, "investigation", {

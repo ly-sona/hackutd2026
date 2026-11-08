@@ -3,6 +3,13 @@ import { defineConfig, devices } from "@playwright/test";
 // Separate ports, database name and data directory protect the developer's local data.
 export default defineConfig({
   testDir: "./tests/e2e",
+  testMatch: process.env.AEGIS_E2E_SUITE === "restart"
+    ? ["coordination-restart.spec.ts", "investigation-restart.spec.ts"]
+    : process.env.AEGIS_E2E_SUITE === "investigation"
+      ? ["investigation.spec.ts", "agent-investigation.spec.ts", "investigation-impact.spec.ts", "investigation-monitoring.spec.ts"]
+    : process.env.AEGIS_E2E_SUITE === "extended"
+      ? ["recovery.spec.ts", "administrator.spec.ts", "team-pending-invitations.spec.ts"]
+      : "critical.spec.ts",
   fullyParallel: false,
   workers: 1,
   timeout: 45_000,

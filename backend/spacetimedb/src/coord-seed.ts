@@ -4,10 +4,7 @@ import { reconcileDemoConsistency } from "./demo-consistency";
 import { ensureRoom } from "./coord-access";
 import { json, key, time, appendEvent } from "./incident-domain";
 import type { Reference } from "../../../shared/coordination";
-export function seedCoordination(
-  ctx: Ctx,
-  notifyCoordination: typeof import("./coord-domain").notifyCoordination,
-) {
+export function seedCoordination(ctx: Ctx) {
   for (const i of ctx.db.incidents.iter())
     ensureRoom(ctx, i.organizationId, i.incidentId, i.createdBy);
   const marker = "acme-phase4-v1";
@@ -282,15 +279,6 @@ export function seedCoordination(
         id: e.id,
         conversationId: task.sourceConversationId,
       });
-    notifyCoordination(
-      ctx,
-      task,
-      assignee,
-      "task.assigned",
-      "Task assigned: " + task.title,
-      "Synthetic fixture; work and verification remain separate.",
-      { taskId: id },
-    );
   }
   const task = ctx.db.tasks.id.find("acme:IR-2041:T-01")!;
   const base = {
@@ -339,15 +327,6 @@ export function seedCoordination(
     status: "Canceled",
     reason: "Historical requester cancellation.",
   });
-  notifyCoordination(
-    ctx,
-    task,
-    "maya",
-    "page.acknowledged",
-    "Historical page acknowledged",
-    "Receipt confirmed; isolation investigation remains unresolved.",
-    { taskId: task.id, pageId: "acme:seed:page-ack" },
-  );
   ctx.db.scenarioSeeds.insert({ id: marker, createdAt: at });
   seedVisualExamples(ctx);
   seedDemoEventTimings(ctx);

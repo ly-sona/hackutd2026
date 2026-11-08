@@ -1,8 +1,6 @@
 import type { Ctx, Reader } from "./index";
 import { json, time, appendEvent } from "./incident-domain";
 import { moduleId } from "./module-id";
-import { notifyCoordination } from "./coord-domain";
-import { responderAccess } from "./coord-access";
 import {
   analyzeIncremental,
   collectionManifest,
@@ -186,32 +184,6 @@ export function finishReassessment(ctx: Ctx, run: Run) {
       }),
     },
   );
-  if (summary.observations)
-    for (const m of ctx.db.memberships.organizationId.filter(
-      run.organizationId,
-    )) {
-      const a = responderAccess(
-        ctx,
-        run.organizationId,
-        run.incidentId,
-        m.userId,
-        time(ctx),
-      );
-      if (
-        a &&
-        ["evidence:view", "scope:records", "scope:view"].every((p) =>
-          (JSON.parse(a.permissions) as string[]).includes(p),
-        )
-      )
-        notifyCoordination(
-          ctx,
-          run,
-          m.userId,
-          "investigation.reassessment",
-          "New evidence requires investigation",
-          `Snapshot revision ${summary.revision}: ${summary.observations} new observations. Prior decisions are preserved; review in Investigation.`,
-        );
-    }
 }
 
 // Source-declared dependencies populate existing inventory links; never confirm impact.

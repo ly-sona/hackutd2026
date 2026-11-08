@@ -121,6 +121,7 @@ export const coordinationOperations = table(
     createdAt: t.u64(),
   },
 );
+// Retired notification-center metadata, retained only for database compatibility.
 export const coordinationNotificationTargets = table(
   {},
   {

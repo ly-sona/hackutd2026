@@ -185,7 +185,7 @@ export function TaskForm({
       />
       <ResponderSelect
         name="backupUserId"
-        label="Backup responder (optional; otherwise Incident Commander)"
+        label="Backup responder (optional; otherwise Incident Manager)"
         optional
       />
       <Field label="Due date and time (optional, local time)">
@@ -205,7 +205,8 @@ export function TaskForm({
           </label>
           <p className="text-xs text-muted-foreground">
             {d.policy?.acknowledgmentSeconds ?? 300}s server deadline, then one
-            eligible backup or commander. Acknowledgment confirms receipt only.
+            eligible backup or Incident Manager. Acknowledgment confirms receipt
+            only.
           </p>
         </>
       )}
@@ -236,7 +237,7 @@ function ResponderSelect({
         required={!optional}
       >
         {optional && (
-          <option value="">Use Incident Commander when paging</option>
+          <option value="">Use Incident Manager when paging</option>
         )}
         {d.responders
           .filter((r) => !selfOnly || r.id === a.userId)
@@ -310,7 +311,7 @@ export function TaskDialog({
           <dd>
             {task.backupUserId
               ? d.name(task.backupUserId)
-              : "Incident Commander"}
+              : "Incident Manager"}
           </dd>
           <dt>Due</dt>
           <dd>
@@ -415,7 +416,7 @@ export function TaskDialog({
           !["Completed", "Canceled"].includes(task.status) && (
             <Editor
               title="Page responder"
-              description={`Urgent page for ${d.name(task.assignedUserId)}. Availability: ${d.responders.find((r) => r.id === task.assignedUserId)?.availability ?? "Not declared"}. Backup: ${task.backupUserId ? d.name(task.backupUserId) : "eligible Incident Commander"}. Server deadline: ${d.policy?.acknowledgmentSeconds ?? 300}s.`}
+              description={`Urgent page for ${d.name(task.assignedUserId)}. Availability: ${d.responders.find((r) => r.id === task.assignedUserId)?.availability ?? "Not declared"}. Backup: ${task.backupUserId ? d.name(task.backupUserId) : "eligible Incident Manager"}. Server deadline: ${d.policy?.acknowledgmentSeconds ?? 300}s.`}
               trigger="Page responder"
               onSubmit={async (f) =>
                 command("page.create", {

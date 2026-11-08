@@ -22,7 +22,6 @@ import {
   actorCategories,
   actionCategories,
   techniqueCatalog,
-  type ReportSnapshot,
 } from "../../shared/recovery";
 export function ReportHistory() {
   const a = useAccess(),
@@ -327,22 +326,21 @@ export function IncidentReports() {
     run = useRecoveryCommand(),
     [open, setOpen] = useState(false),
     [type, setType] = useState<string>(reportTypes[0]),
-    [legal, setLegal] = useState(false),
-    [preview, setPreview] = useState<ReportSnapshot | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [generated, setGenerated] = useState("");
-  const allowed = reportSourcePermissions.every((p) => a.can(p));
-  async function review() {
+  const allowed =
+    reportSourcePermissions.every((p) => a.can(p)) && a.can("legal:view");
+  async function generate() {
     setBusy(true);
     setError("");
+    setGenerated("");
     try {
-      setPreview(
-        await run<ReportSnapshot>("report.preview", {
-          type,
-          includeLegal: legal,
-        }),
-      );
+      const result = await run<{ reportId: string }>("report.generate", {
+        type,
+        includeLegal: true,
+      });
+      setGenerated(result.reportId);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -357,32 +355,31 @@ export function IncidentReports() {
         disabled={!allowed}
         title={
           allowed
-            ? "Review completeness and generate an immutable report"
-            : "All source permissions are required to generate incident-wide reports"
+            ? "Generate an immutable report including restricted legal review"
+            : "All source permissions, including legal access, are required to generate incident-wide reports"
         }
         onClick={() => {
-          if (!a.can("legal:view")) {
-            setLegal(false);
-            setPreview(null);
-          }
+          setError("");
+          setGenerated("");
           setOpen(true);
         }}
       >
         Generate report
       </Button>
       <Dialog
-        open={open && allowed && (!legal || a.can("legal:view"))}
+        open={open && allowed}
         onOpenChange={(v) => {
           if (!busy) setOpen(v);
         }}
       >
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Incident report and completeness review</DialogTitle>
+            <DialogTitle>Generate incident report</DialogTitle>
             <DialogDescription>
               Generate a versioned HTML artifact. Print or Save as PDF from the
-              saved report. Missing information remains explicit and does not
-              prevent interim documentation.
+              saved report. Restricted legal review is included automatically;
+              opening or downloading requires legal access. Missing information
+              remains explicit and does not prevent interim documentation.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-wrap gap-3">
@@ -393,117 +390,27 @@ export function IncidentReports() {
             <select
               className={fieldClass}
               value={type}
-              onChange={(e) => {
-                setType(e.target.value);
-                setPreview(null);
-              }}
+              onChange={(e) => setType(e.target.value)}
             >
               {reportTypes.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
           </Field>
-          {a.can("legal:view") && (
-            <label className="text-sm">
-              <input
-                type="checkbox"
-                checked={legal}
-                onChange={(e) => {
-                  setLegal(e.target.checked);
-                  setPreview(null);
-                }}
-              />{" "}
-              Include restricted legal review (requires legal permission on
-              every future download)
-            </label>
-          )}
-          <Button disabled={busy} variant="outline" onClick={review}>
-            Review completeness and preview
-          </Button>
           {error && (
             <p role="alert" className="text-sm text-red-400">
               {error}
             </p>
           )}
-          {preview && (
-            <>
-              <section aria-label="Report completeness review">
-                <h3 className="font-semibold">Completeness review</h3>
-                <div className="mt-3 grid gap-2">
-                  {preview.completeness.map((c) => (
-                    <div
-                      key={c.label}
-                      className="text-xs border-b border-border pb-2"
-                    >
-                      <strong>
-                        {c.label} · {c.status}
-                      </strong>
-                      <p className="text-muted-foreground">{c.detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-              <section aria-label="Report preview" className="grid gap-3">
-                {preview.sections.map((s) => (
-                  <details
-                    key={s.id}
-                    className="border border-border rounded p-3"
-                  >
-                    <summary className="font-medium text-sm">{s.title}</summary>
-                    <dl className="text-xs mt-3 grid gap-2">
-                      {s.fields.map((f) => (
-                        <div key={f.label}>
-                          <dt className="font-semibold">{f.label}</dt>
-                          <dd className="text-muted-foreground whitespace-pre-wrap">
-                            {f.value}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                    {s.tables.map((t) => (
-                      <p key={t.title} className="mt-3 text-xs">
-                        {t.title}: {t.rows.length} records captured
-                      </p>
-                    ))}
-                  </details>
-                ))}
-              </section>
-              <p className="text-xs text-muted-foreground">
-                Preview cutoff: {preview.sourceCutoff}. Generation takes a fresh
-                consistent database snapshot. Private conversations and derived
-                private sources are excluded. Standards alignment does not imply
-                certification or legal compliance.
-              </p>
-              <Button
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  setError("");
-                  try {
-                    const r = await run<{ reportId: string }>(
-                      "report.generate",
-                      { type, includeLegal: legal },
-                    );
-                    setGenerated(r.reportId);
-                    setPreview(null);
-                  } catch (e) {
-                    setError((e as Error).message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                {busy ? "Generating…" : "Generate immutable artifact"}
-              </Button>
-            </>
-          )}
+          <Button disabled={busy} onClick={generate}>
+            {busy ? "Generating…" : "Generate"}
+          </Button>
           {generated && (
             <p role="status" className="text-sm text-emerald-400">
               Report saved. Open or download it from Incident report history
-              below.
+              in Timeline.
             </p>
           )}
-          <ReportHistory />
         </DialogContent>
       </Dialog>
     </>

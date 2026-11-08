@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, basename } from "node:path";
 import {
   CONNECTOR_VERSION,
   parseSnapshot,
@@ -13,7 +13,7 @@ export async function collectSnapshot(
   revision: number,
   root = resolve(
     process.cwd(),
-    process.cwd().endsWith("/frontend") ? ".." : ".",
+    basename(process.cwd()) === "frontend" ? ".." : ".",
   ),
 ) {
   const manifest = JSON.parse(

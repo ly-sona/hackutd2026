@@ -1,10 +1,5 @@
-export const roleLabels: Record<string, string> = {
-  administrator: "Administrator",
-  commander: "Incident Commander",
-  analyst: "Security Analyst",
-  legal: "Legal/Compliance",
-  operations: "Business Operations",
-};
+export { roleLabels } from "../../shared/roles";
+
 export const incidentBase = (organizationId: string, incidentId = "IR-2041") =>
   `/org/${organizationId}/incidents/${incidentId}`;
 
