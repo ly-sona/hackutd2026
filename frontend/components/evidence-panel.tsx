@@ -111,7 +111,11 @@ export function EvidenceButton({
       <Button
         variant="outline"
         size="sm"
-        className={compact ? "h-auto min-h-7 px-2 py-1 text-xs font-normal" : ""}
+        className={
+          compact
+            ? "h-auto min-h-7 gap-1 px-2 py-1 text-xs sm:text-xs font-normal"
+            : ""
+        }
         onClick={() => setOpen(true)}
       >
         Review evidence ·{" "}
