@@ -89,7 +89,8 @@ export interface SessionSnapshot {
     organizationName: string;
     role: string;
     permissions: string[];
-    incidents: { id: string; title: string }[];
+    incidents: { id: string; title: string; severity: string; status: string }[];
+    responders: {userId:string;name:string;role:string}[];
   }[];
 }
 export async function snapshot(

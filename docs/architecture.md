@@ -1,4 +1,4 @@
-# AEGIS Phase 1 architecture
+# AEGIS Phases 0–2 architecture
 
 Two runtime services remain: Next.js (:3000) and a local SpacetimeDB TypeScript module (:3001). There is no extra API service, database, identity provider, corporate dependency or AI integration. This demonstrates independent trust boundaries in a hackathon environment, not production isolation.
 
@@ -42,7 +42,7 @@ Existing synthetic responders authenticate with their independent passwords befo
 
 The trusted, idempotent bootstrap creates Acme, six independent accounts, role associations, three invitation examples, minimal incident stubs and an audit event. A separate Northstar stub has no Acme memberships and demonstrates tenant isolation. User passwords are randomly generated in an ignored 0600 local file, not public endpoints or source. No unauthenticated administrator-creation path exists.
 
-Only minimal incident stubs needed for access association are stored. The five screens use `frontend/lib/demo-incident.ts` for consistent fictional metrics, relationships, messages, requests and timeline events. They never drive actual authentication. Sensitive later-phase actions are disabled. The supplied screen references are retained under `docs/design-references/`.
+Phase 1 incident stubs remain for access compatibility. Phase 2 adds current incidents, findings, immutable events, evidence metadata/links and per-user read/visit/notification state. Overview and Timeline read caller-scoped live data; static graph/requests/conversations remain explicit later-phase previews. The supplied references stay under `docs/design-references/`.
 
 ## Local workflow, configuration and deployment
 
@@ -51,3 +51,15 @@ The root npm workspace retains one lockfile. `scripts/dev.mjs` starts/reuses the
 Public values in frontend `.env.local` configure canonical app origin and database endpoint/name. Root `.env.local` optionally configures scripts and private values. Shell values win, then root, then frontend values in script loading. Service secrets are inherited only by the trusted server process. Public Next.js values require a rebuild after deployment changes. `.env.production.example` documents independent HTTPS hosting; no hosting deployment is performed by setup.
 
 Browser tests use 3100/3101, `.next-e2e`, `aegis-e2e` and separate state. Test-only expiry/restoration operations require both the service identity and `AEGIS_TEST_MODE=true`; no HTTP endpoint exposes them. Keep the database flag false outside isolated tests. The suite tests actual reducers/views, cookie sessions, private reads and cross-browser revocation; it does not substitute mock security success responses.
+
+## Phase 2 records and file boundary
+
+`incident-schema.ts` defines private tables; `incident-domain.ts` reuses the original authorization helpers rather than creating another identity system. `visible_incident_data` emits only authorized incident projections keyed by kind/ID. Every subscription joins the existing session/assignment/role checks. Evidence metadata and links additionally require evidence:view; randomized storage references are stripped. Notifications and finding reads are recipient/user scoped. Revocation empties projections and the outer workspace boundary removes restricted UI. Server mutations and file reads use actual transaction time, while subscription expiry follows the scheduled clock.
+
+Authorized commands create incident assignments, findings, metadata and immutable change events in one database transaction. Incident and finding status are different enums; personal reads never change either. Human confirmation/resolution requires same-incident evidence and a verification justification. Notes/actions/decisions/corrections are classified events; recorded actions execute nothing. Administrative access changes append relevant incident events.
+
+Next.js writes bounded, validated original evidence to an absolute private directory (`EVIDENCE_STORAGE_DIR`, local default `.spacetime/<state>/evidence`). Only metadata/hash/relationships enter SpacetimeDB. File reads use the trusted evidence descriptor procedure, fresh session/permission checks before and after I/O, hash verification, uncached safe responses and original-byte downloads. Browser text rendering escapes markup; image previews use authenticated bytes in disposable blob URLs. PDFs download. Filesystem and DB transactions are separate; known rejected commands remove new files; uncertain transport/commit outcomes preserve originals and can leave private orphans. This is local MVP storage, not a forensic custody, malware-scanning or production isolation service.
+
+Visit windows capture the previous last-viewed timestamp before advancing it. A session-user/incident-scoped document UUID provides idempotence through client navigation. Reload creates a new visit. Separate finding read rows determine New; investigation status determines Unresolved. Notifications are private, delivered only to currently assigned active responders, and independently marked read. Reporter/assignee are the initial follower rule for evidence notifications.
+
+The stable `acme-phase2-v1` fixture seeds three related scenarios, real synthetic originals and metadata, 9 findings, 26 immutable events and up to 8 initial notifications. It preserves current access, previously seeded/user-edited rows and new user work. Original-file UUID mappings stay private with the originals. The test-only ground truth is never imported into runtime code. A narrowly scoped reset clears only disposable IR-2043 read/visit state, requires explicit confirmation and a development-only module flag, and exposes no HTTP route. All destructive shared-data reset is intentionally absent.

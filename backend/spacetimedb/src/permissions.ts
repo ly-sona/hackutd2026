@@ -27,6 +27,10 @@ export const permissions = [
   "operations:approve",
   "reports:view",
   "reports:export",
+  "findings:create",
+  "findings:edit",
+  "findings:verify",
+  "notes:create",
 ] as const;
 export type Permission = (typeof permissions)[number];
 const common: Permission[] = [
@@ -37,6 +41,7 @@ const common: Permission[] = [
   "messages:send",
   "operations:view",
   "reports:view",
+  "notes:create",
 ];
 export const matrix: Record<Role, readonly Permission[]> = {
   administrator: [
@@ -51,6 +56,9 @@ export const matrix: Record<Role, readonly Permission[]> = {
   ],
   commander: [
     ...common,
+    "findings:create",
+    "findings:edit",
+    "findings:verify",
     "incident:create",
     "incident:manage",
     "scope:view",
@@ -63,14 +71,23 @@ export const matrix: Record<Role, readonly Permission[]> = {
   ],
   analyst: [
     ...common,
+    "findings:create",
+    "findings:edit",
+    "findings:verify",
     "scope:view",
     "scope:edit",
     "evidence:view",
     "evidence:upload",
     "operations:request",
   ],
-  legal: [...common, "scope:view", "evidence:view", "reports:export"],
-  operations: [...common, "operations:request"],
+  legal: [
+    ...common,
+    "findings:create",
+    "scope:view",
+    "evidence:view",
+    "reports:export",
+  ],
+  operations: [...common, "findings:create", "operations:request"],
 };
 export function isRole(value: string): value is Role {
   return roles.some((role) => role === value);

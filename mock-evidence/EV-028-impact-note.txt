@@ -1,0 +1,1 @@
+IR-2041 Customer platform unavailable per synthetic responder report. October Customer Records: 1,240 synthetic records in dataset. C-1044 access unconfirmed. Encryption does not establish exfiltration.

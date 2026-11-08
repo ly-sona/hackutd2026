@@ -68,6 +68,8 @@ export async function isDatabaseRunning() {
 }
 
 export async function configureGateway() {
+  process.env.EVIDENCE_STORAGE_DIR = resolve(root, process.env.EVIDENCE_STORAGE_DIR ?? resolve(dataDir, "evidence"));
+  process.env.AEGIS_DEVELOPMENT_MODE = "true";
   if (process.env.AEGIS_E2E !== "1") {
     if (
       !!process.env.SPACETIMEDB_SERVER_TOKEN !==

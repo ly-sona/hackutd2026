@@ -1,0 +1,2 @@
+IR-2041 2026-11-07 09:26 America/Chicago
+Isolation was reported at 09:18. Traffic was observed at 09:21. Both observations remain in history. Containment is not verified.

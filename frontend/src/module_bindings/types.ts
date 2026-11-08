@@ -54,12 +54,114 @@ export const Credentials = __t.object("Credentials", {
 });
 export type Credentials = __Infer<typeof Credentials>;
 
+export const Evidence = __t.object("Evidence", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  filename: __t.string(),
+  contentType: __t.string(),
+  size: __t.u64(),
+  storageReference: __t.string(),
+  sha256: __t.string(),
+  description: __t.string(),
+  source: __t.string(),
+  status: __t.string(),
+  collectedAt: __t.u64(),
+  uploadedAt: __t.u64(),
+  uploadedBy: __t.string(),
+});
+export type Evidence = __Infer<typeof Evidence>;
+
+export const EvidenceLinks = __t.object("EvidenceLinks", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  evidenceId: __t.string(),
+  findingId: __t.string(),
+  eventId: __t.string(),
+  annotation: __t.string(),
+  excerpt: __t.string(),
+  futureReference: __t.string(),
+  createdBy: __t.string(),
+  createdAt: __t.u64(),
+});
+export type EvidenceLinks = __Infer<typeof EvidenceLinks>;
+
+export const FindingReads = __t.object("FindingReads", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  userId: __t.string(),
+  findingId: __t.string(),
+  readAt: __t.u64(),
+});
+export type FindingReads = __Infer<typeof FindingReads>;
+
+export const Findings = __t.object("Findings", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  title: __t.string(),
+  description: __t.string(),
+  category: __t.string(),
+  priority: __t.string(),
+  status: __t.string(),
+  observedAt: __t.u64(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+  reportedBy: __t.string(),
+  assignedTo: __t.string(),
+  relatedSystem: __t.string(),
+  verifiedBy: __t.string(),
+  verifiedAt: __t.u64(),
+});
+export type Findings = __Infer<typeof Findings>;
+
 export const HealthCheck = __t.object("HealthCheck", {
   id: __t.u64(),
   message: __t.string(),
   createdAt: __t.timestamp(),
 });
 export type HealthCheck = __Infer<typeof HealthCheck>;
+
+export const IncidentCounters = __t.object("IncidentCounters", {
+  organizationId: __t.string(),
+  next: __t.u32(),
+});
+export type IncidentCounters = __Infer<typeof IncidentCounters>;
+
+export const IncidentDataRow = __t.object("IncidentDataRow", {
+  id: __t.string(),
+  kind: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  body: __t.string(),
+});
+export type IncidentDataRow = __Infer<typeof IncidentDataRow>;
+
+export const IncidentEvents = __t.object("IncidentEvents", {
+  id: __t.u64(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  type: __t.string(),
+  actorId: __t.string(),
+  title: __t.string(),
+  description: __t.string(),
+  createdAt: __t.u64(),
+  observedAt: __t.u64(),
+  findingId: __t.string(),
+  evidenceIds: __t.string(),
+  status: __t.string(),
+  previousValue: __t.string(),
+  newValue: __t.string(),
+  correctsEventId: __t.string(),
+});
+export type IncidentEvents = __Infer<typeof IncidentEvents>;
 
 export const IncidentMemberships = __t.object("IncidentMemberships", {
   id: __t.string(),
@@ -77,6 +179,36 @@ export const IncidentStubs = __t.object("IncidentStubs", {
   title: __t.string(),
 });
 export type IncidentStubs = __Infer<typeof IncidentStubs>;
+
+export const IncidentVisits = __t.object("IncidentVisits", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  userId: __t.string(),
+  lastViewedAt: __t.u64(),
+});
+export type IncidentVisits = __Infer<typeof IncidentVisits>;
+
+export const Incidents = __t.object("Incidents", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  title: __t.string(),
+  description: __t.string(),
+  type: __t.string(),
+  severity: __t.string(),
+  status: __t.string(),
+  systems: __t.string(),
+  impact: __t.string(),
+  discoveredAt: __t.u64(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+  createdBy: __t.string(),
+  commanderId: __t.string(),
+});
+export type Incidents = __Infer<typeof Incidents>;
 
 export const Invitations = __t.object("Invitations", {
   id: __t.string(),
@@ -120,6 +252,21 @@ export type MyAccess = __Infer<typeof MyAccess>;
 export const MySession = __t.object("MySession", {});
 export type MySession = __Infer<typeof MySession>;
 
+export const Notifications = __t.object("Notifications", {
+  id: __t.u64(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  recipientId: __t.string(),
+  type: __t.string(),
+  title: __t.string(),
+  description: __t.string(),
+  createdAt: __t.u64(),
+  readAt: __t.u64(),
+  findingId: __t.string(),
+});
+export type Notifications = __Infer<typeof Notifications>;
+
 export const Organizations = __t.object("Organizations", {
   id: __t.string(),
   name: __t.string(),
@@ -127,6 +274,12 @@ export const Organizations = __t.object("Organizations", {
   createdAt: __t.timestamp(),
 });
 export type Organizations = __Infer<typeof Organizations>;
+
+export const ScenarioSeeds = __t.object("ScenarioSeeds", {
+  id: __t.string(),
+  createdAt: __t.u64(),
+});
+export type ScenarioSeeds = __Infer<typeof ScenarioSeeds>;
 
 export const Sessions = __t.object("Sessions", {
   hash: __t.string(),
@@ -175,6 +328,9 @@ export const VisibleAuditEvent = __t.object("VisibleAuditEvent", {
 });
 export type VisibleAuditEvent = __Infer<typeof VisibleAuditEvent>;
 
+export const VisibleIncidentData = __t.object("VisibleIncidentData", {});
+export type VisibleIncidentData = __Infer<typeof VisibleIncidentData>;
+
 export const VisibleInvitation = __t.object("VisibleInvitation", {
   id: __t.string(),
   organizationId: __t.string(),
@@ -211,4 +367,16 @@ export const VisibleSession = __t.object("VisibleSession", {
   name: __t.string(),
 });
 export type VisibleSession = __Infer<typeof VisibleSession>;
+
+export const VisitWindows = __t.object("VisitWindows", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  userId: __t.string(),
+  visitId: __t.string(),
+  cutoff: __t.u64(),
+  openedAt: __t.u64(),
+});
+export type VisitWindows = __Infer<typeof VisitWindows>;
 

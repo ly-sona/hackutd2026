@@ -1,3 +1,4 @@
+import { IncidentDataProvider } from "./incident-data";
 import { requireAccess } from "@/lib/server/session";
 import { AccessError } from "@/lib/server/gateway";
 import { WorkspaceProvider } from "./workspace-provider";
@@ -39,15 +40,17 @@ export async function WorkspaceRoute({
       incidentId={incidentId}
       expectedUserId={account.user.id}
     >
-      <WorkspaceShell section={section}>
-        {section === "members" ? (
-          <MembersPage />
-        ) : section === "invitations" ? (
-          <InvitationsPage />
-        ) : (
-          <IncidentPage section={section} />
-        )}
-      </WorkspaceShell>
+      <IncidentDataProvider>
+        <WorkspaceShell section={section}>
+          {section === "members" ? (
+            <MembersPage />
+          ) : section === "invitations" ? (
+            <InvitationsPage />
+          ) : (
+            <IncidentPage section={section} />
+          )}
+        </WorkspaceShell>
+      </IncidentDataProvider>
     </WorkspaceProvider>
   );
 }

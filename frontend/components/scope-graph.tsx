@@ -38,8 +38,8 @@ const initialNodes: RecordNode[] = [
     data: {
       title: "Administrator A-09",
       kind: "ACCOUNT",
-      description: "Synthetic compromised account",
-      status: "Compromise confirmed",
+      description: "Synthetic account under investigation",
+      status: "Compromise suspected",
       tone: "bg-red-400",
     },
     type: "record",
@@ -274,7 +274,7 @@ export function ScopeGraph() {
         </Button>
         <p className="text-xs leading-5 text-muted-foreground">
           Fixed synthetic context graph. Investigation actions are not
-          implemented in Phase 1.
+          implemented; the graph is a Phase 3 preview.
         </p>
       </aside>
     </div>

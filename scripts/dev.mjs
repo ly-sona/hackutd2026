@@ -53,7 +53,7 @@ try {
     });
     for (let attempt = 0; !(await isDatabaseRunning()); attempt++) {
       if (serverFailure) throw serverFailure;
-      if (server.exitCode !== null || attempt >= 60 || stopping)
+      if (server.exitCode !== null || attempt >= 240 || stopping)
         throw new Error(
           "SpacetimeDB did not become ready. Check ports and CLI output.",
         );

@@ -7,9 +7,19 @@ import {
   type ReducerCtx,
   type ViewCtx,
 } from "spacetimedb/server";
+import { incidentTables } from "./incident-schema";
+import {
+  incidentCommand,
+  incidentProjection,
+  incidentAccessEvent,
+  evidenceDescriptor,
+} from "./incident-domain";
 import { Identity } from "spacetimedb";
 import { matrix, isRole, type Permission } from "./permissions";
-import { membershipExpiryForInvitation, TEMPORARY_MEMBERSHIP_MS } from "./membership-policy";
+import {
+  membershipExpiryForInvitation,
+  TEMPORARY_MEMBERSHIP_MS,
+} from "./membership-policy";
 
 const organizations = table(
   {},
@@ -145,6 +155,7 @@ const healthCheck = table(
 
 const db = schema(
   {
+    ...incidentTables,
     organizations,
     users,
     credentials,
@@ -165,13 +176,14 @@ const db = schema(
     env: {
       AEGIS_GATEWAY_IDENTITY: t.option(t.string()),
       AEGIS_TEST_MODE: t.option(t.string()),
+      AEGIS_DEVELOPMENT_MODE: t.option(t.string()),
     },
   },
 );
 export default db;
-type Ctx = ReducerCtx<typeof db.schemaType>;
+export type Ctx = ReducerCtx<typeof db.schemaType>;
 type ReadCtx = ViewCtx<typeof db.schemaType>;
-type Reader = Pick<ReadCtx, "db" | "sender" | "env">;
+export type Reader = Pick<ReadCtx, "db" | "sender" | "env">;
 class Denied extends Error {
   constructor(
     public code: string,
@@ -261,6 +273,8 @@ function audit(
     outcome,
     metadata,
   });
+  if (outcome === "success")
+    incidentAccessEvent(ctx, org, actor, target, action, metadata);
 }
 function text(input: Record<string, unknown>, key: string, max = 200) {
   const value = input[key];
@@ -435,6 +449,14 @@ function execute(
   data: Record<string, unknown>,
 ): unknown {
   const at = now(ctx);
+  if (action.startsWith("incident."))
+    return incidentCommand(ctx, action, hash, data, {
+      authorize,
+      activeMember,
+      fail: (code, message): never => {
+        throw new Denied(code, message);
+      },
+    });
   if (action === "bootstrap") {
     if (ctx.db.users.count() > 0n) return { seeded: false };
     const seed = data.users;
@@ -975,6 +997,19 @@ export const access_snapshot = db.procedure(
               .name,
             role: m.role,
             permissions: isRole(m.role) ? matrix[m.role] : [],
+            responders:
+              isRole(m.role) && matrix[m.role].includes("incident:create")
+                ? [...tx.db.memberships.organizationId.filter(m.organizationId)]
+                    .filter((r) =>
+                      activeMember(tx, m.organizationId, r.userId, now(tx)),
+                    )
+                    .map((r) => ({
+                      userId: r.userId,
+                      name:
+                        tx.db.users.id.find(r.userId)?.displayName ?? r.userId,
+                      role: r.role,
+                    }))
+                : [],
             incidents: [
               ...tx.db.incidentMemberships.userId.filter(actor.userId),
             ]
@@ -985,10 +1020,19 @@ export const access_snapshot = db.procedure(
               )
               .map((i) => ({
                 id: i.incidentId,
+                severity:
+                  tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
+                    ?.severity ?? "",
+                status:
+                  tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
+                    ?.status ?? "",
                 title:
+                  tx.db.incidents.id.find(`${i.organizationId}:${i.incidentId}`)
+                    ?.title ??
                   tx.db.incidentStubs.id.find(
                     `${i.organizationId}:${i.incidentId}`,
-                  )?.title ?? "",
+                  )?.title ??
+                  "",
               })),
           }));
         return serialize({
@@ -1261,4 +1305,46 @@ export const write_health_check = db.reducer(
       created_at: ctx.timestamp,
     });
   },
+);
+
+const incidentDataRow = t.object("IncidentDataRow", {
+  id: t.string(),
+  kind: t.string(),
+  organizationId: t.string(),
+  incidentId: t.string(),
+  body: t.string(),
+});
+export const visible_incident_data = db.view(
+  { public: true },
+  t.array(incidentDataRow),
+  (ctx) => incidentProjection(ctx, browserAccess(ctx)),
+);
+export const evidence_descriptor = db.procedure(
+  { sessionHash: t.string(), evidenceId: t.string() },
+  t.string(),
+  (ctx, args) =>
+    ctx.withTx((tx) => {
+      gateway(tx);
+      try {
+        return serialize({
+          ok: true,
+          data: evidenceDescriptor(
+            tx,
+            args.sessionHash,
+            args.evidenceId,
+            {
+              authorize,
+              activeMember,
+              fail: (code, message): never => {
+                throw new Denied(code, message);
+              },
+            },
+            now(tx),
+          ),
+        });
+      } catch (error) {
+        if (!(error instanceof Denied)) throw error;
+        return serialize({ ok: false, code: error.code, error: error.message });
+      }
+    }),
 );

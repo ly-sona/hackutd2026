@@ -1,13 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Bell,
-  ChevronRight,
-  Search,
-  Command,
-  ArrowUpRight,
-} from "lucide-react";
+import { ChevronRight, Search, Command, ArrowUpRight } from "lucide-react";
+import { IncidentSelector, NotificationCenter } from "./incident-header";
 import { Brand } from "./brand";
 import { AccountMenu } from "./account-menu";
 import { useAccess } from "./workspace-provider";
@@ -20,12 +15,6 @@ import {
   DialogDescription,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-} from "./ui/dropdown-menu";
 
 export type Section = (typeof sections)[number] | "members" | "invitations";
 export function WorkspaceShell({
@@ -53,7 +42,7 @@ export function WorkspaceShell({
     <div className="min-h-screen">
       <header className="border-b border-border">
         <div className="flex h-16 items-center justify-between gap-4 px-5 lg:px-12">
-          <div className="flex min-w-0 items-center gap-6">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-6">
             <Link href="/organizations" aria-label="AEGIS organizations">
               <Brand />
             </Link>
@@ -68,9 +57,9 @@ export function WorkspaceShell({
               className="hidden text-muted-foreground sm:block"
               size={13}
             />
-            <span className="truncate text-base">{access.incidentId}</span>
+            <IncidentSelector />
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-6">
             <button
               onClick={() => setSearch(true)}
               className="flex h-9 items-center gap-3 rounded-md border border-border px-3 text-sm text-muted-foreground md:w-80"
@@ -80,20 +69,7 @@ export function WorkspaceShell({
               <span className="hidden md:block">Search or run a command…</span>
               <Command className="hidden lg:block" size={12} />
             </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label="Notifications"
-                className="text-muted-foreground"
-              >
-                <Bell size={20} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                <p className="px-2 py-4 text-sm text-muted-foreground">
-                  No new platform notifications.
-                </p>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <NotificationCenter />
             <AccountMenu
               name={access.userName}
               role={roleLabels[access.role]}
@@ -126,7 +102,7 @@ export function WorkspaceShell({
             Access active <span className="text-border">/</span>
             {roleLabels[access.role]}
           </span>
-          <span>Simulated incident · Access controls are functional</span>
+          <span>Synthetic scenario · Live incident documentation</span>
         </div>
       </main>
       <Dialog open={search} onOpenChange={setSearch}>

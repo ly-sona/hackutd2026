@@ -63,3 +63,6 @@ if (result.seeded) {
   console.log(`Seeded six synthetic responders. Private credentials: ${file}`);
 } else
   console.log("Existing access data preserved; bootstrap is already complete.");
+
+const { seedIncidents } = await import('./seed-incidents');
+await seedIncidents();

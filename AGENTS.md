@@ -4,7 +4,7 @@
 
 AEGIS is a HackUTD 2026 Cyber Incident Response Dashboard for the Winstead PC challenge. It must function independently of compromised corporate infrastructure. Prioritize ease of use under stress, real-time incident coordination, evidence-backed scope tracking and human-approved recovery actions.
 
-Phases 0 and 1 establish the development foundation and independent access controls. Incident screens contain synthetic data; later capabilities remain unimplemented. Implement only the phase requested by the user; never preempt later phases. The planned feature phases are:
+Phases 0–2 establish the development foundation, independent access controls, and live incident documentation. Overview/Timeline are database-backed; graph, approvals, chat, paging and recovery remain later-phase previews. Implement only the phase requested by the user; never preempt later phases. The planned feature phases are:
 
 1. Independent Security & Access
 2. Incident Command & Documentation
@@ -72,3 +72,13 @@ Phases 0 and 1 establish the development foundation and independent access contr
 ## Change management
 
 Prefer minimal viable changes. Do not refactor unrelated code. Reuse existing components and utilities, preserve existing work and Git history, and avoid duplicated logic. Do not commit secrets, local DB state, build output or test artifacts. Do not make unrelated commits or push without a user request.
+
+## Phase 2 documentation and evidence
+
+- Preserve append-only `incident_events`: corrections reference the original with actor/time/justification. Never edit/delete history during normal operations. Current incident/finding rows may change only alongside new events.
+- Reuse the existing service-gated command boundary and backend permission matrix. Validate all input and same-organization/incident entity links before writes; preserve transactional denial semantics. Never expose raw private tables or file storage references in browser projections.
+- Keep finding investigation state independent of per-user reads, visits and notification read state. Confirmation/resolution requires linked evidence, human verifier/time and justification; do not infer certainty from a file hash or access path.
+- Store evidence originals outside public assets using `EVIDENCE_STORAGE_DIR`, random UUID names, 5 MiB size limits and restrictive file permissions. Preserve original bytes; append annotations separately. Recheck authorization before serving, verify SHA-256, render text as escaped text and use authorized blob previews. No filesystem paths in public metadata.
+- `backend/seed/evidence-manifest.json`, `mock-evidence/`, and the versioned backend fixture define one consistent synthetic story. Routine seed runs preserve existing/user-created rows and original files. Never import the test-only ground-truth oracle into application or seed code.
+- The only demo reset clears disposable IR-2043 read/visit state with explicit opt-in and module `AEGIS_DEVELOPMENT_MODE=true`. Never broaden it to erase shared Acme data or Phase 1 users. Publish development mode false outside local/test.
+- Keep the five reference layouts and mark remaining Scope/Operations/Team story content as previews. Do not implement graph traversal, record generation, contradiction detection, paging, chat, approvals, recovery or automatic reporting before the requested later phase.

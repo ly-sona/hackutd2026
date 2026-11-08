@@ -130,7 +130,11 @@ export function InviteResponder() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<Delivery>();
   if (!access.can("members:invite")) return null;
-  const candidates = members.filter(
+  const candidates = uniqueOrganizationMembers(
+    members,
+    access.organizationId,
+    access.incidentId,
+  ).filter(
     (m) => m.organizationId === access.organizationId && m.status !== "active",
   );
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -349,7 +353,11 @@ export function MembersPage() {
     return (
       <AccessState message="Only an organization administrator can manage members." />
     );
-  const members = rows.filter(
+  const members = uniqueOrganizationMembers(
+    rows,
+    access.organizationId,
+    access.incidentId,
+  ).filter(
     (m) =>
       m.organizationId === access.organizationId &&
       (filter === "all" || m.role === filter) &&
@@ -893,4 +901,16 @@ function AuditPanel() {
       </div>
     </section>
   );
+}
+
+function uniqueOrganizationMembers<
+  T extends { organizationId: string; userId: string; incidentId: string },
+>(rows: readonly T[], org: string, incident: string): T[] {
+  const result = new Map<string, T>();
+  for (const row of rows) {
+    if (row.organizationId !== org) continue;
+    const old = result.get(row.userId);
+    if (!old || row.incidentId === incident) result.set(row.userId, row);
+  }
+  return [...result.values()];
 }

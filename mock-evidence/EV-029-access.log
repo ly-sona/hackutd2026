@@ -1,0 +1,2 @@
+2026-11-07T08:40:00-06:00 principal=service-review resource=Customer_Database operation=read result=denied
+Synthetic denied request; successful unauthorized access not established.

@@ -39,6 +39,7 @@ import WriteHealthCheckReducer from "./write_health_check_reducer";
 
 // Import all procedure arg schemas
 import * as AccessSnapshotProcedure from "./access_snapshot_procedure";
+import * as EvidenceDescriptorProcedure from "./evidence_descriptor_procedure";
 import * as InvitationPreviewProcedure from "./invitation_preview_procedure";
 import * as LookupCredentialsProcedure from "./lookup_credentials_procedure";
 import * as TakeCommandResultProcedure from "./take_command_result_procedure";
@@ -48,6 +49,7 @@ import HealthCheckRow from "./health_check_table";
 import MyAccessRow from "./my_access_table";
 import MySessionRow from "./my_session_table";
 import VisibleAuditRow from "./visible_audit_table";
+import VisibleIncidentDataRow from "./visible_incident_data_table";
 import VisibleInvitationsRow from "./visible_invitations_table";
 import VisibleMembersRow from "./visible_members_table";
 
@@ -87,6 +89,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, VisibleAuditRow),
+  visibleIncidentData: __table({
+    name: 'visible_incident_data',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, VisibleIncidentDataRow),
   visibleInvitations: __table({
     name: 'visible_invitations',
     indexes: [
@@ -112,6 +121,7 @@ const reducersSchema = __reducers(
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
 const proceduresSchema = __procedures(
   __procedureSchema("access_snapshot", AccessSnapshotProcedure.params, AccessSnapshotProcedure.returnType),
+  __procedureSchema("evidence_descriptor", EvidenceDescriptorProcedure.params, EvidenceDescriptorProcedure.returnType),
   __procedureSchema("invitation_preview", InvitationPreviewProcedure.params, InvitationPreviewProcedure.returnType),
   __procedureSchema("lookup_credentials", LookupCredentialsProcedure.params, LookupCredentialsProcedure.returnType),
   __procedureSchema("take_command_result", TakeCommandResultProcedure.params, TakeCommandResultProcedure.returnType),
@@ -125,6 +135,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_session": Omit<typeof tablesSchema.schemaType.tables["mySession"], "accessorName"> & { readonly accessorName: "my_session" };
     /** @deprecated Use `visibleAudit` instead. This alias will be removed in the next major version. */
     readonly "visible_audit": Omit<typeof tablesSchema.schemaType.tables["visibleAudit"], "accessorName"> & { readonly accessorName: "visible_audit" };
+    /** @deprecated Use `visibleIncidentData` instead. This alias will be removed in the next major version. */
+    readonly "visible_incident_data": Omit<typeof tablesSchema.schemaType.tables["visibleIncidentData"], "accessorName"> & { readonly accessorName: "visible_incident_data" };
     /** @deprecated Use `visibleInvitations` instead. This alias will be removed in the next major version. */
     readonly "visible_invitations": Omit<typeof tablesSchema.schemaType.tables["visibleInvitations"], "accessorName"> & { readonly accessorName: "visible_invitations" };
     /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
@@ -150,6 +162,7 @@ const tableAccessorAliases = {
   "my_access": "myAccess",
   "my_session": "mySession",
   "visible_audit": "visibleAudit",
+  "visible_incident_data": "visibleIncidentData",
   "visible_invitations": "visibleInvitations",
   "visible_members": "visibleMembers",
 } as const;
@@ -178,6 +191,8 @@ export type DbView = __DbViewBase & {
   readonly "my_session": __DbViewBase["mySession"];
   /** @deprecated Use `visibleAudit` instead. This alias will be removed in the next major version. */
   readonly "visible_audit": __DbViewBase["visibleAudit"];
+  /** @deprecated Use `visibleIncidentData` instead. This alias will be removed in the next major version. */
+  readonly "visible_incident_data": __DbViewBase["visibleIncidentData"];
   /** @deprecated Use `visibleInvitations` instead. This alias will be removed in the next major version. */
   readonly "visible_invitations": __DbViewBase["visibleInvitations"];
   /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
@@ -192,6 +207,8 @@ export type Tables = __TablesBase & {
   readonly "my_session": __TablesBase["mySession"];
   /** @deprecated Use `visibleAudit` instead. This alias will be removed in the next major version. */
   readonly "visible_audit": __TablesBase["visibleAudit"];
+  /** @deprecated Use `visibleIncidentData` instead. This alias will be removed in the next major version. */
+  readonly "visible_incident_data": __TablesBase["visibleIncidentData"];
   /** @deprecated Use `visibleInvitations` instead. This alias will be removed in the next major version. */
   readonly "visible_invitations": __TablesBase["visibleInvitations"];
   /** @deprecated Use `visibleMembers` instead. This alias will be removed in the next major version. */
