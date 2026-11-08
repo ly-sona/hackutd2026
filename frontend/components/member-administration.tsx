@@ -397,7 +397,7 @@ export function MembersPage() {
       </Link>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-medium tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-[40px]">
             Manage members
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -682,7 +682,7 @@ export function InvitationsPage() {
     <>
       <div className="mb-8 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-medium">Invitations</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-[40px]">Invitations</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             One-hour, single-use access invitations for your organization.
           </p>

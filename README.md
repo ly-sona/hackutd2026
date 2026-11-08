@@ -38,7 +38,10 @@ scripts/                   Local orchestration, service identity and trusted boo
 docs/
   architecture.md          Trust boundaries and real-time access lifecycle
   design-references/       The five supplied incident screen PNGs
+  ui-audit/                Page-by-page fidelity audit and before/after captures
 ```
+
+The [current UI design specification and restoration notes](docs/ui-audit/restored-live-ui.txt) document the approved five-page compositions, live control locations and shared styling for detail views. New desktop, phone and detail screenshots are saved in `docs/ui-audit/restored-live-v1/`. The [earlier UI audit](docs/ui-audit/audit.txt) and [Phase 3–4 merge notes](docs/ui-audit/merge-2d2e4bc.txt) are retained as history. Only Operations remains a preview. Local Geist/Geist Mono fonts and their license live in `frontend/app/fonts/`; no remote font request is required.
 
 ## Install and start
 
@@ -66,6 +69,8 @@ export PATH="$HOME/.local/share/aegis-node/node_modules/.bin:$HOME/.local/bin:$P
 ```
 
 Open **http://localhost:3000**. Unauthenticated visitors are redirected to login. SpacetimeDB listens on **http://127.0.0.1:3001**; `/v1/ping` checks availability. It is an API/WebSocket endpoint, not a browser admin dashboard.
+
+On Windows, the development scripts invoke npm through its JavaScript entry point rather than spawning the `.cmd` shim directly. Run the scripts through `npm run` so that entry point is available. Startup checks the frontend port before publishing or launching a watcher; if it is occupied, use the existing server or stop it before starting another. Ctrl+C terminates owned process trees on Windows as well as Linux/macOS, while leaving a reused database running.
 
 Startup reuses a healthy local database or starts one, provisions a separate private service identity, publishes the additive module, generates bindings and idempotently seeds the demonstration before starting Next.js and the official backend watcher. Existing data, passwords and CLI owner credentials are preserved. Schema changes never automatically delete data. Ctrl+C stops owned services; reused services remain running.
 

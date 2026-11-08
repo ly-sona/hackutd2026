@@ -45,6 +45,14 @@ export function localAddress() {
 }
 export function launch(command, args, options = {}) {
   if (command === cli) args = ["--config-path", cliConfig, ...args];
+  // Windows cannot spawn npm's .cmd shim directly without a shell.
+  // Reuse npm's JavaScript entry point and keep arguments shell-free.
+  if (process.platform === "win32" && command === "npm") {
+    if (!process.env.npm_execpath)
+      throw new Error("Start this command through npm so its CLI path is available.");
+    command = process.execPath;
+    args = [process.env.npm_execpath, ...args];
+  }
   return spawn(command, args, { cwd: root, stdio: "inherit", ...options });
 }
 export function completed(child) {

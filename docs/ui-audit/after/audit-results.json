@@ -1,0 +1,528 @@
+{
+  "mode": "Actual authenticated application and real SpacetimeDB; synthetic incident data",
+  "pages": [
+    {
+      "section": "overview",
+      "desktop": {
+        "width": 1600,
+        "scrollWidth": 1600,
+        "height": 1000,
+        "font": "geist, \"geist Fallback\", Arial, Helvetica, sans-serif",
+        "heading": "Ransomware response",
+        "headingBox": {
+          "x": 54,
+          "y": 177,
+          "width": 456.96875,
+          "height": 52.796875,
+          "top": 177,
+          "right": 510.96875,
+          "bottom": 229.796875,
+          "left": 54
+        },
+        "headerBox": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 115,
+          "top": 0,
+          "right": 1600,
+          "bottom": 115,
+          "left": 0
+        },
+        "nav": [
+          {
+            "text": "Overview",
+            "box": {
+              "x": 54,
+              "y": 60,
+              "width": 81.0625,
+              "height": 54,
+              "top": 60,
+              "right": 135.0625,
+              "bottom": 114,
+              "left": 54
+            }
+          },
+          {
+            "text": "Scope",
+            "box": {
+              "x": 179.0625,
+              "y": 60,
+              "width": 52.1875,
+              "height": 54,
+              "top": 60,
+              "right": 231.25,
+              "bottom": 114,
+              "left": 179.0625
+            }
+          },
+          {
+            "text": "Operations",
+            "box": {
+              "x": 275.25,
+              "y": 60,
+              "width": 90.203125,
+              "height": 54,
+              "top": 60,
+              "right": 365.453125,
+              "bottom": 114,
+              "left": 275.25
+            }
+          },
+          {
+            "text": "Team",
+            "box": {
+              "x": 409.453125,
+              "y": 60,
+              "width": 44.3125,
+              "height": 54,
+              "top": 60,
+              "right": 453.765625,
+              "bottom": 114,
+              "left": 409.453125
+            }
+          },
+          {
+            "text": "Timeline",
+            "box": {
+              "x": 497.765625,
+              "y": 60,
+              "width": 69.125,
+              "height": 54,
+              "top": 60,
+              "right": 566.890625,
+              "bottom": 114,
+              "left": 497.765625
+            }
+          }
+        ]
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390,
+        "height": 1665,
+        "overflow": []
+      }
+    },
+    {
+      "section": "scope",
+      "desktop": {
+        "width": 1600,
+        "scrollWidth": 1600,
+        "height": 1000,
+        "font": "geist, \"geist Fallback\", Arial, Helvetica, sans-serif",
+        "heading": "Scope & evidence",
+        "headingBox": {
+          "x": 54,
+          "y": 147,
+          "width": 428.734375,
+          "height": 48,
+          "top": 147,
+          "right": 482.734375,
+          "bottom": 195,
+          "left": 54
+        },
+        "headerBox": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 115,
+          "top": 0,
+          "right": 1600,
+          "bottom": 115,
+          "left": 0
+        },
+        "nav": [
+          {
+            "text": "Overview",
+            "box": {
+              "x": 54,
+              "y": 60,
+              "width": 76.578125,
+              "height": 54,
+              "top": 60,
+              "right": 130.578125,
+              "bottom": 114,
+              "left": 54
+            }
+          },
+          {
+            "text": "Scope",
+            "box": {
+              "x": 174.578125,
+              "y": 60,
+              "width": 54.765625,
+              "height": 54,
+              "top": 60,
+              "right": 229.34375,
+              "bottom": 114,
+              "left": 174.578125
+            }
+          },
+          {
+            "text": "Operations",
+            "box": {
+              "x": 273.34375,
+              "y": 60,
+              "width": 90.203125,
+              "height": 54,
+              "top": 60,
+              "right": 363.546875,
+              "bottom": 114,
+              "left": 273.34375
+            }
+          },
+          {
+            "text": "Team",
+            "box": {
+              "x": 407.546875,
+              "y": 60,
+              "width": 44.3125,
+              "height": 54,
+              "top": 60,
+              "right": 451.859375,
+              "bottom": 114,
+              "left": 407.546875
+            }
+          },
+          {
+            "text": "Timeline",
+            "box": {
+              "x": 495.859375,
+              "y": 60,
+              "width": 69.125,
+              "height": 54,
+              "top": 60,
+              "right": 564.984375,
+              "bottom": 114,
+              "left": 495.859375
+            }
+          }
+        ]
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390,
+        "height": 1510,
+        "overflow": []
+      }
+    },
+    {
+      "section": "operations",
+      "desktop": {
+        "width": 1600,
+        "scrollWidth": 1600,
+        "height": 1000,
+        "font": "geist, \"geist Fallback\", Arial, Helvetica, sans-serif",
+        "heading": "Operations",
+        "headingBox": {
+          "x": 54,
+          "y": 147,
+          "width": 354.515625,
+          "height": 48,
+          "top": 147,
+          "right": 408.515625,
+          "bottom": 195,
+          "left": 54
+        },
+        "headerBox": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 115,
+          "top": 0,
+          "right": 1600,
+          "bottom": 115,
+          "left": 0
+        },
+        "nav": [
+          {
+            "text": "Overview",
+            "box": {
+              "x": 54,
+              "y": 60,
+              "width": 76.578125,
+              "height": 54,
+              "top": 60,
+              "right": 130.578125,
+              "bottom": 114,
+              "left": 54
+            }
+          },
+          {
+            "text": "Scope",
+            "box": {
+              "x": 174.578125,
+              "y": 60,
+              "width": 52.1875,
+              "height": 54,
+              "top": 60,
+              "right": 226.765625,
+              "bottom": 114,
+              "left": 174.578125
+            }
+          },
+          {
+            "text": "Operations",
+            "box": {
+              "x": 270.765625,
+              "y": 60,
+              "width": 95.34375,
+              "height": 54,
+              "top": 60,
+              "right": 366.109375,
+              "bottom": 114,
+              "left": 270.765625
+            }
+          },
+          {
+            "text": "Team",
+            "box": {
+              "x": 410.109375,
+              "y": 60,
+              "width": 44.3125,
+              "height": 54,
+              "top": 60,
+              "right": 454.421875,
+              "bottom": 114,
+              "left": 410.109375
+            }
+          },
+          {
+            "text": "Timeline",
+            "box": {
+              "x": 498.421875,
+              "y": 60,
+              "width": 69.125,
+              "height": 54,
+              "top": 60,
+              "right": 567.546875,
+              "bottom": 114,
+              "left": 498.421875
+            }
+          }
+        ]
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390,
+        "height": 1586,
+        "overflow": []
+      }
+    },
+    {
+      "section": "team",
+      "desktop": {
+        "width": 1600,
+        "scrollWidth": 1600,
+        "height": 1000,
+        "font": "geist, \"geist Fallback\", Arial, Helvetica, sans-serif",
+        "heading": "Team",
+        "headingBox": {
+          "x": 54,
+          "y": 147,
+          "width": 330.0625,
+          "height": 48,
+          "top": 147,
+          "right": 384.0625,
+          "bottom": 195,
+          "left": 54
+        },
+        "headerBox": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 115,
+          "top": 0,
+          "right": 1600,
+          "bottom": 115,
+          "left": 0
+        },
+        "nav": [
+          {
+            "text": "Overview",
+            "box": {
+              "x": 54,
+              "y": 60,
+              "width": 76.578125,
+              "height": 54,
+              "top": 60,
+              "right": 130.578125,
+              "bottom": 114,
+              "left": 54
+            }
+          },
+          {
+            "text": "Scope",
+            "box": {
+              "x": 174.578125,
+              "y": 60,
+              "width": 52.1875,
+              "height": 54,
+              "top": 60,
+              "right": 226.765625,
+              "bottom": 114,
+              "left": 174.578125
+            }
+          },
+          {
+            "text": "Operations",
+            "box": {
+              "x": 270.765625,
+              "y": 60,
+              "width": 90.203125,
+              "height": 54,
+              "top": 60,
+              "right": 360.96875,
+              "bottom": 114,
+              "left": 270.765625
+            }
+          },
+          {
+            "text": "Team",
+            "box": {
+              "x": 404.96875,
+              "y": 60,
+              "width": 46.15625,
+              "height": 54,
+              "top": 60,
+              "right": 451.125,
+              "bottom": 114,
+              "left": 404.96875
+            }
+          },
+          {
+            "text": "Timeline",
+            "box": {
+              "x": 495.125,
+              "y": 60,
+              "width": 69.125,
+              "height": 54,
+              "top": 60,
+              "right": 564.25,
+              "bottom": 114,
+              "left": 495.125
+            }
+          }
+        ]
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390,
+        "height": 1255,
+        "overflow": []
+      }
+    },
+    {
+      "section": "timeline",
+      "desktop": {
+        "width": 1600,
+        "scrollWidth": 1600,
+        "height": 1000,
+        "font": "geist, \"geist Fallback\", Arial, Helvetica, sans-serif",
+        "heading": "Timeline",
+        "headingBox": {
+          "x": 54,
+          "y": 147,
+          "width": 434.859375,
+          "height": 48,
+          "top": 147,
+          "right": 488.859375,
+          "bottom": 195,
+          "left": 54
+        },
+        "headerBox": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 115,
+          "top": 0,
+          "right": 1600,
+          "bottom": 115,
+          "left": 0
+        },
+        "nav": [
+          {
+            "text": "Overview",
+            "box": {
+              "x": 54,
+              "y": 60,
+              "width": 76.578125,
+              "height": 54,
+              "top": 60,
+              "right": 130.578125,
+              "bottom": 114,
+              "left": 54
+            }
+          },
+          {
+            "text": "Scope",
+            "box": {
+              "x": 174.578125,
+              "y": 60,
+              "width": 52.1875,
+              "height": 54,
+              "top": 60,
+              "right": 226.765625,
+              "bottom": 114,
+              "left": 174.578125
+            }
+          },
+          {
+            "text": "Operations",
+            "box": {
+              "x": 270.765625,
+              "y": 60,
+              "width": 90.203125,
+              "height": 54,
+              "top": 60,
+              "right": 360.96875,
+              "bottom": 114,
+              "left": 270.765625
+            }
+          },
+          {
+            "text": "Team",
+            "box": {
+              "x": 404.96875,
+              "y": 60,
+              "width": 44.3125,
+              "height": 54,
+              "top": 60,
+              "right": 449.28125,
+              "bottom": 114,
+              "left": 404.96875
+            }
+          },
+          {
+            "text": "Timeline",
+            "box": {
+              "x": 493.28125,
+              "y": 60,
+              "width": 72.890625,
+              "height": 54,
+              "top": 60,
+              "right": 566.171875,
+              "bottom": 114,
+              "left": 493.28125
+            }
+          }
+        ]
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390,
+        "height": 1944,
+        "overflow": []
+      }
+    }
+  ],
+  "interactions": {
+    "timelineApproval": "Recorded\n· 1 of 2 approved\n\nFirst purchase approval recorded\n\nOP-008 · Recovery hardware · Recorded 09:25 CST\n\nWhat happened\n\nPriya Shah’s approval is recorded in this sample request. A second eligible approval is still required.\n\nNext step\n\nReview the outstanding approval in Operations.\n\nMaya Chen is the remaining reviewer.\n\nSources & audit details",
+    "timelineAdministrative": "Recorded\n· Invitation recorded\n\nResponder invited\n\nIR-2041 · Incident access · Recorded 09:08 CST\n\nWhat happened\n\nThis sample event records an invitation sent by Sam Patel. An invitation does not establish accepted membership.\n\nNext step\n\nReview invitation status in Team.\n\nSam Patel manages the invitation.\n\nSources & audit details",
+    "scopeAccount": "ACCOUNT\n\nAdministrator A-09\n\nCompromise confirmed\n\nUnauthorized use of this account is confirmed in the sample investigation. Its access permissions establish a possible path to Customer Database.\n\nEvidence · 1 item\nAssign investigation",
+    "operationsAuthorized": "OP-007 /Storage request\n\nBackup storage extension\n—\n\nA synthetic example of a previously authorized storage request. No action was performed by AEGIS.\n\nRequester\nAlex Rivera\nNormal route\nAdditional retention capacity required\nIndependent approval\nMC\n\nMaya Chen · You\n\nCommander\n\nApproved\nAR\n\nAlex Rivera\n\nAssigned reviewer\n\nApproved\nFallback rationale & evidence\nEvidence retention → Backup storage\nApprove request\nRequest changes\n\nTwo distinct authorized approvers. Authorization only; no payment is executed.",
+    "teamAfterContactClick": "Alex Rivera"
+  },
+  "errors": []
+}

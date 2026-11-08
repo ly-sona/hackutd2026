@@ -1,3 +1,4 @@
+import { openGraphTools } from "./presentation-helpers";
 import {
   test,
   expect,
@@ -160,6 +161,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
     await expect(
       page.getByRole("heading", { name: "Scope & evidence", exact: true }),
     ).toBeVisible();
+    await openGraphTools(page);
     await expect(page.getByTestId("inventory-record-count")).toHaveText(
       "1,240",
     );
@@ -169,6 +171,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
       50,
     );
     expect(await page.locator(".react-flow__edge").count()).toBeGreaterThan(3);
+    await openGraphTools(page);
     await page.getByLabel("Find scope entity").selectOption("evidence:EV-018");
     const detail = page.getByTestId("scope-detail");
     await expect(detail.getByRole("heading", { level: 2 })).toHaveText(
@@ -196,6 +199,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
         })
       ).status(),
     ).toBe(400);
+    await openGraphTools(page);
     await page
       .getByLabel("Find scope entity")
       .selectOption("acme:scope:RG-OCTOBER");
@@ -229,6 +233,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
     await login(context, "alex");
     const live = await connection(context);
     await page.goto(`${base}/scope`);
+    await openGraphTools(page);
     await page.getByRole("button", { name: "Add asset", exact: true }).click();
     const form = page.getByRole("dialog");
     const reference = `SCOPE-${Date.now()}`;
@@ -287,6 +292,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
     expect(business.status()).toBe(200);
     const businessId = (await business.json()).entityId;
     await expect(page.getByTestId(`scope-node-${businessRef}`)).toBeAttached();
+    await openGraphTools(page);
     await page.getByLabel("Find scope entity").selectOption(businessId);
     await expect(
       page.getByTestId("scope-detail").getByTestId("assessment-Compromise"),
@@ -295,6 +301,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
       page.getByTestId("scope-detail").getByTestId("assessment-Availability"),
     ).toContainText("Unassessed");
     await page.setViewportSize({ width: 390, height: 844 });
+    await openGraphTools(page);
     await page
       .getByLabel("Find scope entity")
       .selectOption(`acme:scope:${reference}`);
@@ -401,6 +408,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
       id = "acme:record:C-2240";
     const page = await b.newPage();
     await page.goto(`${base}/scope?entity=${encodeURIComponent(id)}`);
+    await openGraphTools(page);
     await expect(
       page
         .getByTestId("scope-detail")
@@ -526,6 +534,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
     await page.goto(`${base}/scope`);
     await expect(page.getByTestId("scope-node-A-09")).toBeVisible();
     const initial = await page.locator(".react-flow__node").count();
+    await openGraphTools(page);
     await page.getByLabel("Find scope entity").selectOption("acme:scope:A-09");
     await page
       .getByRole("button", { name: "Expand related", exact: true })
@@ -569,14 +578,19 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
     await page
       .getByRole("button", { name: "Reset focus", exact: true })
       .click();
+    await openGraphTools(page);
     await page
       .getByLabel("Find scope entity")
       .selectOption("acme:scope:SYS-CUSTOMER-DB");
-    const detail = page.getByTestId("scope-detail");
+    await page
+      .getByTestId("scope-detail")
+      .getByRole("button", { name: /Open full investigation/ })
+      .click();
+    const detail = page.getByRole("dialog").first();
     await detail
       .getByRole("button", { name: "Link evidence", exact: true })
       .click();
-    const link = page.getByRole("dialog");
+    const link = page.getByRole("dialog").last();
     await link.getByLabel("Existing evidence").selectOption("EV-018");
     await link
       .getByLabel("Evidence annotation", { exact: true })
@@ -595,7 +609,7 @@ test.describe("Phase 3 connected scope against real SpacetimeDB", () => {
     await detail
       .getByRole("button", { name: "Add finding", exact: true })
       .click();
-    const form = page.getByRole("dialog"),
+    const form = page.getByRole("dialog").last(),
       title = `Scope follow-up ${Date.now()}`;
     await form.getByLabel("Finding title").fill(title);
     await form

@@ -21,14 +21,16 @@ import {
   Layers3,
   FileText,
   Settings2,
+  MoreHorizontal,
   SlidersHorizontal,
 } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useAccess } from "./workspace-provider";
-import { ScopeDataProvider, useScope } from "./scope-data";
+import { useScope } from "./scope-data";
 import { AssetForm, AssociateAsset, RelationshipForm } from "./scope-forms";
 import { fieldClass, Field } from "./incident-forms";
 import { Button } from "./ui/button";
+import { PageHeading } from "./workspace-ui";
 import {
   Dialog,
   DialogContent,
@@ -70,32 +72,69 @@ function EntityNode({ data, selected }: NodeProps<GraphNode>) {
     <div
       data-testid={`scope-node-${e.reference}`}
       data-entity-kind={e.kind}
-      className={`w-48 rounded-md border bg-[#0d0d0f] p-3 ${selected ? "border-2 border-white" : "border-neutral-600"}`}
+      className={`${e.kind === "Record" ? "w-40" : e.kind === "Dataset" ? "w-48" : "w-[250px]"} rounded-md border bg-[#0d0d0d] p-4 ${selected ? "border-2 border-white" : "border-neutral-600"}`}
     >
-      <Handle type="target" position={Position.Left} className="opacity-0" />
-      <Handle type="source" position={Position.Right} className="opacity-0" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        className="opacity-0"
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom-left"
+        style={{ left: "35%" }}
+        className="opacity-0"
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom-right"
+        style={{ left: "65%" }}
+        className="opacity-0"
+      />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top"
+        className="opacity-0"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className="opacity-0"
+      />
       <div className="flex items-start gap-2">
         <Icon size={19} className="shrink-0" />
         <div>
-          <p className="text-sm font-semibold">{e.name}</p>
-          <p className="mt-1 text-[10px] uppercase text-muted-foreground">
+          <p className="text-lg font-semibold">
+            {e.kind === "Evidence" ? e.reference : e.name}
+          </p>
+          <p className="mt-1 text-[13px] uppercase text-muted-foreground">
             {e.kind}
           </p>
           {e.countKnown && ["Dataset", "Record Group"].includes(e.kind) && (
-            <p className="mt-2 text-[10px]">
+            <p className="mt-2 text-[13px]">
               {e.recordCount.toLocaleString("en-US")} records · inventory
             </p>
           )}
-          <p
-            className={`mt-2 text-[10px] ${isConfirmed(data.status) ? "text-red-400" : data.status === "Ruled Out" ? "text-emerald-400" : "text-amber-300"}`}
-          >
-            {data.dimension ? `${data.dimension}: ${data.status}` : data.status}
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            {e.kind !== "Evidence" && data.status !== "Unassessed" && (
+              <span
+                aria-hidden="true"
+                className={`mr-1.5 inline-block size-2 rounded-full ${isConfirmed(data.status) ? "bg-red-400" : data.status === "Ruled Out" ? "bg-emerald-400" : "bg-amber-400"}`}
+              />
+            )}
+            {e.kind === "Evidence"
+              ? e.name
+              : data.dimension
+                ? data.dimension === "Compromise"
+                  ? `Compromised: ${data.status.replace(/ Compromise$/, "")}`
+                  : `${data.dimension}: ${data.status}`
+                : data.status}
           </p>
-          {data.potential && (
-            <p className="mt-1 text-[10px] text-amber-300">
-              Potential path · investigate
-            </p>
-          )}
         </div>
       </div>
     </div>
@@ -106,21 +145,17 @@ export function ScopeWorkspace() {
   if (!a.can("scope:view"))
     return (
       <>
-        <h1 className="text-3xl font-semibold">Scope & evidence</h1>
-        <p className="mt-3 text-muted-foreground">
-          Trace access, evidence, and business dependencies.
-        </p>
+        <PageHeading
+          title="Scope & evidence"
+          description="Trace access, evidence, and business dependencies."
+        />
         <p className="mt-8 border border-border p-6 text-sm">
           Scope access is restricted. Your role can review authorized impact
           summaries on Overview.
         </p>
       </>
     );
-  return (
-    <ScopeDataProvider key={`${a.organizationId}:${a.incidentId}`}>
-      <ScopeCanvas />
-    </ScopeDataProvider>
-  );
+  return <ScopeCanvas />;
 }
 function ScopeCanvas() {
   const a = useAccess(),
@@ -131,6 +166,7 @@ function ScopeCanvas() {
     [extra, setExtra] = useState<string[]>([]),
     [collapsed, setCollapsed] = useState<string[]>([]),
     [filterOpen, setFilterOpen] = useState(false),
+    [toolsOpen, setToolsOpen] = useState(false),
     [detailOpen, setDetailOpen] = useState(false),
     [group, setGroup] = useState<string | null>(null),
     [error, setError] = useState("");
@@ -194,7 +230,10 @@ function ScopeCanvas() {
   const graph = useMemo(() => {
     const focused = d.entities.filter(
       (e) =>
-        (e.defaultVisible || extra.includes(e.id) || e.id === selected?.id) &&
+        ((e.defaultVisible && !["Finding", "Incident"].includes(e.kind)) ||
+          !!filters.kind ||
+          extra.includes(e.id) ||
+          e.id === selected?.id) &&
         !collapsed.includes(e.id),
     );
     const entities = focused.filter(
@@ -240,15 +279,26 @@ function ScopeCanvas() {
       "Business Operation": 1,
       Finding: 3,
     };
-    const counts = new Map<number, number>();
+    const counts = new Map<string, number>();
     const nodes: GraphNode[] = limited.map((e) => {
       const col = positions[e.kind] ?? 0;
-      const row = counts.get(col) ?? 0;
-      counts.set(col, row + 1);
+      const key = ["Evidence", "Business Operation"].includes(e.kind)
+        ? e.kind
+        : String(col);
+      const row = counts.get(key) ?? 0;
+      counts.set(key, row + 1);
       return {
         id: e.id,
         type: "scope",
-        position: { x: col * 265, y: row * 175 },
+        position:
+          e.kind === "Business Operation"
+            ? { x: 120 + row * 280, y: 350 }
+            : e.kind === "Evidence"
+              ? { x: 480 + row * 280, y: 350 }
+              : {
+                  x: [0, 310, 620, 865, 1170][col] ?? col * 300,
+                  y: 80 + row * 180,
+                },
         selected: e.id === selected?.id,
         data: {
           entity: e,
@@ -267,14 +317,33 @@ function ScopeCanvas() {
         id: r.id,
         source: r.sourceId,
         target: r.targetId,
+        sourceHandle:
+          ["Evidence", "Business Operation"].includes(
+            d.entities.find((entity) => entity.id === r.sourceId)?.kind ?? "",
+          ) &&
+          d.entities.find((entity) => entity.id === r.targetId)?.kind ===
+            "System"
+            ? "top"
+            : "right",
+        targetHandle:
+          ["Evidence", "Business Operation"].includes(
+            d.entities.find((entity) => entity.id === r.sourceId)?.kind ?? "",
+          ) &&
+          d.entities.find((entity) => entity.id === r.targetId)?.kind ===
+            "System"
+            ? d.entities.find((entity) => entity.id === r.sourceId)?.kind ===
+              "Evidence"
+              ? "bottom-right"
+              : "bottom-left"
+            : "left",
         type: "smoothstep",
         label: r.type.toLowerCase().replaceAll("_", " "),
         markerEnd: { type: MarkerType.ArrowClosed, color: "#a1a1aa" },
         style: {
-          stroke: r.status === "Confirmed" ? "#a1a1aa" : "#d6aa47",
+          stroke: r.status === "Confirmed" ? "#a1a1aa" : "#8a8a8a",
           strokeDasharray: r.status === "Confirmed" ? undefined : "5 4",
         },
-        labelStyle: { fill: "#ddd", fontSize: 11 },
+        labelStyle: { fill: "#ddd", fontSize: 14 },
         labelBgStyle: { fill: "#0b0b0d" },
         data: { status: r.status },
       }));
@@ -315,99 +384,117 @@ function ScopeCanvas() {
   };
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Scope & evidence
-          </h1>
-          <p className="mt-2 text-base text-muted-foreground">
-            Trace access, evidence, and business dependencies.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {a.can("scope:edit") && (
-            <>
-              <AssetForm />
-              <RelationshipForm />
-            </>
-          )}
-          <Button variant="outline" onClick={() => setFilterOpen(true)}>
-            <SlidersHorizontal size={15} />
-            Filter
-          </Button>
-        </div>
-      </div>
-      <ScopeSummaryStrip summary={d.summary} />
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select
-          aria-label="Find scope entity"
-          className={`${fieldClass} max-w-80`}
-          value={selected?.id ?? ""}
-          onChange={(e) => {
-            const entity = d.entities.find((v) => v.id === e.target.value);
-            if (entity) choose(entity);
-          }}
+      <PageHeading
+        title="Scope & evidence"
+        description="Trace access, evidence, and business dependencies."
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setFilterOpen(true)}>
+              <SlidersHorizontal size={18} />
+              Filter
+            </Button>
+            <Button
+              variant="ghost"
+              aria-label="Graph tools"
+              aria-expanded={toolsOpen}
+              onClick={() => setToolsOpen(!toolsOpen)}
+            >
+              <MoreHorizontal size={22} />
+            </Button>
+          </>
+        }
+      />
+      {toolsOpen && (
+        <section
+          aria-label="Graph tools"
+          className="mb-6 space-y-5 rounded-lg border border-border p-5"
         >
-          {d.entities.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name} · {e.kind}
-            </option>
-          ))}
-        </select>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            setExtra((old) => [...new Set([...old, ...related.slice(0, 25)])]);
-            setCollapsed((old) => old.filter((id) => !related.includes(id)));
-          }}
-        >
-          Expand related
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            setCollapsed((old) => [
-              ...new Set([
-                ...old,
-                ...related.filter((id) => id !== selected?.id),
-              ]),
-            ])
-          }
-        >
-          Collapse related
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            setExtra([]);
-            setCollapsed([]);
-            setFilters({
-              kind: "",
-              status: "",
-              impact: "",
-              sensitivity: "",
-              evidence: "",
-            });
-          }}
-        >
-          Reset focus
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          {graph.nodes.length} nodes shown · dashed links are unverified or
-          suspected
-        </span>
-      </div>
+          <div className="flex flex-wrap gap-3">
+            {a.can("scope:edit") && (
+              <>
+                <AssetForm />
+                <RelationshipForm />
+                <AssociateAsset />
+              </>
+            )}
+          </div>
+          <ScopeSummaryStrip summary={d.summary} />
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <select
+              aria-label="Find scope entity"
+              className={`${fieldClass} max-w-80`}
+              value={selected?.id ?? ""}
+              onChange={(e) => {
+                const entity = d.entities.find((v) => v.id === e.target.value);
+                if (entity) choose(entity);
+              }}
+            >
+              {d.entities.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name} · {e.kind}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setExtra((old) => [
+                  ...new Set([...old, ...related.slice(0, 25)]),
+                ]);
+                setCollapsed((old) =>
+                  old.filter((id) => !related.includes(id)),
+                );
+              }}
+            >
+              Expand related
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                setCollapsed((old) => [
+                  ...new Set([
+                    ...old,
+                    ...related.filter((id) => id !== selected?.id),
+                  ]),
+                ])
+              }
+            >
+              Collapse related
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setExtra([]);
+                setCollapsed([]);
+                setFilters({
+                  kind: "",
+                  status: "",
+                  impact: "",
+                  sensitivity: "",
+                  evidence: "",
+                });
+              }}
+            >
+              Reset focus
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {graph.nodes.length} nodes shown · dashed links are unverified or
+              suspected
+            </span>
+          </div>
+        </section>
+      )}
       {error && (
         <p role="alert" className="mb-4 text-sm text-red-400">
           {error}
         </p>
       )}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div
-          className="relative h-[570px] min-w-0 rounded-md border border-border lg:h-[640px]"
+          className="relative h-[540px] min-w-0 overflow-hidden rounded-md border border-border lg:h-[620px]"
           aria-label="Incident context graph"
           data-testid="scope-graph"
         >
@@ -417,15 +504,16 @@ function ScopeCanvas() {
             edges={graph.edges}
             nodeTypes={nodeTypes}
             colorMode="dark"
+            style={{ background: "#090909" }}
             fitView
-            fitViewOptions={{ padding: 0.1 }}
+            fitViewOptions={{ padding: 0.05 }}
             minZoom={0.2}
             maxZoom={1.8}
             nodesDraggable={false}
             nodesConnectable={false}
             onNodeClick={(_, node) => choose(node.data.entity)}
           >
-            <Background color="#454549" gap={18} size={0.6} />
+            <Background color="#686868" gap={18} size={0.85} />
             <Controls showInteractive={false} position="bottom-right" />
           </ReactFlow>
           {a.can("scope:records") && (
@@ -459,20 +547,24 @@ function ScopeCanvas() {
           )}
         </div>
         <aside
-          className="hidden min-w-0 border-l border-border pl-6 xl:block xl:max-h-[640px] xl:overflow-y-auto xl:pr-2"
+          className="hidden min-w-0 border-l border-border pl-6 xl:block xl:max-h-[620px] xl:overflow-y-auto xl:pr-2"
           data-testid="scope-detail"
         >
           {selected && (
-            <EntityDetails entity={selected} select={choose} browse={browse} />
+            <EntityDetails
+              entity={selected}
+              select={choose}
+              browse={browse}
+              compact
+              expand={() => setDetailOpen(true)}
+            />
           )}
         </aside>
       </div>
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span>
-          Solid: documented relationship · Dashed: uncertainty · Potential paths
-          do not prove impact.
+          Dashed links are uncertain. Access paths do not prove record impact.
         </span>
-        {a.can("scope:edit") && <AssociateAsset />}
       </div>
       <Button
         variant="outline"

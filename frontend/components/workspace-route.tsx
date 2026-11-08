@@ -11,10 +11,12 @@ export async function WorkspaceRoute({
   organizationId,
   incidentId,
   section,
+  children,
 }: {
   organizationId: string;
   incidentId: string;
   section: Section;
+  children?: React.ReactNode;
 }) {
   const path = ["members", "invitations"].includes(section)
     ? `/org/${organizationId}/${section}`
@@ -43,15 +45,17 @@ export async function WorkspaceRoute({
     >
       <IncidentDataProvider>
         <CoordinationDataProvider>
-          <WorkspaceShell section={section}>
-            {section === "members" ? (
-              <MembersPage />
-            ) : section === "invitations" ? (
-              <InvitationsPage />
-            ) : (
-              <IncidentPage section={section} />
-            )}
-          </WorkspaceShell>
+          {children ?? (
+            <WorkspaceShell section={section}>
+              {section === "members" ? (
+                <MembersPage />
+              ) : section === "invitations" ? (
+                <InvitationsPage />
+              ) : (
+                <IncidentPage section={section} />
+              )}
+            </WorkspaceShell>
+          )}
         </CoordinationDataProvider>
       </IncidentDataProvider>
     </WorkspaceProvider>

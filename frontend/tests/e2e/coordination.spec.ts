@@ -1,3 +1,4 @@
+import { openDisclosure } from "./presentation-helpers";
 import {
   test,
   expect,
@@ -851,6 +852,7 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
       expect(
         d.rows<Task>("task").find((t) => t.id === task.taskId)!.status,
       ).toBe("Open");
+      await openDisclosure(browserPage, "View all work");
       await expect(
         browserPage
           .getByTestId("attention-task")
@@ -1152,6 +1154,7 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
     );
     const article = page.locator(`[data-message-id="${message.messageId}"]`);
     await expect(article).toContainText(content);
+    await article.getByLabel("Message actions").click();
     await article
       .getByRole("button", { name: "Create task", exact: true })
       .click();
@@ -1206,6 +1209,10 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
     await expect(
       page.locator(`[data-message-id="${message.messageId}"]`),
     ).toContainText(content);
+    await page
+      .locator(`[data-message-id="${message.messageId}"]`)
+      .getByLabel("Message actions")
+      .click();
     await page
       .locator(`[data-message-id="${message.messageId}"]`)
       .getByRole("button", { name: "Add finding", exact: true })

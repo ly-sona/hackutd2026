@@ -27,8 +27,7 @@ export const demoIncident: IncidentFixture = {
   organization: "Acme",
   title: "Ransomware response",
   severity: "Critical",
-  summary:
-    "Customer platform · Opened November 7 at 09:04 CST · Synthetic incident",
+  summary: "Customer platform · Opened Nov 7, 2026 at 09:04 CST",
   operations: [
     {
       name: "Customer support",
@@ -50,21 +49,21 @@ export const demoIncident: IncidentFixture = {
       source: "Synthetic network export",
     },
     {
-      id: "EV-011",
-      title: "Corporate SSO dependency",
-      source: "Synthetic purchasing record",
+      id: "EV-026",
+      title: "Isolation change request",
+      source: "Synthetic change ticket",
     },
   ],
   timeline: [
     {
       id: "event-1",
       time: "09:08",
-      title: "Response planning started",
+      title: "Responder invited",
       detail:
-        "The synthetic response plan establishes independent coordination for the incident. Actual access changes are recorded separately under Manage members.",
+        "This synthetic event records Sam Patel inviting a responder. Accepted membership and actual access changes are recorded separately under Manage members.",
       severity: "info",
       actor: "Sam Patel",
-      label: "Planning example",
+      label: "Access update",
     },
     {
       id: "event-2",
@@ -73,7 +72,7 @@ export const demoIncident: IncidentFixture = {
       detail:
         "An isolation report was recorded for the Customer Database. The report has not been technically verified.",
       severity: "warning",
-      actor: "Priya Shah",
+      actor: "Maya Chen",
       label: "Not yet verified",
     },
     {
@@ -94,7 +93,7 @@ export const demoIncident: IncidentFixture = {
         "In this fictional approval example, Priya Shah has reviewed OP-008. The application has not executed an approval or payment.",
       severity: "info",
       actor: "Priya Shah",
-      label: "1 of 2 reviews · Demo",
+      label: "1 of 2 approvals",
     },
     {
       id: "event-5",
@@ -103,7 +102,7 @@ export const demoIncident: IncidentFixture = {
       detail:
         "The sample isolation report and network traffic log disagree. Containment is not yet verified. This warning is a fixed fixture, not a live contradiction-detection result.",
       severity: "critical",
-      actor: "Synthetic assessment",
+      actor: "AEGIS",
       label: "Verification needed",
     },
   ],
@@ -111,17 +110,22 @@ export const demoIncident: IncidentFixture = {
 export const demoRequests = [
   {
     id: "OP-008",
+    incidentId: "IR-2041",
     title: "Recovery hardware",
     requester: "Alex Rivera",
-    status: "Your approval needed",
+    status: "Approval pending",
     impact: "Replacement hardware to restore the customer platform.",
     description: "Replacement hardware to restore the customer platform.",
     amount: "$4,800",
     type: "Vendor purchase",
     participants: ["Priya Shah", "Maya Chen"],
+    decisions: ["Approved", "Pending"],
+    normalRoute: "Corporate Identity Service access under review",
+    rationale: "Vendor Purchasing → Corporate Identity Service · Inventory dependency; compromise remains unverified",
   },
   {
     id: "OP-009",
+    incidentId: "IR-2041",
     title: "Temporary support access",
     requester: "Jordan Davis",
     status: "In review",
@@ -131,17 +135,24 @@ export const demoRequests = [
     amount: "—",
     type: "Continuity access",
     participants: ["Maya Chen", "Jordan Davis"],
+    decisions: ["Pending", "Pending"],
+    normalRoute: "Customer database access restricted",
+    rationale: "Customer Support → Customer Database · EV-028 availability report",
   },
   {
     id: "OP-007",
+    incidentId: "IR-2041",
     title: "Backup storage extension",
     requester: "Alex Rivera",
-    status: "Authorized example",
+    status: "Authorized",
     impact: "Evidence retention capacity",
     description:
       "A synthetic example of a previously authorized storage request. No action was performed by AEGIS.",
     amount: "—",
     type: "Storage request",
     participants: ["Maya Chen", "Alex Rivera"],
+    decisions: ["Approved", "Approved"],
+    normalRoute: "Additional retention capacity required",
+    rationale: "Evidence retention → Backup storage",
   },
 ];

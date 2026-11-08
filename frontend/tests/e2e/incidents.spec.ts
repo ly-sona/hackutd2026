@@ -115,6 +115,12 @@ test.describe("Phase 2 real incident documentation", () => {
     const page = await c.newPage();
     await page.goto(`${base}/overview`);
     await page
+      .getByRole("button", {
+        name: "Incident details and actions",
+        exact: true,
+      })
+      .click();
+    await page
       .getByRole("button", { name: "New incident", exact: true })
       .click();
     const form = page.getByRole("dialog");
@@ -130,11 +136,17 @@ test.describe("Phase 2 real incident documentation", () => {
       page.getByRole("heading", { name: title, exact: true }),
     ).toBeVisible();
     const incidentId = /incidents\/(IR-\d+)/.exec(page.url())![1];
-      await page.setViewportSize({width:390,height:844});
-      const selector = await page.getByLabel("Select incident",{exact:true}).boundingBox();
-      const search = await page.getByRole("button",{name:"Search workspace",exact:true}).boundingBox();
-      expect(selector!.x + selector!.width).toBeLessThanOrEqual(search!.x);
-      expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const selector = await page
+      .getByLabel("Select incident", { exact: true })
+      .boundingBox();
+    const search = await page
+      .getByRole("button", { name: "Search workspace", exact: true })
+      .boundingBox();
+    expect(selector!.x + selector!.width).toBeLessThanOrEqual(search!.x);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
 
     const live = await dataConnection(c);
     await expect

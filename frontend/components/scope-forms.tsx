@@ -257,7 +257,7 @@ export function AssessmentForm({
         />
       </Field>
       <EvidenceChoices defaults={linked} />
-      <Field label="Related Phase 2 finding">
+      <Field label="Related finding">
         <select
           name="findingId"
           defaultValue={assessment?.findingId ?? ""}
@@ -291,7 +291,7 @@ export function LinkScopeEvidence({ entity }: { entity: ScopeEntity }) {
     <Editor
       title="Link existing evidence"
       trigger="Link evidence"
-      description="Reference the existing Phase 2 original; this creates an annotation and a real incident event."
+      description="Link an original evidence file and preserve its source and annotation."
       onSubmit={(f) =>
         api("scope", {
           ...d.scope,
