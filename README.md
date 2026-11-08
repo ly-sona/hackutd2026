@@ -79,6 +79,8 @@ Background child processes hide extra Windows console windows and remain attache
 
 Startup reuses a healthy local database or starts one, provisions a separate private service identity, publishes the additive module, generates bindings and idempotently seeds the demonstration before starting Next.js and the official backend watcher. Existing data, passwords and CLI owner credentials are preserved. Schema changes never automatically delete data. Ctrl+C stops owned services; reused services remain running.
 
+Each locally started database keeps its signing key pair (`id_ecdsa` and `id_ecdsa.pub`) inside its own ignored data directory. Development, browser tests and restart tests use explicit key paths so their identities remain stable and isolated from the CLI's global signing keys. Preserve these keys together with `cli.toml`, `gateway.json` and the database state when moving or backing up a local database. A partial key pair fails startup rather than replacing an existing key. An `InvalidSignature` error means the stored credentials and server key do not match; do not delete the database or replace its identities to work around it.
+
 `npm install` creates `frontend/.env.local` only if absent and links npm's hoisted TypeScript compiler into the module-local executable location expected by the CLI. `npm ci` uses the same setup hook. On Linux, install browser system dependencies with `npm exec --workspace @aegis/frontend playwright -- install --with-deps chromium` if needed.
 
 ## Demo accounts and access flows
