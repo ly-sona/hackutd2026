@@ -72,3 +72,4 @@ console.log(await command("coord.seed", "", {}));
 
 const { seedRecovery } = await import('./seed-recovery');
 await seedRecovery();
+console.log(await command("investigation.seed", "", {}));

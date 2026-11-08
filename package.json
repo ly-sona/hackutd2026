@@ -27,7 +27,8 @@
     "db:seed": "node scripts/seed.mjs",
     "demo:accounts": "node scripts/demo-accounts.mjs",
     "demo:reset": "node scripts/reset-demo.mjs",
-    "demo:recovery": "node scripts/recovery-demo.mjs"
+    "demo:recovery": "node scripts/recovery-demo.mjs",
+    "demo:reference": "node scripts/reference-case.mjs"
   },
   "devDependencies": {
     "tsx": "^4.23.15"

@@ -1,0 +1,42 @@
+{
+  "schema": "aegis-snapshot-v1",
+  "connectorId": "identity",
+  "revision": 2,
+  "coverage": "full",
+  "collectedAt": "2026-11-07T10:00:00Z",
+  "records": [
+    {
+      "key": "AUTH-001",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "accountId": "A-09",
+        "role": "administrator",
+        "outcome": "success",
+        "source": "192.0.2.10",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "AUTH-002",
+      "observedAt": "2026-11-07T09:14:00Z",
+      "fields": {
+        "accountId": "A-09",
+        "role": "administrator",
+        "outcome": "success",
+        "source": "198.51.100.87",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "AUTH-003",
+      "observedAt": "2026-11-07T09:40:00Z",
+      "fields": {
+        "accountId": "A-09",
+        "role": "administrator",
+        "outcome": "success",
+        "source": "203.0.113.99",
+        "approvedChange": ""
+      }
+    }
+  ]
+}

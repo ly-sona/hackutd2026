@@ -8,6 +8,7 @@ import { type Infer as __Infer } from "spacetimedb";
 // Import all procedure arg schemas
 import * as AccessSnapshotProcedure from "../access_snapshot_procedure";
 import * as EvidenceDescriptorProcedure from "../evidence_descriptor_procedure";
+import * as InvestigationWorkerProcedure from "../investigation_worker_procedure";
 import * as InvitationPreviewProcedure from "../invitation_preview_procedure";
 import * as LookupCredentialsProcedure from "../lookup_credentials_procedure";
 import * as RecoveryReadProcedure from "../recovery_read_procedure";
@@ -18,6 +19,8 @@ export type AccessSnapshotArgs = __Infer<typeof AccessSnapshotProcedure.params>;
 export type AccessSnapshotResult = __Infer<typeof AccessSnapshotProcedure.returnType>;
 export type EvidenceDescriptorArgs = __Infer<typeof EvidenceDescriptorProcedure.params>;
 export type EvidenceDescriptorResult = __Infer<typeof EvidenceDescriptorProcedure.returnType>;
+export type InvestigationWorkerArgs = __Infer<typeof InvestigationWorkerProcedure.params>;
+export type InvestigationWorkerResult = __Infer<typeof InvestigationWorkerProcedure.returnType>;
 export type InvitationPreviewArgs = __Infer<typeof InvitationPreviewProcedure.params>;
 export type InvitationPreviewResult = __Infer<typeof InvitationPreviewProcedure.returnType>;
 export type LookupCredentialsArgs = __Infer<typeof LookupCredentialsProcedure.params>;

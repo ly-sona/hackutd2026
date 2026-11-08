@@ -84,6 +84,31 @@ try {
     await completed(
       launch("npm", ["exec", "tsx", "--", "scripts/bootstrap.ts"]),
     );
+    if (!(
+      process.env.AEGIS_E2E === "1" &&
+      process.env.AEGIS_E2E_MANUAL_WORKER === "1"
+    )) {
+      const worker = launch(
+        "npm",
+        ["exec", "tsx", "--", "scripts/investigation-runner.ts"],
+        {
+          detached: true,
+          env: {
+            ...process.env,
+            SPACETIMEDB_SERVER_TOKEN: "",
+            AEGIS_GATEWAY_IDENTITY: "",
+          },
+        },
+      );
+      children.add(worker);
+      worker.once("exit", () => {
+        children.delete(worker);
+        if (!stopping)
+          console.error(
+            "Investigation worker stopped. Queued jobs remain persisted; restart the development command to resume.",
+          );
+      });
+    }
     if (process.env.AEGIS_E2E === "1") {
       const next = launch(
         "npm",

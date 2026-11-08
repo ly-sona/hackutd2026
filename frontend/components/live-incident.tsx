@@ -1,4 +1,5 @@
 "use client";
+import { InvestigationStatus } from "./investigation-status";
 import {
   TaskForm,
   CoordinationAttention,
@@ -301,6 +302,7 @@ export function LiveOverview() {
           </div>
         ))}
       </div>
+      <InvestigationStatus />
       <ScopeSummaryStrip summary={d.scopeSummary} />
       <AffectedOperations />
       <div className="mb-7 flex flex-wrap gap-3">

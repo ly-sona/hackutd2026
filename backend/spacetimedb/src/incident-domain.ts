@@ -1,4 +1,5 @@
 import { moduleId } from "./module-id";
+import { investigationMetadata } from "./investigation-metadata";
 import {
   canReadFinding,
   canReadConversation,
@@ -400,6 +401,7 @@ function execute(
         createdAt: ctx.timestamp,
       });
     ensureRoom(ctx, org, id, who);
+    investigationMetadata(ctx, org, id);
     appendEvent(ctx, org, id, who, "incident", "Incident opened", description, {
       status: "Open",
       observedAt: discoveredAt,

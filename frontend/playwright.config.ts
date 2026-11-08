@@ -19,6 +19,8 @@ export default defineConfig({
     env: {
       AEGIS_FRONTEND_PORT: "3100",
       AEGIS_E2E: "1",
+      // Investigation tests drive the real narrow worker at explicit checkpoints.
+      AEGIS_E2E_MANUAL_WORKER: "1",
       AEGIS_NEXT_DIST_DIR: ".next-e2e",
       NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
       NEXT_PUBLIC_SPACETIMEDB_HOST: "http://127.0.0.1:3101",

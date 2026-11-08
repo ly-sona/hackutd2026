@@ -6,6 +6,8 @@ Independent Cyber Incident Response Platform for the **Winstead PC challenge at 
 
 See [Phase 5 flows and boundaries](docs/phase5.md) for the three demonstration flows, approval policies, safe subset, standards alignment and report confidentiality.
 
+**Addition A — connector intake and deterministic investigation:** the contextual Investigation page collects four simulated P0 source domains, preserves immutable private snapshots, computes actual record differences and bounded anomaly observations, and populates existing evidence/Scope/Timeline data. Overview stays available and the five primary screens are preserved. The supervised worker uses a separate narrow identity and durable job authorization independent of browser/session lifetime, with current permission and revocation checks. Agent inference, proposal review, continuous collection, and Additions B/C are not implemented. See [Addition A setup, security boundaries, reference integrity tooling, and focused validation](docs/investigation-a.md).
+
 ## Stack and structure
 
 Next.js **16.4.5** App Router, React **19.3.1**, strict TypeScript **5.9**, Tailwind **4**, shadcn/ui **4.23** (Radix), Lucide, React Flow **12**, Zod **4**, SpacetimeDB CLI/SDK **2.14.1**, Vitest **5**, Testing Library and Playwright **1.65**/Chromium. npm workspaces share one root lockfile. Node's standard crypto library provides scrypt password hashing and random opaque session/invitation tokens; no custom signing protocol or third-party identity provider is used.

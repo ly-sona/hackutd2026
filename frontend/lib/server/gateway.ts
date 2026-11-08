@@ -26,6 +26,9 @@ export async function withGateway<T>(
       "UNAVAILABLE",
       "The access service is not configured. Contact the administrator.",
     );
+  return withServiceConnection(token, run);
+}
+export async function withServiceConnection<T>(token: string, run: (connection: DbConnection) => Promise<T>): Promise<T> {
   let connection: DbConnection | undefined;
   try {
     connection = await new Promise<DbConnection>((resolve, reject) => {
