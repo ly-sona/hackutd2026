@@ -356,7 +356,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     const guestPage = await guest.newPage();
     await guestPage.goto(new URL(link).pathname);
     await expect(
-      guestPage.getByRole("heading", { name: "Join Acme" }),
+      guestPage.getByRole("heading", { name: "Join Techniq" }),
     ).toBeVisible();
     await guestPage
       .getByRole("button", { name: "Accept invitation", exact: true })
@@ -686,7 +686,7 @@ test.describe("independent access controls against real SpacetimeDB", () => {
     const page = await guest.newPage();
     await page.goto(new URL(invitation.link).pathname);
     await expect(
-      page.getByRole("heading", { name: "Join Acme" }),
+      page.getByRole("heading", { name: "Join Techniq" }),
     ).toBeVisible();
     await page.getByLabel("Full name", { exact: true }).fill("Casey Demo");
     await page

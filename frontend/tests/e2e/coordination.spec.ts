@@ -21,7 +21,6 @@ import type {
 import type {
   Finding,
   IncidentEvent,
-  Notification,
   Evidence,
 } from "../../lib/incident-model";
 const origin = "http://127.0.0.1:3100",
@@ -345,7 +344,7 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
       await alex.close();
     }
   });
-  test("creates rooms with new incidents and keeps DMs, admin access, notifications and tenant boundaries restricted", async ({
+  test("creates rooms with new incidents and keeps DMs, admin access and tenant boundaries restricted", async ({
     browser,
   }) => {
     const contexts = await Promise.all(
@@ -380,11 +379,6 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
         )
         .toBe(true);
       expect(sd.rows<Conversation>("conversation").length).toBeGreaterThan(0);
-      expect(
-        pd
-          .incident<Notification>("notification")
-          .some((n) => n.conversationId === dm.conversationId),
-      ).toBe(false);
       expect(
         (
           await post(priya.request, "message.send", {
@@ -452,7 +446,7 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
       await Promise.all(contexts.map((c) => c.close()));
     }
   });
-  test("converts a DM into a real task and finding without leaking source, timeline, graph or notifications", async ({
+  test("converts a DM into a real task and finding without leaking source, timeline or graph", async ({
     browser,
   }) => {
     const maya = await browser.newContext(),
@@ -518,14 +512,6 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
         pd
           .scope<{ reference: string }>("entity")
           .some((e) => e.reference === finding.findingId),
-      ).toBe(false);
-      expect(
-        pd
-          .incident<Notification>("notification")
-          .some(
-            (n) =>
-              n.findingId === finding.findingId || n.taskId === task.taskId,
-          ),
       ).toBe(false);
       expect(
         (
@@ -774,7 +760,7 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
       await jordan.close();
     }
   });
-  test("keeps High priority separate from explicit paging and separates notification reads, acknowledgment, tasks and findings", async ({
+  test("keeps High priority separate from explicit paging and separates acknowledgment, tasks and findings", async ({
     browser,
   }) => {
     const maya = await browser.newContext(),
@@ -817,24 +803,6 @@ test.describe("Phase 4 real communication, tasks and server paging", () => {
           await post(priya.request, "page.acknowledge", { pageId: page.pageId })
         ).status(),
       ).toBe(403);
-      await expect
-        .poll(() =>
-          d
-            .incident<Notification>("notification")
-            .some((n) => n.pageId === page.pageId),
-        )
-        .toBe(true);
-      const notice = d
-        .incident<Notification>("notification")
-        .find((n) => n.pageId === page.pageId)!;
-      expect(
-        (
-          await alex.request.post("/api/incident/notifications/read", {
-            headers: { Origin: origin },
-            data: { ...scope, notificationId: notice.id },
-          })
-        ).status(),
-      ).toBe(200);
       expect(
         d.rows<Page>("page").find((p) => p.id === page.pageId)!.status,
       ).toBe(pending);

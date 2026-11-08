@@ -160,7 +160,7 @@ export function seedRecovery(
       name: "Emergency Support Forms",
       description:
         "Independent synthetic support forms. Available means no known usage restriction, not independently verified safe.",
-      owner: "Acme synthetic response team",
+      owner: "Techniq synthetic response team",
       assetType: "Business service",
       parentId: "",
       datasetId: "",

@@ -1,6 +1,6 @@
 # Phase 5: trust, recovery and defensible reports
 
-AEGIS retains the five reference screens. Overview adds operation status and report entry; Scope shows an entity's trust basis and links to Operations. Operations uses persisted request, decision and workflow records. Team reuses the existing investigation tasks and notifications. Timeline includes trust, approval, recovery, classification, legal-review and report events plus historical artifacts. Replay remains deferred.
+AEGIS retains the five reference screens. Overview adds operation status and report entry; Scope shows an entity's trust basis and links to Operations. Operations uses persisted request, decision and workflow records. Team reuses the existing investigation tasks. Timeline includes trust, approval, recovery, classification, legal-review and report events plus historical artifacts. Replay remains deferred.
 
 ## Three demonstration flows
 
@@ -24,7 +24,7 @@ Trust restrictions are incident-specific sidecars to existing graph entities. Ex
 
 The original inventory remains 1,240 customer references. Reports and Overview use the existing deduplicated scope calculations: inventory, potential exposure and individually confirmed impact are different counts. Restoring an alternate capability never marks the original records recovered or changes their encryption/exfiltration/alteration/deletion/availability assessments.
 
-`recovery.*` commands use the trusted session boundary. Successful mutations have per-actor stable operation UUIDs, append actual incident events and use Phase 4 notifications/tasks. Every decision checks current organization/incident membership, role, self-approval, duplicate decision, expiry and revision. The procedure version and immutable parameters bind beneficiaries, subset, read-only policy and one-hour lifetime. A conservative snapshot of incident assessments, graph relationships and trust restrictions invalidates pending work after material context changes. Execution rechecks current requester and approver eligibility.
+`recovery.*` commands use the trusted session boundary. Successful mutations have per-actor stable operation UUIDs, append actual incident events and use Phase 4 tasks. Every decision checks current organization/incident membership, role, self-approval, duplicate decision, expiry and revision. The procedure version and immutable parameters bind beneficiaries, subset, read-only policy and one-hour lifetime. A conservative snapshot of incident assessments, graph relationships and trust restrictions invalidates pending work after material context changes. Execution rechecks current requester and approver eligibility.
 
 The existing one-second internal SpacetimeDB schedule owns execution, not a browser timer or another service. Durable steps progress through Running → Awaiting Approval → Executing → Awaiting Verification → Succeeded / Failed / Fallback Active. Failure preserves restrictions and work history. Human investigation/task verification remains separate from a simulated capability check. Canceling preserves records and revokes active fallback access. Incident closure requires a separate evidence-backed request, analyst and commander approval, and an unchanged incident version; changing status directly to Closed cannot bypass this boundary.
 

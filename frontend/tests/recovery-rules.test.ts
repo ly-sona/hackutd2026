@@ -85,7 +85,7 @@ it("escapes untrusted report content in immutable printable HTML", () => {
     sourceCutoff: "2026-11-08",
     generatedBy: "maya",
     organizationId: "acme",
-    organizationName: "Acme",
+    organizationName: "Techniq",
     incidentId: "IR-1",
     incidentTitle: "<script>bad()</script>",
     audience: "Responders",

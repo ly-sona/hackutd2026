@@ -6,7 +6,7 @@
       "incidentId": "IR-2041",
       "filename": "EV-012-isolation.log",
       "description": "Isolation action reported; successful containment not established.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2041:F-01",
       "collectedAt": "2026-11-07T09:18:00-06:00",
       "status": "Unverified"
@@ -16,7 +16,7 @@
       "incidentId": "IR-2041",
       "filename": "EV-018-network.log",
       "description": "Outbound traffic observed; source and cause under investigation.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2041:F-02",
       "collectedAt": "2026-11-07T09:21:00-06:00",
       "status": "Unverified"
@@ -26,7 +26,7 @@
       "incidentId": "IR-2041",
       "filename": "EV-021-transfer.log",
       "description": "Unusual transfer; transferred contents unknown.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2041:F-03",
       "collectedAt": "2026-11-07T09:22:00-06:00",
       "status": "Unverified"
@@ -36,7 +36,7 @@
       "incidentId": "IR-2042",
       "filename": "EV-024-authentication.log",
       "description": "Suspicious administrator activity; not proof of compromise.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2042:F-07",
       "collectedAt": "2026-11-07T08:57:00-06:00",
       "status": "Unverified"
@@ -46,7 +46,7 @@
       "incidentId": "IR-2041",
       "filename": "EV-025-responder-note.txt",
       "description": "Responder investigation flag; manually seeded, not automatic detection.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2041:F-04",
       "collectedAt": "2026-11-07T09:26:00-06:00",
       "status": "Unverified"
@@ -56,7 +56,7 @@
       "incidentId": "IR-2041",
       "filename": "EV-026-change-ticket.json",
       "description": "A change request exists; outcome remains unverified.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2041:F-01",
       "collectedAt": "2026-11-07T09:17:00-06:00",
       "status": "Unverified"
@@ -66,7 +66,7 @@
       "incidentId": "IR-2041",
       "filename": "EV-027-verification.log",
       "description": "Verification is pending, not successful.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2041:F-05",
       "collectedAt": "2026-11-07T09:28:00-06:00",
       "status": "Unverified"
@@ -76,7 +76,7 @@
       "incidentId": "IR-2041",
       "filename": "EV-028-impact-note.txt",
       "description": "Reported business impact; record-level exposure unknown.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2041:F-06",
       "collectedAt": "2026-11-07T09:12:00-06:00",
       "status": "Unverified"
@@ -86,7 +86,7 @@
       "incidentId": "IR-2043",
       "filename": "EV-029-access.log",
       "description": "Denied access attempt; no successful access established.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2043:F-09",
       "collectedAt": "2026-11-07T08:40:00-06:00",
       "status": "Unverified"
@@ -96,7 +96,7 @@
       "incidentId": "IR-2042",
       "filename": "EV-030-review-note.txt",
       "description": "Account review pending.",
-      "source": "Synthetic Acme responder fixture",
+      "source": "Synthetic Techniq responder fixture",
       "findingId": "IR-2042:F-08",
       "collectedAt": "2026-11-07T09:02:00-06:00",
       "status": "Unverified"

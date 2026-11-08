@@ -83,19 +83,6 @@ export interface FindingRead {
   findingId: string;
   readAt: string;
 }
-export interface Notification {
-  conversationId?: string; taskId?: string; pageId?: string;
-  id: string;
-  organizationId: string;
-  incidentId: string;
-  recipientId: string;
-  type: string;
-  title: string;
-  description: string;
-  createdAt: string;
-  readAt: string;
-  findingId: string;
-}
 export const severities = ["Critical", "High", "Medium", "Low"];
 export const incidentStates = [
   "Open",

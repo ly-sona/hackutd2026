@@ -17,7 +17,6 @@ import type {
   Incident,
   IncidentEvent,
   Evidence,
-  Notification,
 } from "../../lib/incident-model";
 const origin = "http://127.0.0.1:3100",
   base = "/org/acme/incidents/IR-2041",
@@ -484,72 +483,6 @@ test.describe("Phase 2 real incident documentation", () => {
     }
     live.conn.disconnect();
   });
-  test("keeps notifications recipient-specific and reading them never resolves a finding", async ({
-    browser,
-  }) => {
-    const a = await browser.newContext(),
-      b = await browser.newContext();
-    await login(a, "maya");
-    await login(b, "alex");
-    const liveA = await dataConnection(a),
-      liveB = await dataConnection(b);
-    const title = `Notify responders ${Date.now()}`;
-    const response = await post(a.request, "findings", finding(title));
-    expect(response.status()).toBe(200);
-    const id = (await response.json()).findingId;
-    await expect
-      .poll(() =>
-        liveB
-          .rows<Notification>("notification")
-          .some((n) => n.findingId === id && n.recipientId === "alex"),
-      )
-      .toBe(true);
-    expect(
-      liveA
-        .rows<Notification>("notification")
-        .some((n) => n.findingId === id && n.recipientId === "alex"),
-    ).toBe(false);
-    const notification = liveB
-      .rows<Notification>("notification")
-      .find((n) => n.findingId === id)!;
-    expect(
-      (
-        await post(a.request, "notifications/read", {
-          ...scope,
-          notificationId: notification.id,
-        })
-      ).status(),
-    ).toBe(404);
-    expect(
-      (
-        await post(b.request, "notifications/read", {
-          ...scope,
-          notificationId: notification.id,
-        })
-      ).status(),
-    ).toBe(200);
-    await expect
-      .poll(
-        () =>
-          liveB
-            .rows<Notification>("notification")
-            .find((n) => n.id === notification.id)?.readAt,
-      )
-      .not.toBe("0");
-    expect(
-      liveB.rows<Finding>("finding").find((f) => f.id === id)?.status,
-    ).toBe("Suspected");
-    const page = await b.newPage();
-    await page.goto(`${base}/overview`);
-    await page
-      .getByRole("button", { name: "Notifications", exact: true })
-      .click();
-    await expect(page.getByRole("menu")).toContainText(title);
-    liveA.conn.disconnect();
-    liveB.conn.disconnect();
-    await a.close();
-    await b.close();
-  });
   test("denies anonymous, unassigned, cross-organization and revoked evidence access, and never serves ground truth", async ({
     browser,
   }) => {
@@ -659,7 +592,6 @@ test.describe("Phase 2 real incident documentation", () => {
           "event",
           "evidence",
           "link",
-          "notification",
         ].includes(r.kind),
       )
       .map((r) => r.id)
@@ -685,7 +617,6 @@ test.describe("Phase 2 real incident documentation", () => {
             "event",
             "evidence",
             "link",
-            "notification",
           ].includes(r.kind),
         )
         .map((r) => r.id)
