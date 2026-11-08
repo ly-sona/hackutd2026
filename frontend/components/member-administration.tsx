@@ -353,7 +353,7 @@ export function MembersPage() {
   const [notice, setNotice] = useState("");
   if (!access.can("members:edit"))
     return (
-      <AccessState message="Only an organization administrator can manage members." />
+      <AccessState message="Only a System Administrator can manage members." />
     );
   const members = uniqueOrganizationMembers(
     rows,
@@ -440,7 +440,7 @@ export function MembersPage() {
         </div>
         <select
           aria-label="Filter by role"
-          className={`${selectClass} max-w-52`}
+          className={`${selectClass} max-w-72`}
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
         >

@@ -1,3 +1,4 @@
+import { roleLabels } from "../../../shared/roles";
 import type { Ctx, Reader } from "./index";
 import { appendEvent, type Ports } from "./incident-domain";
 import { scopeSnapshot } from "./scope-domain";
@@ -99,7 +100,7 @@ export function snapshotReport(
     ["Severity", incident.severity],
     ["Type", incident.type],
     [
-      "Commander",
+      "Incident Manager",
       ctx.db.users.id.find(incident.commanderId)?.displayName ??
         incident.commanderId,
     ],
@@ -230,7 +231,7 @@ export function snapshotReport(
           [...ctx.db.approvalDecisions.requestId.filter(r.id)]
             .map(
               (d) =>
-                `${d.userId}: ${d.decision} (${d.role}) ${stamp(d.decidedAt)} — ${d.justification}`,
+                `${d.userId}: ${d.decision} (${roleLabels[d.role]}) ${stamp(d.decidedAt)} — ${d.justification}`,
             )
             .join("\n"),
         ]),
@@ -388,7 +389,7 @@ export function snapshotReport(
       label: "Incident identity and owner",
       section: "identification",
       status: incident.commanderId ? "Documented" : "Missing",
-      detail: incident.commanderId || "Assign a commander",
+      detail: incident.commanderId || "Assign an Incident Manager",
     },
     {
       label: "Detection and reporting",

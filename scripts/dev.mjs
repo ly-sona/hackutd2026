@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { createServer } from "node:net";
 import { execFileSync } from "node:child_process";
+import { localSigningKeyArgs } from "./local-signing-keys.mjs";
 import {
   root,
   cli,
@@ -72,6 +73,7 @@ try {
       localAddress(),
       "--data-dir",
       dataDir,
+      ...localSigningKeyArgs(dataDir),
       "--non-interactive",
     ]);
     let serverFailure;

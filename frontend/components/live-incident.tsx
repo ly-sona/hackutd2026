@@ -33,7 +33,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { Badge } from "./ui/badge";
 import { Avatar } from "./account-menu";
 import { PageHeading, Disclosure } from "./workspace-ui";
 import { AffectedOperations } from "./recovery-workspace";
@@ -295,19 +294,25 @@ export function LiveOverview() {
         eyebrow={`INCIDENT ${i.incidentId}`}
         description={
           <>
+            <dl
+              aria-label="Incident severity and status"
+              className="mb-2 flex flex-wrap gap-x-6 gap-y-2 text-base"
+            >
+              <div className="flex items-center gap-2">
+                <dt>Severity:</dt>
+                <dd className={`font-medium ${tone(i.severity)}`}>{i.severity}</dd>
+              </div>
+              <div className="flex items-center gap-2">
+                <dt>Status:</dt>
+                <dd className="font-medium text-foreground">{i.status}</dd>
+              </div>
+            </dl>
             {i.systems || i.type} · Opened {incidentTime(i.createdAt)}
           </>
         }
         actions={
           <>
-            <Badge
-              variant="outline"
-              className={`px-3 py-1 text-lg font-normal ${tone(i.severity)} ${i.severity === "Critical" ? "border-red-400" : "border-amber-400"}`}
-            >
-              {i.severity}
-            </Badge>
             {a.can("findings:create") && <FindingForm />}
-            <IncidentReports />
             <Button
               variant="ghost"
               size="icon"
@@ -326,7 +331,6 @@ export function LiveOverview() {
           className="mb-8 space-y-6 rounded-lg border border-border p-6"
         >
           <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="outline">{i.status}</Badge>
             {a.can("incident:manage") && <UpdateIncident />}
             {a.can("notes:create") && <AddNote />}
             {a.can("evidence:upload") && <AttachEvidence />}
@@ -343,7 +347,7 @@ export function LiveOverview() {
           </p>
           <dl className="grid gap-5 text-base sm:grid-cols-4">
             <div>
-              <dt className="text-muted-foreground">Commander</dt>
+              <dt className="text-muted-foreground">Incident Manager</dt>
               <dd className="mt-1">
                 {d.members.find((m) => m.userId === i.commanderId)?.name ??
                   (i.commanderId || "Unassigned")}

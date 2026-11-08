@@ -1,4 +1,5 @@
 import { cli, endpoint, database, modulePath, bindingsPath, dataDir, localAddress, launch, completed, isDatabaseRunning, configureGateway } from './config.mjs';
+import { localSigningKeyArgs } from './local-signing-keys.mjs';
 const action = process.argv[2];
 let args;
 switch (action) {
@@ -8,7 +9,7 @@ switch (action) {
       console.log(`Reusing SpacetimeDB at ${endpoint}; no duplicate instance started.`);
       process.exit(0);
     }
-    args = ['start', '--listen-addr', localAddress(), '--data-dir', dataDir, '--non-interactive'];
+    args = ['start', '--listen-addr', localAddress(), '--data-dir', dataDir, ...localSigningKeyArgs(dataDir), '--non-interactive'];
     break;
   case 'build': args = ['build', '--module-path', modulePath]; break;
   case 'publish':

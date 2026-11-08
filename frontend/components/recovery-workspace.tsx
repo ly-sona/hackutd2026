@@ -260,8 +260,8 @@ export function RecoveryStart({
       }
     >
       <p className="text-sm">
-        Version {template.version} · Two independent approvals: Security Analyst
-        and Incident Commander. The requester cannot approve. Infrastructure
+        Version {template.version} · Two independent approvals: Security Engineer
+        and Incident Manager. The requester cannot approve. Infrastructure
         actions and verification are simulated.
       </p>
       <p className="text-sm text-muted-foreground">{template.expectedResult}</p>
@@ -1022,7 +1022,7 @@ export function RequestClosure() {
     <Editor
       title="Request independent incident closure"
       trigger="Request incident closure"
-      description="Closure is separate from recovery and does not resolve findings or clear impact assessments. A different authorized analyst and commander must approve. Request as an independent reviewer, such as Legal, when there is only one analyst and commander."
+      description="Closure is separate from recovery and does not resolve findings or clear impact assessments. A different authorized Security Engineer and Incident Manager must approve. Request as an independent reviewer, such as the Legal & Compliance Officer, when there is only one Security Engineer and Incident Manager."
       onSubmit={(f) =>
         run("close", {
           justification: String(f.get("justification")),
