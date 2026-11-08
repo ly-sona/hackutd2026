@@ -16,6 +16,7 @@ import {
   deriveWarnings,
   operationReadiness,
   incidentContext,
+  currentApprovalContext,
   scoped,
   key,
   json,
@@ -97,7 +98,14 @@ function validContext(ctx: Reader, r: Request) {
   return (
     !r.contextFingerprint ||
     r.contextFingerprint ===
-      incidentContext(ctx, r.organizationId, r.incidentId)
+      currentApprovalContext(
+        ctx,
+        r.organizationId,
+        r.incidentId,
+        r.contextFingerprint,
+        JSON.parse(r.affectedEntityIds),
+        JSON.parse(r.evidenceIds),
+      )
   );
 }
 function newApproval(
@@ -284,7 +292,7 @@ export function recoveryCommand(
       evidenceIds: json(evidenceIds),
       affectedEntityIds: "[]",
       parameters: json({ incidentUpdatedAt: incident.updatedAt }),
-      contextFingerprint: incidentContext(ctx, org, inc),
+      contextFingerprint: incidentContext(ctx, org, inc, [], evidenceIds),
       revisionToken: ctx.newUuidV7().toString(),
       status: "Pending",
       createdAt: at,
@@ -421,7 +429,13 @@ export function recoveryCommand(
       taskId,
       parentExecutionId: parentId,
       parameters,
-      contextFingerprint: incidentContext(ctx, org, inc),
+      contextFingerprint: incidentContext(
+        ctx,
+        org,
+        inc,
+        [entityId],
+        evidenceIds,
+      ),
       triggerEvidenceIds: json(evidenceIds),
       triggerAssessmentIds: json(
         [...ctx.db.scopeAssessments.incidentKey.filter(k)].map((a) => a.id),
@@ -1040,7 +1054,14 @@ export function processRecovery(ctx: Ctx) {
     }
     if (
       e.contextFingerprint !==
-      incidentContext(ctx, e.organizationId, e.incidentId)
+      currentApprovalContext(
+        ctx,
+        e.organizationId,
+        e.incidentId,
+        e.contextFingerprint,
+        [e.operationId],
+        JSON.parse(e.triggerEvidenceIds),
+      )
     ) {
       fail(
         ctx,

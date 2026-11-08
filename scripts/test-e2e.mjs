@@ -7,7 +7,7 @@ import { createServer } from "node:net";
 import { spawn } from "node:child_process";
 
 const [suite = "critical", ...args] = process.argv.slice(2);
-if (!["critical", "extended", "restart"].includes(suite)) throw new Error("Unknown integration suite.");
+if (!["critical", "extended", "restart", "investigation"].includes(suite)) throw new Error("Unknown integration suite.");
 const lockPath = join(tmpdir(), "aegis-browser-tests.lock");
 const discovery = args.includes("--list") || args.includes("--help");
 let lock;

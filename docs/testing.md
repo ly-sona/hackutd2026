@@ -1,6 +1,6 @@
 # Minimal hackathon integration suite
 
-`npm run test:e2e` runs seven independent Chromium scenarios against the real Next.js application and SpacetimeDB module. One failed scenario does not intentionally skip the rest through a serial group. Mobile viewport assertions and mobile screenshot capture have been removed from all automated integration suites.
+`npm run test:e2e` runs seven independent Chromium scenarios against the real Next.js application and SpacetimeDB module. One failed scenario does not intentionally skip the rest through a serial group. The default suite has no mobile viewport assertions or screenshot capture; the opt-in investigation suite retains its evidence-view overflow check.
 
 | Default scenario | Essential guarantee |
 | --- | --- |
@@ -24,11 +24,13 @@ From the repository root:
 npm run test:e2e
 npm run test:e2e:extended
 npm run test:e2e:restart
+npm run test:e2e:investigation
 ```
 
 - Default: **7** scenarios in `frontend/tests/e2e/critical.spec.ts`.
 - Extended: **19** existing desktop recovery, administrator and pending-invitation scenarios. Run when those workflows change; they are not part of the default command.
-- Restart: **1** existing standalone restart scenario covering durable pages and recovery progression. Run before judging or after scheduler/persistence changes.
+- Restart: **2** standalone restart scenarios covering durable pages/recovery progression and non-destructive investigation migration, worker resumption and later-snapshot lineage. Run before judging or after scheduler/persistence changes.
+- Investigation: collection, scoped authorization, human review, impact and reassessment scenarios. Two cases require a real model API key (`AEGIS_MODEL_API_KEY`; endpoint/model overrides are optional); they do not substitute mock model responses. Without credentials, select deterministic cases with `--grep-invert "real model investigates|later actual evidence drives a real agent"` and report the model gates as unexecuted.
 - Existing unit tests remain unchanged and run with `npm run test`.
 
 List tests or filter directly through the workspace script:
@@ -50,6 +52,6 @@ Each run uses fresh temporary database/evidence state; prior runs are retained t
 
 ## Deliberate reductions
 
-The old broad Phase 0–4 scenarios were replaced, not preserved as a second default regression suite. Exact CSS, synthetic timestamp distributions, repeated seed tours, every invitation path, notification/read-position variations, graph-control combinations and detailed navigation optimizations are no longer integrated checks. Mobile usability is a manual check when a relevant layout changes. There is no automated mobile suite or mobile screenshot collection.
+The old broad Phase 0–4 scenarios were replaced, not preserved as a second default regression suite. Exact CSS, synthetic timestamp distributions, repeated seed tours, every invitation path, notification/read-position variations, graph-control combinations and detailed navigation optimizations are no longer integrated checks. Mobile usability is a manual check when a relevant layout changes. There is no standalone automated mobile suite or mobile screenshot collection. The opt-in investigation flow checks evidence-view overflow at a narrow viewport.
 
 This trades breadth for the critical demonstration and trust boundaries. Passing the default suite does not prove every invitation, report, approval or recovery edge case. Unit rules and the opt-in newer suites provide additional coverage when relevant. Do not silently increase timeouts or claim a full pass by combining separate partial reruns.

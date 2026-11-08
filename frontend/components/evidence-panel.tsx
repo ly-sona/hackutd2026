@@ -113,13 +113,15 @@ export function EvidenceButton({
         size="sm"
         className={
           compact
-            ? "h-auto min-h-7 gap-1 px-2 py-1 text-xs sm:text-xs font-normal"
-            : ""
+            ? "max-w-full h-auto min-h-7 gap-1 px-2 py-1 text-xs sm:text-xs font-normal"
+            : "max-w-full"
         }
         onClick={() => setOpen(true)}
       >
-        Review evidence ·{" "}
-        {evidence.id.startsWith("EV-0") ? evidence.id : evidence.filename}
+        <span className="truncate">
+          Review evidence ·{" "}
+          {evidence.id.startsWith("EV-0") ? evidence.id : evidence.filename}
+        </span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">

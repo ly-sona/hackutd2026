@@ -1,0 +1,129 @@
+{
+  "schema": "aegis-snapshot-v1",
+  "connectorId": "customers",
+  "revision": 2,
+  "coverage": "partial",
+  "collectedAt": "2026-11-07T10:00:00Z",
+  "records": [
+    {
+      "key": "C-1040",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-0@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1041",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-1@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1042",
+      "observedAt": "2026-11-07T09:40:00Z",
+      "fields": {
+        "contact_email": "later-change@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1043",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-3@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1044",
+      "observedAt": "2026-11-07T09:15:00Z",
+      "fields": {
+        "contact_email": "changed-address@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1045",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-5@example.invalid",
+        "category": "premium",
+        "accountId": "A-09",
+        "approvedChange": "CHG-SYNTHETIC-001"
+      }
+    },
+    {
+      "key": "C-1046",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-6@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1047",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-7@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1048",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-8@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1049",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-9@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-1050",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "contact_email": "customer-10@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": ""
+      }
+    },
+    {
+      "key": "C-2000",
+      "observedAt": "2026-11-07T09:20:00Z",
+      "fields": {
+        "contact_email": "new-customer@example.invalid",
+        "category": "standard",
+        "accountId": "A-09",
+        "approvedChange": "CHG-SYNTHETIC-002"
+      }
+    }
+  ]
+}

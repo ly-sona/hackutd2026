@@ -1,0 +1,20 @@
+{
+  "schema": "aegis-snapshot-v1",
+  "connectorId": "identity",
+  "revision": 0,
+  "coverage": "full",
+  "collectedAt": "2026-11-07T08:30:00Z",
+  "records": [
+    {
+      "key": "AUTH-001",
+      "observedAt": "2026-11-07T08:00:00Z",
+      "fields": {
+        "accountId": "A-09",
+        "role": "administrator",
+        "outcome": "success",
+        "source": "192.0.2.10",
+        "approvedChange": ""
+      }
+    }
+  ]
+}

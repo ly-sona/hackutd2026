@@ -1,3 +1,4 @@
+import { monitoringSummary } from "./investigation-monitoring";
 import { roleLabels } from "../../../shared/roles";
 import type { Ctx, Reader } from "./index";
 import { appendEvent, type Ports } from "./incident-domain";
@@ -92,6 +93,53 @@ export function snapshotReport(
       fields: fields.map(([label, value]) => ({ label, value })),
       tables,
     });
+  const investigations = [...ctx.db.analysisRuns.incidentKey.filter(k)].sort(
+    (a, b) => Number(a.createdAt - b.createdAt),
+  );
+  if (investigations.length)
+    section(
+      "investigation",
+      "Evidence collection and reassessment",
+      [
+        [
+          "Understanding",
+          "Versioned synthetic exports and deterministic observations support investigation leads. Earlier human decisions are preserved; new risks and contradictions require review. No anomaly or unchanged content establishes restoration safety.",
+        ],
+        [
+          "Review boundary",
+          "Pending proposals are not authoritative findings or confirmed impact. Source-reported availability and confidentiality exposure remain separate.",
+        ],
+      ],
+      [
+        {
+          title: "Snapshot history",
+          columns: [
+            "Run",
+            "Revision",
+            "Collection",
+            "Deterministic",
+            "Agent",
+            "New observations",
+            "Source comparisons",
+          ],
+          rows: investigations.map((r) => {
+            const m = monitoringSummary(ctx, r);
+            const agents = [
+              ...ctx.db.agentRuns.collectionRunId.filter(r.id),
+            ].sort((a, b) => Number(b.createdAt - a.createdAt));
+            return [
+              r.id,
+              String(m.revision),
+              r.collectionStatus,
+              r.deterministicStatus,
+              agents[0]?.status ?? "Not started",
+              String(m.observations),
+              json(m.sources),
+            ];
+          }),
+        },
+      ],
+    );
   section("identification", "1. Incident Identification", [
     ["Incident", inc],
     ["Title", incident.title],

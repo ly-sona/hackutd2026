@@ -1,0 +1,25 @@
+{
+  "version": "acme-connectors-v1",
+  "connectors": {
+    "customers": [
+      "mock-evidence/connectors/customers-0.json",
+      "mock-evidence/connectors/customers-1.json",
+      "mock-evidence/connectors/customers-2.json"
+    ],
+    "identity": [
+      "mock-evidence/connectors/identity-0.json",
+      "mock-evidence/connectors/identity-1.json",
+      "mock-evidence/connectors/identity-2.json"
+    ],
+    "network": [
+      "mock-evidence/connectors/network-0.json",
+      "mock-evidence/connectors/network-1.json",
+      "mock-evidence/connectors/network-2.json"
+    ],
+    "services": [
+      "mock-evidence/connectors/services-0.json",
+      "mock-evidence/connectors/services-1.json",
+      "mock-evidence/connectors/services-2.json"
+    ]
+  }
+}

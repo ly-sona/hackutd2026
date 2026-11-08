@@ -96,6 +96,7 @@ export async function configureGateway() {
       process.env.AEGIS_GATEWAY_IDENTITY
     ) {
       process.env.AEGIS_TEST_MODE = "false";
+      await configureInvestigationWorker();
       return;
     }
   }
@@ -124,4 +125,24 @@ export async function configureGateway() {
   process.env.AEGIS_GATEWAY_IDENTITY = credentials.identity;
   process.env.AEGIS_TEST_MODE =
     process.env.AEGIS_E2E === "1" ? "true" : "false";
+  await configureInvestigationWorker();
+}
+
+async function configureInvestigationWorker() {
+  if (process.env.AEGIS_E2E !== "1" && process.env.SPACETIMEDB_WORKER_TOKEN && process.env.AEGIS_WORKER_IDENTITY) return;
+  localAddress();
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  const file = resolve(dataDir, "investigation-worker.json");
+  let credentials;
+  if (existsSync(file)) credentials = JSON.parse(readFileSync(file, "utf8"));
+  else {
+    const response = await fetch(`${endpoint}/v1/identity`, { method: "POST", signal: AbortSignal.timeout(10_000) });
+    if (!response.ok) throw new Error("Could not provision the investigation worker identity.");
+    credentials = await response.json();
+    mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+    writeFileSync(file, JSON.stringify(credentials), { mode: 0o600 });
+  }
+  if (typeof credentials.token !== "string" || typeof credentials.identity !== "string") throw new Error("Invalid investigation worker credentials.");
+  process.env.SPACETIMEDB_WORKER_TOKEN = credentials.token;
+  process.env.AEGIS_WORKER_IDENTITY = credentials.identity;
 }
