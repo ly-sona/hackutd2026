@@ -1,6 +1,6 @@
 export function Brand() {
   return (
-    <span className="inline-flex items-center gap-2.5 text-[23px] font-semibold tracking-tight">
+    <span className="inline-flex items-center gap-2.5 text-[26px] font-semibold tracking-tight">
       <svg
         width="29"
         height="29"

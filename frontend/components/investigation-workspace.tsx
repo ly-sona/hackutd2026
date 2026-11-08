@@ -242,9 +242,8 @@ export function InvestigationWorkspace() {
             </label>
             {!canStart && (
               <p className="mt-4 text-sm text-muted-foreground">
-                Collection requires an assigned Commander or Analyst with
-                evidence upload, scope editing and record access. Your existing
-                permissions are unchanged.
+                Collection requires evidence upload/view, scope editing and
+                record access. Your existing permissions are unchanged.
               </p>
             )}
             {d.metadata?.scenario === "hr" && (
@@ -357,6 +356,7 @@ export function InvestigationWorkspace() {
                       key={s.id}
                       size="sm"
                       variant="outline"
+                      className="h-auto max-w-full whitespace-normal py-2 text-left"
                       onClick={() => inspect(s.id)}
                     >
                       {connectors.find((c) => c.id === s.connectorId)?.name}
@@ -369,7 +369,7 @@ export function InvestigationWorkspace() {
                     {differences.total} compared keys · {differences.coverage}{" "}
                     export
                   </p>
-                  <div className="mb-4 flex flex-wrap gap-2">
+                  <div className="mb-4 flex flex-wrap gap-2 [&>button]:h-auto [&>button]:max-w-full [&>button]:flex-wrap [&>button]:whitespace-normal [&>button]:py-2">
                     {differences.snapshots.map((s) => {
                       const e = incident.evidence.find(
                         (e) => e.id === s.evidenceId,
@@ -406,7 +406,7 @@ export function InvestigationWorkspace() {
                       </pre>
                     </details>
                   ))}
-                  <div className="mt-3 flex gap-3">
+                  <div className="mt-3 flex flex-wrap gap-3">
                     <Button
                       size="sm"
                       variant="outline"
@@ -461,7 +461,7 @@ export function InvestigationWorkspace() {
                   </pre>
                 </details>
               ))}
-              <div className="mt-4 flex gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <Button
                   size="sm"
                   variant="outline"

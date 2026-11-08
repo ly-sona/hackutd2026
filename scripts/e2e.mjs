@@ -55,9 +55,13 @@ await appendFile(
     "\n",
   { mode: 0o600 },
 );
-if (entry?.isDirectory()) await rename(pointer, previous);
+if (entry)
+  await rename(
+    pointer,
+    entry.isDirectory() ? previous : pointer + "-preserved-" + randomUUID(),
+  );
 const temporary = pointer + "-link-" + randomUUID();
-await symlink(state, temporary, "dir");
+await symlink(state, temporary, process.platform === "win32" ? "junction" : "dir");
 await rename(temporary, pointer);
 console.log(
   "Isolated test state: " +

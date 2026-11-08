@@ -363,10 +363,9 @@ test("enforces scopes, role permissions, immutable operation identities, and pri
     expect(
       (await post(anonymous.request, "investigation", start)).status(),
     ).toBe(401);
-    for (const c of [admin, operations])
-      expect((await post(c.request, "investigation", start)).status()).toBe(
-        403,
-      );
+    expect(
+      (await post(operations.request, "investigation", start)).status(),
+    ).toBe(403);
     expect(
       (
         await post(maya.request, "investigation", {
@@ -485,10 +484,9 @@ test("enforces scopes, role permissions, immutable operation identities, and pri
       `/org/acme/incidents/${scope.incidentId}/investigation`,
     );
     await expect(
-      privatePage.getByText(
-        "Collection requires an assigned Commander or Analyst",
-        { exact: false },
-      ),
+      privatePage.getByText("Collection requires evidence upload/view", {
+        exact: false,
+      }),
     ).toBeVisible();
     expect(
       (
@@ -500,6 +498,24 @@ test("enforces scopes, role permissions, immutable operation identities, and pri
         })
       ).status(),
     ).toBe(403);
+    // Reuse main's organization-administrator permissions without requiring an
+    // incident assignment; the worker still validates the captured role revision.
+    const adminScope = await newIncident(maya, ["alex", "jordan"]);
+    const adminStart = await post(admin.request, "investigation", {
+      ...adminScope,
+      action: "start",
+      connectorIds: ["customers"],
+      operationId: randomUUID(),
+    });
+    expect(adminStart.status()).toBe(200);
+    expect(await processNextJob()).toBe(true);
+    const adminRead = await post(admin.request, "investigation", {
+      ...adminScope,
+      action: "read",
+      kind: "observations",
+      runId: (await adminStart.json()).runId,
+    });
+    expect(adminRead.status()).toBe(200);
   } finally {
     for (const c of [maya, admin, operations, anonymous]) await c.close();
   }

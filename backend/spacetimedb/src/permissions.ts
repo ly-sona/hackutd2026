@@ -72,16 +72,7 @@ const common: Permission[] = [
   "scope:summary",
 ];
 export const matrix: Record<Role, readonly Permission[]> = {
-  administrator: [
-    ...common,
-    "organization:manage",
-    "members:invite",
-    "members:edit",
-    "members:revoke",
-    "incident:create",
-    "scope:view",
-    "evidence:view",
-  ],
+  administrator: [...permissions],
   commander: [
     ...common,
     ...coordination,

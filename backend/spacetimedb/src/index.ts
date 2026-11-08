@@ -280,6 +280,16 @@ function authorize(
     );
   if (
     incident &&
+    member.role === "administrator" &&
+    !ctx.db.incidentStubs.id.find(`${org}:${incident}`)
+  )
+    throw new Denied(
+      "ACCESS_DENIED",
+      "Incident unavailable in this organization.",
+    );
+  if (
+    incident &&
+    member.role !== "administrator" &&
     ctx.db.incidentMemberships.id.find(incidentKey(org, incident, actor.userId))
       ?.membershipStatus !== "active"
   )
@@ -1080,13 +1090,14 @@ export const access_snapshot = db.procedure(
                       role: r.role,
                     }))
                 : [],
-            incidents: [
-              ...tx.db.incidentMemberships.userId.filter(actor.userId),
-            ]
+            incidents: incidentAccessRows(
+              tx,
+              m.organizationId,
+              actor.userId,
+              m.role,
+            )
               .filter(
                 (i) =>
-                  i.organizationId === m.organizationId &&
-                  i.membershipStatus === "active" &&
                   !tx.db.incidentInvestigations.id.find(
                     `${i.organizationId}:${i.incidentId}`,
                   )?.retired,
@@ -1165,27 +1176,50 @@ function browserSession(ctx: ReadCtx) {
     return undefined;
   }
 }
+function incidentAccessRows(
+  ctx: Reader,
+  org: string,
+  userId: string,
+  role: string,
+) {
+  if (role === "administrator")
+    return [...ctx.db.incidentStubs.organizationId.filter(org)].map(
+      (incident) => ({
+        id: incidentKey(org, incident.id.slice(org.length + 1), userId),
+        organizationId: org,
+        incidentId: incident.id.slice(org.length + 1),
+        membershipStatus: "active",
+      }),
+    );
+  return [...ctx.db.incidentMemberships.userId.filter(userId)].filter(
+    (incident) =>
+      incident.organizationId === org && incident.membershipStatus === "active",
+  );
+}
 function browserAccess(ctx: ReadCtx) {
   const actor = browserSession(ctx);
   if (!actor) return [];
   const at = ctx.db.accessClock.id.find(0)?.now ?? 0n;
-  return [...ctx.db.incidentMemberships.userId.filter(actor.userId)].flatMap(
-    (i) => {
-      const m = activeMember(ctx, i.organizationId, actor.userId, at);
-      if (!m || !isRole(m.role) || i.membershipStatus !== "active") return [];
-      return [
-        {
-          id: i.id,
-          userId: actor.userId,
-          userName: actor.user.displayName,
-          organizationId: i.organizationId,
-          organizationName: ctx.db.organizations.id.find(i.organizationId)!
-            .name,
-          incidentId: i.incidentId,
-          role: m.role,
-          permissions: JSON.stringify(matrix[m.role]),
-        },
-      ];
+  return [...ctx.db.memberships.userId.filter(actor.userId)].flatMap(
+    (membership) => {
+      const m = activeMember(ctx, membership.organizationId, actor.userId, at);
+      if (!m || !isRole(m.role)) return [];
+      const permissions = JSON.stringify(matrix[m.role]);
+      return incidentAccessRows(
+        ctx,
+        m.organizationId,
+        actor.userId,
+        m.role,
+      ).map((i) => ({
+        id: i.id,
+        userId: actor.userId,
+        userName: actor.user.displayName,
+        organizationId: i.organizationId,
+        organizationName: ctx.db.organizations.id.find(i.organizationId)!.name,
+        incidentId: i.incidentId,
+        role: m.role,
+        permissions,
+      }));
     },
   );
 }
@@ -1231,7 +1265,8 @@ export const visible_members = db.view(
           !user ||
           (!admin &&
             (m.status !== "active" ||
-              association?.membershipStatus !== "active"))
+              (m.role !== "administrator" &&
+                association?.membershipStatus !== "active")))
         )
           return [];
         return [
@@ -1244,6 +1279,7 @@ export const visible_members = db.view(
             status: m.status,
             expiresAt: m.expiresAt,
             incidentId:
+              m.role === "administrator" ||
               association?.membershipStatus === "active"
                 ? access.incidentId
                 : "",

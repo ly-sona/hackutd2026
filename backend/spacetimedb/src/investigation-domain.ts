@@ -283,7 +283,7 @@ export function investigationCommand(
       "An initial investigation already exists. Later collection is not implemented in Addition A.",
     );
   const member = ctx.db.memberships.id.find(`${org}:${actor.userId}`)!,
-    assignment = ctx.db.incidentMemberships.id.find(`${k}:${actor.userId}`)!;
+    assignment = ctx.db.incidentMemberships.id.find(`${k}:${actor.userId}`);
   const sourceIds = ids.map((id) => `${k}:source:${id}`),
     at = time(ctx);
   for (const [i, id] of sourceIds.entries())
@@ -308,7 +308,10 @@ export function investigationCommand(
     fingerprint,
     actorId: actor.userId,
     membershipRevision: member.updatedAt.microsSinceUnixEpoch.toString(),
-    assignmentRevision: assignment.createdAt.microsSinceUnixEpoch.toString(),
+    assignmentRevision:
+      member.role === "administrator"
+        ? "organization-administrator"
+        : assignment!.createdAt.microsSinceUnixEpoch.toString(),
     sourceIds: json(sourceIds),
     status: "Queued",
     collectionStatus: "Queued",
@@ -355,11 +358,13 @@ function eligible(ctx: Reader, run: Run, at: bigint) {
     permissions.every((p) =>
       matrix[member.role as keyof typeof matrix].includes(p),
     ) &&
-    assigned?.membershipStatus === "active" &&
     member.updatedAt.microsSinceUnixEpoch.toString() ===
       run.membershipRevision &&
-    assigned.createdAt.microsSinceUnixEpoch.toString() ===
-      run.assignmentRevision &&
+    (member.role === "administrator"
+      ? run.assignmentRevision === "organization-administrator"
+      : assigned?.membershipStatus === "active" &&
+        assigned.createdAt.microsSinceUnixEpoch.toString() ===
+          run.assignmentRevision) &&
     run.deadline > at
   );
 }

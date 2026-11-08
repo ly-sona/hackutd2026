@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "./workspace-link";
+import { PageHeading } from "./workspace-ui";
+import { Avatar } from "./account-menu";
 import { useRecovery, useRecoveryCommand } from "./recovery-data";
 import { useAccess } from "./workspace-provider";
 import { useCoordination } from "./coordination-data";
@@ -11,7 +13,7 @@ import { Badge } from "./ui/badge";
 import { Editor, Field, fieldClass } from "./incident-forms";
 import { EvidenceButton } from "./evidence-panel";
 import { TaskButton } from "./coordination-tasks";
-import { incidentBase } from "@/lib/roles";
+import { roleLabels, incidentBase } from "@/lib/roles";
 import { incidentTime } from "@/lib/incident-model";
 import type {
   RecoveryExecution,
@@ -21,7 +23,13 @@ import type {
 const tone = (s: string) =>
   s === "Do Not Use" || s === "Failed" || s === "Rejected"
     ? "text-red-400"
-    : ["Available", "Succeeded", "Fallback Active", "Operational"].includes(s)
+    : [
+          "Available",
+          "Approved",
+          "Succeeded",
+          "Fallback Active",
+          "Operational",
+        ].includes(s)
       ? "text-emerald-400"
       : "text-amber-300";
 export function TrustWarning({ warning: w }: { warning: Warning }) {
@@ -214,20 +222,26 @@ export function RecoveryStart({
     </Editor>
   );
 }
-export function AffectedOperations() {
+export function AffectedOperations({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const d = useRecovery(),
     a = useAccess();
   return (
-    <section className="my-7">
-      <div className="mb-4 flex flex-wrap gap-3 justify-between">
-        <h2 className="text-xl font-semibold">Affected operations</h2>
-        <Link
-          className="text-sm underline"
-          href={`${incidentBase(a.organizationId, a.incidentId)}/operations`}
-        >
-          Review recovery and approvals →
-        </Link>
-      </div>
+    <section className={embedded ? undefined : "my-7"}>
+      {!embedded && (
+        <div className="mb-4 flex flex-wrap gap-3 justify-between">
+          <h2 className="text-xl font-semibold">Affected operations</h2>
+          <Link
+            className="text-sm underline"
+            href={`${incidentBase(a.organizationId, a.incidentId)}/operations`}
+          >
+            Review recovery and approvals →
+          </Link>
+        </div>
+      )}
       <div className="overflow-auto rounded-md border border-border">
         <table className="w-full text-sm">
           <thead>
@@ -293,18 +307,21 @@ function Decision({
   request: r,
   decision,
   disabled = false,
+  primary = false,
 }: {
   request: ApprovalRequest;
   decision: "Approve" | "Reject";
   disabled?: boolean;
+  primary?: boolean;
 }) {
   const run = useRecoveryCommand();
   return disabled ? (
-    <Button disabled variant="outline">
+    <Button disabled variant={primary ? "default" : "outline"}>
       {decision === "Approve" ? "Approve request" : "Reject request"}
     </Button>
   ) : (
     <Editor
+      primary={primary}
       title={`${decision} request`}
       trigger={decision === "Approve" ? "Approve request" : "Reject request"}
       description="Your decision is bound to this request version, procedure parameters, evidence and current trust context. Eligibility is checked again before execution."
@@ -476,182 +493,325 @@ export function RecoveryWorkspace() {
     a = useAccess(),
     c = useCoordination(),
     [selected, setSelected] = useState("");
-  const r = d.requests.find((r) => r.id === selected) ?? d.requests[0],
-    e = r ? d.executions.find((e) => e.id === r.executionId) : undefined;
-  const decisions = r ? d.decisions.filter((x) => x.requestId === r.id) : [],
-    eligible =
-      !!r &&
-      a.can("approvals:decide") &&
-      r.policyDefinition.roles.includes(a.role) &&
-      r.requestedBy !== a.userId &&
-      r.status === "Pending" &&
-      Number(r.expiresAt) > Number(d.now) &&
-      !decisions.some((x) => x.userId === a.userId);
+  const r =
+    d.requests.find((request) => request.id === selected) ?? d.requests[0];
+  const e = r
+    ? d.executions.find((execution) => execution.id === r.executionId)
+    : undefined;
+  const decisions = r
+    ? d.decisions.filter((decision) => decision.requestId === r.id)
+    : [];
+  const operation = r
+    ? d.operations.find((item) => item.entityId === r.operationId)
+    : undefined;
+  const warning = r
+    ? d.warnings.find((item) => item.entityId === r.operationId)
+    : undefined;
+  const pending = d.requests.filter((request) => request.status === "Pending");
+  const inReview = pending.filter((request) =>
+    d.decisions.some(
+      (decision) => decision.requestId === request.id && decision.eligible,
+    ),
+  ).length;
+  const eligible =
+    !!r &&
+    a.can("approvals:decide") &&
+    r.policyDefinition.roles.includes(a.role) &&
+    r.requestedBy !== a.userId &&
+    r.status === "Pending" &&
+    Number(r.expiresAt) > Number(d.now) &&
+    !decisions.some((decision) => decision.userId === a.userId);
+  const warnings = d.warnings.filter((item) => item.category !== "Available");
   return (
     <>
-      <header className="mb-7 flex justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-semibold">Operations</h1>
-          <p className="mt-2 text-muted-foreground">
-            Keep essential work moving independently.
-          </p>
-        </div>
-        {a.can("recovery:start") ? (
-          <RecoveryStart trigger="New request" />
-        ) : (
-          <Button disabled variant="outline">
-            New request
-          </Button>
-        )}
-      </header>
-      <AffectedOperations />
-      <div className="grid gap-6 border-t border-border pt-5 lg:grid-cols-[34%_1fr]">
-        <aside className="lg:border-r border-border lg:pr-5">
-          <h2 className="mb-4 text-xl font-semibold">Requests</h2>
-          {d.requests.map((x) => (
+      <PageHeading
+        title="Operations"
+        description={`${a.incidentId} · Keep essential work moving independently.`}
+        actions={
+          a.can("recovery:start") ? (
+            <RecoveryStart trigger="New request" />
+          ) : (
+            <Button disabled variant="outline">
+              New request
+            </Button>
+          )
+        }
+      />
+      <p className="-mt-3 mb-4 text-base text-muted-foreground sm:text-lg">
+        {pending.length - inReview} awaiting approval
+        <span className="mx-2">·</span>
+        {inReview} in review
+        <span className="mx-2">·</span>
+        {
+          d.requests.filter((request) => request.status === "Approved").length
+        }{" "}
+        approved
+      </p>
+      <details className="mb-5">
+        <summary className="cursor-pointer text-sm text-muted-foreground">
+          Business continuity reports
+        </summary>
+        <AffectedOperations />
+      </details>
+      <div className="grid min-w-0 grid-cols-1 border-t border-border pt-5 lg:grid-cols-[minmax(0,35fr)_minmax(0,65fr)]">
+        <aside className="min-w-0 border-b border-border pb-6 lg:border-r lg:border-b-0 lg:pr-5">
+          <h2 className="mb-5 text-2xl font-semibold">Requests</h2>
+          {d.requests.map((request) => (
             <button
-              key={x.id}
-              onClick={() => setSelected(x.id)}
-              className={`w-full border-b border-border p-4 text-left ${x.id === r?.id ? "border-l-2 border-l-white bg-muted/30" : ""}`}
+              key={request.id}
+              onClick={() => setSelected(request.id)}
+              className={`flex w-full items-center justify-between gap-4 border-b border-border px-4 py-3 text-left ${r?.id === request.id ? "border-l-[3px] border-l-white bg-muted/35" : "border-l-[3px] border-l-transparent hover:bg-muted/15"}`}
             >
-              <strong className="block">{x.title}</strong>
-              <span className="text-xs text-muted-foreground">
-                {x.displayReference} · {x.status}
+              <span className="min-w-0">
+                <span className="block text-lg font-semibold break-words">
+                  {request.title}
+                </span>
+                <span className="mt-1 block text-base text-muted-foreground">
+                  {request.displayReference}
+                </span>
+              </span>
+              <span
+                className={`flex shrink-0 items-center gap-2 text-base ${tone(request.status)}`}
+              >
+                <span className="size-2 rounded-full bg-current" />
+                {request.status}
               </span>
             </button>
           ))}
-          <div className="mt-6 grid gap-2">
-            <RecoveryStart />
-            <RecoveryStart fallback />
-            <RequestClosure />
-          </div>
+          <details className="mt-6 border-t border-border pt-4">
+            <summary className="cursor-pointer text-base text-muted-foreground">
+              Recovery tools
+            </summary>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <RecoveryStart />
+              <RecoveryStart fallback />
+              <RequestClosure />
+            </div>
+          </details>
         </aside>
-        <main className="min-w-0">
+        <section
+          aria-label="Selected request"
+          className="min-w-0 pt-6 lg:pt-0 lg:pl-8"
+        >
           {r ? (
             <>
-              <p className="text-xs text-muted-foreground">
-                {r.displayReference} · {r.sensitivity} sensitivity · {r.status}
+              <p className="mb-3 text-base text-muted-foreground sm:text-lg">
+                {r.displayReference}
+                <span className="mx-2">/</span>
+                {r.actionType.replaceAll("_", " ")}
               </p>
-              <h2 className="mt-2 text-2xl font-semibold">{r.title}</h2>
-              <p className="my-3 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <h2 className="text-[34px] leading-tight font-semibold break-words">
+                  {r.title}
+                </h2>
+                <span className={`text-2xl font-semibold ${tone(r.status)}`}>
+                  {r.status}
+                </span>
+              </div>
+              <p className="mt-2 text-base leading-7 text-muted-foreground sm:text-lg">
                 {r.description}
               </p>
-              <dl className="text-sm grid grid-cols-[100px_1fr] gap-2">
+              <dl className="my-5 grid grid-cols-[110px_minmax(0,1fr)] gap-x-4 gap-y-2 text-base sm:grid-cols-[200px_minmax(0,1fr)] sm:text-lg">
                 <dt>Requester</dt>
-                <dd>{c.name(r.requestedBy)}</dd>
-                <dt>Expires</dt>
-                <dd>{incidentTime(r.expiresAt)}</dd>
-                <dt>Policy</dt>
-                <dd>
-                  {r.policyDefinition.roles.join(" + ")} · distinct from
-                  requester
+                <dd className="text-muted-foreground">
+                  {c.name(r.requestedBy)}
+                </dd>
+                <dt>Normal route</dt>
+                <dd className="text-muted-foreground">
+                  {warning?.category ??
+                    (operation ? "Available" : "Not recorded")}
                 </dd>
               </dl>
-              <section
-                className="mt-5 grid gap-3 text-sm"
-                aria-label="Bound approval parameters"
+              <div className="border-t border-border pt-5">
+                <h3 className="mb-3 text-lg font-semibold">
+                  Independent approval
+                </h3>
+                {r.policyDefinition.roles.map((role) => {
+                  const decision = decisions.find((item) => item.role === role);
+                  const reviewers = c.responders.filter(
+                    (person) =>
+                      person.role === role && person.id !== r.requestedBy,
+                  );
+                  const name = decision
+                    ? c.name(decision.userId)
+                    : reviewers.length === 1
+                      ? reviewers[0].name
+                      : (roleLabels[role] ?? role);
+                  return (
+                    <div
+                      key={role}
+                      className="flex flex-wrap items-center gap-4 border-b border-border py-3"
+                    >
+                      <Avatar name={name} />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">
+                          {name}
+                          {decision?.userId === a.userId && " · You"}
+                        </p>
+                        <p className="mt-1 text-base text-muted-foreground">
+                          {roleLabels[role] ?? role}
+                          {!decision &&
+                            reviewers.length === 1 &&
+                            " · Eligible reviewer"}
+                        </p>
+                        {!decision && reviewers.length > 1 && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Eligible:{" "}
+                            {reviewers.map((person) => person.name).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`ml-auto text-base sm:text-lg ${decision?.eligible && decision.decision === "Approve" ? "text-emerald-400" : decision?.decision === "Reject" ? "text-red-400" : "text-amber-300"}`}
+                      >
+                        {decision
+                          ? `${decision.decision === "Approve" ? "Approved" : "Rejected"}${decision.eligible ? "" : " · No longer eligible"}`
+                          : "Pending"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <details
+                key={`${r.id}:rationale`}
+                className="border-b border-border py-5"
               >
-                <h3 className="font-semibold">What this request authorizes</h3>
-                <p className="whitespace-pre-wrap">{r.justification}</p>
-                {e && (
-                  <p>
-                    {e.templateId} · version {e.templateVersion} ·{" "}
-                    {
-                      d.operations.find((o) => o.entityId === e.operationId)
-                        ?.name
-                    }
-                  </p>
-                )}
-                {e?.kind === "fallback" &&
-                  (() => {
-                    const p = JSON.parse(r.parameters) as {
-                      beneficiaryIds: string[];
-                      accessLevel: string;
-                      durationSeconds: number;
-                      groupId: string;
-                    };
-                    return (
-                      <dl className="grid gap-2 text-xs">
-                        <div>
-                          <dt>Beneficiaries</dt>
-                          <dd>
-                            {p.beneficiaryIds
+                <summary className="cursor-pointer text-lg font-semibold">
+                  Fallback rationale &amp; evidence
+                  <span className="mt-1 block text-base font-normal text-muted-foreground">
+                    {r.justification ||
+                      "Review the request’s authorization and supporting evidence."}
+                  </span>
+                </summary>
+                <section
+                  aria-label="Bound approval parameters"
+                  className="mt-4 grid gap-4 text-base"
+                >
+                  <h3 className="font-semibold">
+                    What this request authorizes
+                  </h3>
+                  <p className="whitespace-pre-wrap">{r.justification}</p>
+                  {e && (
+                    <p>
+                      {e.templateId} · version {e.templateVersion} ·{" "}
+                      {operation?.name}
+                    </p>
+                  )}
+                  {e?.kind === "fallback" &&
+                    (() => {
+                      const parameters = JSON.parse(r.parameters) as {
+                        beneficiaryIds: string[];
+                        accessLevel: string;
+                        durationSeconds: number;
+                        groupId: string;
+                      };
+                      return (
+                        <div className="grid gap-2">
+                          <p>
+                            Beneficiaries:{" "}
+                            {parameters.beneficiaryIds
                               .map((id) => c.name(id))
                               .join(", ")}
-                          </dd>
+                          </p>
+                          <p>
+                            {parameters.accessLevel} ·{" "}
+                            {parameters.durationSeconds / 60} minutes ·{" "}
+                            {parameters.groupId}
+                          </p>
+                          <p>
+                            No original customer-database access. Current
+                            membership is checked on every read.
+                          </p>
                         </div>
-                        <div>
-                          <dt>Access</dt>
-                          <dd>
-                            {p.accessLevel} · {p.durationSeconds / 60} minutes ·{" "}
-                            {p.groupId}
-                          </dd>
-                        </div>
-                        <p>
-                          No original customer-database access. Current
-                          membership is checked on every read.
-                        </p>
-                      </dl>
-                    );
-                  })()}
-                <div className="flex gap-2 flex-wrap">
-                  {(JSON.parse(r.evidenceIds) as string[]).map((id) => (
-                    <RecoveryEvidence key={id} id={id} />
-                  ))}
-                </div>
-              </section>
-              <h3 className="mt-6 mb-3 font-semibold">Independent approval</h3>
-              {r.policyDefinition.roles.map((role) => {
-                const decision = decisions.find((d) => d.role === role);
-                return (
-                  <div
-                    className="py-3 border-b border-border text-sm flex justify-between gap-3"
-                    key={role}
-                  >
-                    <span>{role}</span>
-                    <span>
-                      {decision
-                        ? `${c.name(decision.userId)} · ${decision.decision}${decision.eligible ? "" : " (no longer eligible)"}`
-                        : "Pending"}
-                    </span>
+                      );
+                    })()}
+                  <div className="flex flex-wrap gap-2">
+                    {(JSON.parse(r.evidenceIds) as string[]).map((id) => (
+                      <RecoveryEvidence key={id} id={id} />
+                    ))}
                   </div>
-                );
-              })}
-              <div className="flex gap-2 flex-wrap mt-5">
-                <Decision request={r} decision="Approve" disabled={!eligible} />
+                  {!(JSON.parse(r.evidenceIds) as string[]).length && (
+                    <p className="text-muted-foreground">
+                      No evidence linked to this request.
+                    </p>
+                  )}
+                </section>
+              </details>
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                <div className="min-w-56 sm:min-w-[340px] [&>button]:w-full">
+                  <Decision
+                    request={r}
+                    decision="Approve"
+                    disabled={!eligible}
+                    primary
+                  />
+                </div>
                 <Decision request={r} decision="Reject" disabled={!eligible} />
               </div>
-              {decisions.map((decision) => (
-                <p
-                  className="mt-2 text-xs text-muted-foreground"
-                  key={decision.id}
+              <p className="mt-4 text-base leading-6 text-muted-foreground">
+                {r.policyDefinition.roles
+                  .map((role) => roleLabels[role] ?? role)
+                  .join(r.policyDefinition.anyRole ? " or " : " + ")}{" "}
+                approval required, independent of the requester. Decisions are
+                checked against current access, evidence and request expiry.
+              </p>
+              <details
+                key={`${r.id}:history`}
+                className="mt-5 border-t border-border py-4"
+              >
+                <summary className="cursor-pointer text-base text-muted-foreground">
+                  Approval policy &amp; history
+                </summary>
+                <div className="mt-4 grid gap-3 text-base text-muted-foreground">
+                  <p>
+                    {r.policyDefinition.name} · {r.sensitivity} sensitivity
+                  </p>
+                  <p>Expires {incidentTime(r.expiresAt)}</p>
+                  {decisions.map((decision) => (
+                    <p key={decision.id}>
+                      {c.name(decision.userId)} ·{" "}
+                      {incidentTime(decision.decidedAt)}:{" "}
+                      {decision.justification}
+                    </p>
+                  ))}
+                  {!decisions.length && <p>No decisions recorded.</p>}
+                  {r.result && <p>{r.result}</p>}
+                </div>
+              </details>
+              {e && (
+                <details
+                  key={`${r.id}:execution`}
+                  className="border-t border-border py-4"
                 >
-                  {c.name(decision.userId)} · {incidentTime(decision.decidedAt)}
-                  : {decision.justification}
-                </p>
-              ))}
-              {r.result && <p className="mt-4 text-sm">{r.result}</p>}
-              {e && <ExecutionDetail execution={e} />}
+                  <summary className="cursor-pointer text-base text-muted-foreground">
+                    Recovery progress ·{" "}
+                    <span className={tone(e.state)}>{e.state}</span>
+                  </summary>
+                  <ExecutionDetail execution={e} />
+                </details>
+              )}
             </>
           ) : (
-            <p>No requests recorded.</p>
+            <p className="text-muted-foreground">
+              {d.ready ? "No requests recorded." : "Loading requests…"}
+            </p>
           )}
-        </main>
+        </section>
       </div>
-      <section className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Trust warnings</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {d.warnings
-            .filter((w) => w.category !== "Available")
-            .map((w) => (
-              <TrustWarning key={w.id} warning={w} />
-            ))}
+      <details className="mt-8 border-t border-border py-5">
+        <summary className="cursor-pointer text-base text-muted-foreground">
+          Trust warnings ({warnings.length})
+        </summary>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {warnings.map((warning) => (
+            <TrustWarning key={warning.id} warning={warning} />
+          ))}
         </div>
-      </section>
-      <p className="mt-7 text-xs text-muted-foreground">
-        Infrastructure restoration is simulated. Human decisions, durable
-        execution, evidence, restricted fallback access and report versions are
-        functional. No payment or live infrastructure change is performed.
+      </details>
+      <p className="mt-4 text-sm leading-6 text-muted-foreground">
+        Infrastructure restoration is simulated. Decisions, evidence and limited
+        fallback access are functional. No payment or live infrastructure change
+        is performed.
       </p>
     </>
   );

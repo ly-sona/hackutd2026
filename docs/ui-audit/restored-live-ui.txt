@@ -1,0 +1,117 @@
+AEGIS live UI restoration — version 1
+2026-11-08
+
+Latest refinement: demo palette version 2 (docs/ui-audit/demo-palette-v2/)
+Graph metadata is neutral gray with small colored status dots; the visible
+technical label is Compromised. The internal assessment dimension stays unchanged.
+Overview previews one Critical, one High and one routine-priority work item,
+in red/yellow/green order, with all remaining work accessible in View all work.
+Green indicates routine priority here, not verified or resolved compromise.
+An additive acme-ui-examples-v1 development/test seed supplies the three mock-like
+findings and a recorded continuity decision. These are actual persisted rows,
+with linked originals for the technical observations. Seed runs preserve all
+previous records and do not duplicate these examples.
+Explicit continuity reports in event metadata show Customer Support Restricted
+and Vendor Purchasing Fallback available. These reports are separate from scope
+impact certainty and do not authorize or execute a purchase. The new timeline
+examples are newer than the original task fixtures, so the initial demo exposes
+urgent red, recorded green and review yellow events without scrolling. Subsequent
+live activity retains chronological ordering.
+
+Version 2 verification: desktop and phone visual assertions passed for all
+three changed pages, including the initial timeline's red/green/yellow rows.
+The browser regression run passed 49 scenarios; one scope scenario completed
+its assertions but exceeded the 45-second limit during cleanup, skipping its
+three serial successors. The entire seven-test scope suite then passed in
+27.7 seconds with a 90-second per-test allowance. All 53 distinct browser
+scenarios are covered by the full run and scope rerun. Build, lint, typecheck
+and all 31 unit tests also passed. Previous screenshots remain untouched.
+
+Source of truth
+The five approved images in docs/design-references/ remain unchanged.
+New screenshots: docs/ui-audit/restored-live-v1/ (desktop, phone and detail views).
+Earlier before/after captures and audits are retained in this directory.
+
+Shared design specification
+- Near-black page #090909, surfaces #111111, detail dialogs #101010.
+- Primary text #fafafa; muted gray supporting text; thin neutral borders.
+- Red #ff535b for urgent/critical, yellow #ffcd38 for uncertainty/pending,
+  green #45e176 for recorded/authorized outcomes. Every status also has text.
+- Local Geist and Geist Mono. Desktop page title 40px, Overview 44px;
+  phone 30px. Section titles 24px; body 16px; description 18px desktop.
+- Reuse PageHeading, Disclosure and the shared Button/Badge/Dialog/Input
+  primitives. Keep the same incident selector, navigation and account controls.
+- Main views answer the immediate question first. Put full provenance, audit
+  history and editing in explicitly named details; never remove functionality
+  or substitute static fixture values just to resemble the image.
+- Flat lists, generous spacing, restrained filled selection/urgency states.
+  Avoid nested dashboard cards and extra summary grids on main pages.
+- Keep existing permission checks. Access paths and group membership are not
+  proof of individual compromise. Acknowledgment is not task verification.
+
+Restored page compositions and retained functionality
+
+Overview
+Incident title/severity/Add finding; four live summary metrics; three attention
+rows; affected business operations table; three recent activities. No containment
+banner or decision modal. View all work exposes remaining findings and live task
+attention. Incident details and actions exposes metadata, Update incident,
+Document update, Attach evidence, New incident, Create task and full scope counts.
+Finding selection still opens the complete investigation and source history.
+
+Scope
+Focused relationship graph, slim inspector and record browser. Graph tools holds
+inventory counts, entity search, graph expansion and asset/relationship editors.
+Inspector shows the primary assessment, concise context, other impacts and
+evidence disclosures, Assign investigation and Open full investigation.
+The full investigation retains every assessment editor, evidence link, asset
+editor, relationship action, finding conversion and provenance field.
+
+Operations
+Approved request list/detail composition, independent approvers and collapsed
+fallback rationale. Preview approval/recovery actions stay disabled and explain
+their limitation in tooltips. No fabricated approval execution was added.
+
+Team
+Unboxed conversation directory, incident group chat, selected direct message,
+participant avatars, flat message stream and simple composer. Actual authorized
+group membership, private DMs, references, availability, unread state and source
+conversion remain connected. Each message's actions menu exposes Create task
+and Add finding. The header's Incident tasks control opens the full task desk;
+task links/deep links retain paging, verification and original-source navigation.
+
+Timeline
+Colored vertical event feed and slim selected-event pane: what happened,
+observed/recorded times, next step, owner and primary evidence/workflow links.
+Sources & audit details holds complete descriptions, all references, prior/new
+values and correction controls. Filters and Since my last visit use live events
+and per-user read cutoffs. The default event is newest; explicit event links
+select their actual target. No hardcoded Today label on historical events.
+
+New detail views
+Finding/task editors, evidence previews/uploads, investigation, record browser,
+task desk, task detail, members and invitations share the typography, restrained
+surfaces, borders and action styles. Dialogs scroll within the viewport; tables
+scroll within their container on phones. Team controls wrap rather than squeeze
+the conversation title. Overview's secondary control moves below rows on phones.
+
+Deliberate differences from static mocks
+All live titles, counts, assignees, timestamps, assessments and event content
+reflect the database. In particular the graph keeps the real Dataset entity
+between database and record group, plus actual edge direction and uncertainty.
+Business statuses reflect actual availability assessments; no green safe state
+is invented to match a sample image. Seeded data may differ from mock captions.
+Phase 5 workflows remain previews. No backend, auth or permission behavior was
+replaced with static UI.
+
+Validation
+Production build, ESLint, frontend/backend typecheck and 31 unit tests passed.
+All 51 real-backend browser tests passed; the five presentation/workflow tests
+were then rerun after final styling changes and all five passed. Test assertions
+were updated to open the newly disclosed controls, without removing permission,
+history, evidence, conversion or live-update assertions.
+Desktop screenshots use 1600x1000 and phone screenshots use 390x844. All five
+page widths fit the phone viewport. Detail screenshots include editors, scope
+investigation, records, evidence, tasks and a selected urgent timeline event.
+Original reference images and backend source have no changes from current HEAD.
+Changes remain local and uncommitted.

@@ -600,7 +600,7 @@ test.describe("Phase 5 evidence, approved recovery and immutable reports", () =>
       await maya.close();
     }
   });
-  test("denies anonymous, administrator, Operations, wrong-incident and revoked report sources; private tables stay private", async ({
+  test("allows administrator reports while denying unauthorized sources and preserving private tables", async ({
     browser,
   }) => {
     const maya = await browser.newContext(),
@@ -618,20 +618,30 @@ test.describe("Phase 5 evidence, approved recovery and immutable reports", () =>
         }),
         url = `/api/reports/${r.reportId}?organizationId=acme&incidentId=IR-2041`;
       expect((await anonymous.request.get(url)).status()).toBe(401);
-      expect((await sam.request.get(url)).status()).toBe(403);
+      expect((await sam.request.get(url)).status()).toBe(200);
       expect((await jordan.request.get(url)).status()).toBe(403);
       expect(
         (await maya.request.get(url.replace("IR-2041", "IR-2042"))).status(),
       ).toBe(404);
+      await cancelActive(maya, d);
+      const started = await ok(sam.request, "start", {
+        templateId: "restore-support",
+        entityId: "acme:scope:OP-SUPPORT",
+        justification:
+          "Administrator can request recovery; independent approvals remain required.",
+      });
+      const request = await awaitRequest(d, started.executionId);
       expect(
         (
-          await post(sam.request, "start", {
-            templateId: "restore-support",
-            entityId: "acme:scope:OP-SUPPORT",
-            justification: "Admin authority alone is insufficient.",
+          await post(sam.request, "decide", {
+            requestId: request.id,
+            revisionToken: request.revisionToken,
+            decision: "Approve",
+            justification: "Self approval must remain denied.",
           })
         ).status(),
       ).toBe(403);
+      await cancelActive(maya, d);
       await command("test_remove_incident", "", { userId: "maya" });
       expect((await maya.request.get(url)).status()).toBe(403);
       await command("test_restore_memberships", "", {});
@@ -699,6 +709,10 @@ test.describe("Phase 5 evidence, approved recovery and immutable reports", () =>
     await expect(
       page.getByRole("heading", { name: "Operations", exact: true }),
     ).toBeVisible();
+    await page
+      .locator("summary")
+      .filter({ hasText: "Business continuity reports" })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Affected operations", exact: true }),
     ).toBeVisible();
@@ -1084,6 +1098,10 @@ test("lets humans review bound workflow parameters and approve a real request th
       await p
         .getByRole("button")
         .filter({ hasText: request.displayReference })
+        .click();
+      await p
+        .locator("summary")
+        .filter({ hasText: "Fallback rationale & evidence" })
         .click();
       await expect(p.getByLabel("Bound approval parameters")).toContainText(
         "Human UI recovery review",

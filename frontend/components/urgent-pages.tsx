@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-import Link from "next/link";
+import Link from "./workspace-link";
 import { useCoordination } from "./coordination-data";
 import { useAccess } from "./workspace-provider";
 import { Button } from "./ui/button";

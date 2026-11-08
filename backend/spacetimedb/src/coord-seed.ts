@@ -1,4 +1,6 @@
 import type { Ctx } from "./index";
+import { seedDemoEventTimings } from "./demo-event-timing";
+import { reconcileDemoConsistency } from "./demo-consistency";
 import { ensureRoom } from "./coord-access";
 import { json, key, time, appendEvent } from "./incident-domain";
 import type { Reference } from "../../../shared/coordination";
@@ -9,7 +11,12 @@ export function seedCoordination(
   for (const i of ctx.db.incidents.iter())
     ensureRoom(ctx, i.organizationId, i.incidentId, i.createdBy);
   const marker = "acme-phase4-v1";
-  if (ctx.db.scenarioSeeds.id.find(marker)) return { seeded: false };
+  if (ctx.db.scenarioSeeds.id.find(marker)) {
+    seedVisualExamples(ctx);
+    seedDemoEventTimings(ctx);
+    reconcileDemoConsistency(ctx);
+    return { seeded: false };
+  }
   if (!ctx.db.scenarioSeeds.id.find("acme-phase3-v1"))
     throw new Error(
       "Seed the existing incident and scope data before coordination.",
@@ -49,7 +56,7 @@ export function seedCoordination(
   const main: [string, string, Reference[]][] = [
     [
       "alex",
-      "Traffic continued after the reported isolation time. EV-018 records traffic at 09:21; isolation was reported at 09:15.",
+      "Traffic continued after the reported isolation time. EV-018 records traffic at 09:21; isolation was reported at 09:18 in EV-012.",
       refs,
     ],
     [
@@ -144,7 +151,15 @@ export function seedCoordination(
         content.replace(
           "The Customer Database remains under investigation. An access path alone is not proof of exfiltration.",
           "Incident scope remains under investigation; review the incident's own evidence.",
-        ),
+        ).replace(
+          "I will compare the reported isolation time with the preserved artifact and document the result.",
+          inc === "IR-2042" ? "I will compare the suspicious sign-in with EV-024 and document the account-owner review."
+            : "I will review the denied database request in EV-029. A denied request does not establish successful access.",
+        ).replace(
+          "The October group review will distinguish potential exposure from individually confirmed impacts.",
+          inc === "IR-2042" ? "Account A-09 remains suspected; EV-030 records that the owner review is pending."
+            : "The access review will distinguish a denied attempt from any evidence of successful database access.",
+        ).replace("Support coordination is ongoing.", inc === "IR-2042" ? "Account review coordination is ongoing." : "Access review coordination is ongoing."),
       );
   for (const [i, c] of dms.entries()) {
     const inc = i === 2 ? "IR-2042" : "IR-2041",
@@ -186,7 +201,7 @@ export function seedCoordination(
     "Document investigation handoff",
     "Review access findings",
     "Coordinate incident response notes",
-    "Review containment evidence",
+    "Review denied database access",
     "Coordinate support status",
     "Review private investigation notes",
   ];
@@ -286,8 +301,8 @@ export function seedCoordination(
     requestedBy: "maya",
     pagedUserId: "alex",
     backupUserId: "maya",
-    createdAt: at - 7_200_000n,
-    acknowledgmentDeadline: at - 6_900_000n,
+    createdAt: task.createdAt + 120_000n,
+    acknowledgmentDeadline: task.createdAt + 420_000n,
     acknowledgedBy: "",
     acknowledgedAt: 0n,
     escalatedAt: 0n,
@@ -299,13 +314,13 @@ export function seedCoordination(
     id: "acme:seed:page-ack",
     status: "Acknowledged",
     acknowledgedBy: "alex",
-    acknowledgedAt: at - 7_100_000n,
+    acknowledgedAt: base.createdAt + 100_000n,
   });
   ctx.db.pages.insert({
     ...base,
     id: "acme:seed:page-escalated",
     status: "Escalated",
-    escalatedAt: at - 6_900_000n,
+    escalatedAt: base.acknowledgmentDeadline,
   });
   ctx.db.pages.insert({
     ...base,
@@ -313,9 +328,10 @@ export function seedCoordination(
     status: "Acknowledged",
     pagedUserId: "maya",
     parentPageId: "acme:seed:page-escalated",
+    createdAt: base.acknowledgmentDeadline,
     acknowledgmentDeadline: 0n,
     acknowledgedBy: "maya",
-    acknowledgedAt: at - 6_800_000n,
+    acknowledgedAt: base.acknowledgmentDeadline + 100_000n,
   });
   ctx.db.pages.insert({
     ...base,
@@ -333,5 +349,140 @@ export function seedCoordination(
     { taskId: task.id, pageId: "acme:seed:page-ack" },
   );
   ctx.db.scenarioSeeds.insert({ id: marker, createdAt: at });
+  seedVisualExamples(ctx);
+  seedDemoEventTimings(ctx);
+  reconcileDemoConsistency(ctx);
   return { seeded: true };
+}
+
+// Additive local demo examples. Never rewrite existing findings or event history.
+function seedVisualExamples(ctx: Ctx) {
+  if (
+    ctx.env.AEGIS_DEVELOPMENT_MODE !== "true" &&
+    ctx.env.AEGIS_TEST_MODE !== "true"
+  )
+    return;
+  const marker = "acme-ui-examples-v1";
+  if (ctx.db.scenarioSeeds.id.find(marker)) return;
+  const at = time(ctx),
+    org = "acme",
+    inc = "IR-2041",
+    incidentKey = key(org, inc);
+  const examples = [
+    {
+      id: "UI-01",
+      title: "Conflicting isolation reports",
+      description:
+        "Outbound traffic was observed after isolation was reported. Verify containment against EV-018.",
+      priority: "Critical",
+      assignedTo: "alex",
+      relatedSystem: "Customer Database",
+      evidence: ["EV-018"],
+      seconds: 60n,
+    },
+    {
+      id: "UI-02",
+      title: "Vendor approval depends on affected SSO",
+      description:
+        "An independent approval route is available. A human approval is still required.",
+      priority: "High",
+      assignedTo: "maya",
+      relatedSystem: "Vendor Purchasing",
+      evidence: [],
+      seconds: 180n,
+    },
+    {
+      id: "UI-03",
+      title: "Verify October customer exposure",
+      description:
+        "Access path identified. Record-level impact remains unconfirmed.",
+      priority: "Low",
+      assignedTo: "alex",
+      relatedSystem: "October Customer Records",
+      evidence: ["EV-021"],
+      seconds: 240n,
+    },
+  ];
+  for (const item of examples) {
+    const id = `${inc}:${item.id}`,
+      timestamp = at - item.seconds * 1000n;
+    if (ctx.db.findings.id.find(id)) continue;
+    ctx.db.findings.insert({
+      id,
+      organizationId: org,
+      incidentId: inc,
+      incidentKey,
+      title: item.title,
+      description: item.description,
+      category: "Investigation",
+      priority: item.priority,
+      status: "Unverified",
+      observedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      reportedBy: "maya",
+      assignedTo: item.assignedTo,
+      relatedSystem: item.relatedSystem,
+      verifiedBy: "",
+      verifiedAt: 0n,
+    });
+    appendEvent(
+      ctx,
+      org,
+      inc,
+      "maya",
+      "finding",
+      item.title,
+      item.description,
+      {
+        createdAt: timestamp,
+        observedAt: timestamp,
+        findingId: id,
+        evidenceIds: json(item.evidence),
+        status: "Unverified",
+        newValue:
+          item.id === "UI-01"
+            ? json({
+                scopeEntityId: "acme:scope:OP-SUPPORT",
+                businessStatus: "Restricted",
+              })
+            : "",
+      },
+    );
+    for (const evidenceId of item.evidence) {
+      ctx.db.evidenceLinks.insert({
+        id: `seed:${id}:${evidenceId}`,
+        organizationId: org,
+        incidentId: inc,
+        incidentKey,
+        evidenceId,
+        findingId: id,
+        eventId: "",
+        annotation: item.description,
+        excerpt: "",
+        futureReference: "",
+        createdBy: "maya",
+        createdAt: timestamp,
+      });
+    }
+  }
+  appendEvent(
+    ctx,
+    org,
+    inc,
+    "maya",
+    "decision",
+    "Independent purchasing route documented",
+    "Synthetic business continuity update: a fallback approval route is available. No purchase has been approved or executed.",
+    {
+      createdAt: at - 120000n,
+      observedAt: at - 120000n,
+      status: "Documented",
+      newValue: json({
+        scopeEntityId: "acme:scope:OP-PURCHASING",
+        businessStatus: "Fallback available",
+      }),
+    },
+  );
+  ctx.db.scenarioSeeds.insert({ id: marker, createdAt: at });
 }

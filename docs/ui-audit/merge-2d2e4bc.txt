@@ -1,0 +1,56 @@
+Pull and conflict resolution — November 8, 2026
+
+Remote: main advanced from ca3d2d1 to 2d2e4bc.
+Backup: stash named "backup: merged Phase 2 UI before connected scope and
+coordination pull" retains all prior tracked and untracked local work.
+No commit or push was made.
+
+Specification consulted
+AEGIS: Winstead PC, MVP Features tab:
+https://docs.google.com/document/d/1Jfio3YANoApCpoKp_GrjUWwB3gPn3GLCikkYReHBSr8/edit?tab=t.ha0mwqomp1wt
+Phase 3 requires connected assets/records, distinct impact assessments, evidence
+links and a selectable React Flow graph. Phase 4 requires real chat, incident
+conversations, tasks, declared availability, acknowledgment and escalation.
+Incident conversations remain inside Team; no sixth incident-room tab was added.
+Phase 5 approval/recovery/reporting remains outside this merge's implementation.
+
+Conflict decisions
+- incident-pages.tsx: preserve live ScopeWorkspace and TeamWorkspace, retain
+  live Overview/Timeline, and carry forward the local Operations presentation.
+- workspace-shell.tsx: preserve live notifications, incident selection and the new
+  UrgentPages component alongside local 54px gutters, typography and navigation.
+- scope-graph.tsx: accept upstream removal of the obsolete static graph. Live graph
+  behavior resides in scope-workspace.tsx. The previous file remains in the backup.
+- Keep the new caller-scoped data providers, reducers, permissions and generated
+  bindings; do not replace live behavior with the old static previews.
+
+UI changes introduced by this remote version
+- Scope: live inventory summaries, entity selection, graph filters, expandable
+  relationships, assessment/evidence details and paginated individual records.
+- Team: persisted incident group and private DMs, editable message composer,
+  reference links, task/finding conversion, manual availability and task controls.
+- Overview: scope summary and coordination attention/tasks are now connected.
+- Timeline: scope and coordination events include links to their original sources.
+- Header workspace: pending urgent pages can display acknowledgment controls.
+- Operations: the local request/approval preview is retained; it does not execute
+  approvals or recovery. Its notice now correctly identifies the other live tools.
+
+Local presentation retained
+Geist fonts, near-black surfaces, sharp status palette, filled primary controls,
+shared header/tab styling and the local Operations request details remain intact.
+Team keeps an unboxed two-column layout, readable text and a collapsed conversation
+directory on phones so chat is immediately accessible. These notes do not claim
+pixel parity between the newer functional pages and the original raster mocks.
+
+Historical audit and images remain unchanged as a pre-Phase-2 baseline; they are
+not fresh captures of the connected Scope/Team implementation.
+
+Verification
+- Production module/frontend build, lint, both workspace type checks: passed.
+- Unit tests: 31 passed.
+- Full browser suite: 47 passed; two tests exposed mobile overflow with 11 group
+  participants. Fixed the conversation header/avatar wrapping; both affected
+  tests passed on a targeted rerun (2 passed). All 49 checks passed across runs.
+- The running development app was restarted through npm run dev, reusing its DB.
+  Existing access and Phase 2 rows were preserved; Phase 3/4 fixtures were added.
+  All five pages were opened through actual authenticated browser sessions.

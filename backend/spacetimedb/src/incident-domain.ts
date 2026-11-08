@@ -142,11 +142,9 @@ export function appendEvent(
   });
 }
 function recipients(ctx: Ctx, org: string, inc: string, ports: Ports) {
-  return [...ctx.db.incidentMemberships.organizationId.filter(org)].filter(
-    (m) =>
-      m.incidentId === inc &&
-      m.membershipStatus === "active" &&
-      ports.activeMember(ctx, org, m.userId, time(ctx)),
+  return [...ctx.db.memberships.organizationId.filter(org)].filter(
+    (m) => ports.activeMember(ctx, org, m.userId, time(ctx)) &&
+      (m.role === "administrator" || ctx.db.incidentMemberships.id.find(`${org}:${inc}:${m.userId}`)?.membershipStatus === "active"),
   );
 }
 function notify(
@@ -306,7 +304,7 @@ function execute(
   function member(user: string, commander = false) {
     if (!user) return;
     const m = p.activeMember(ctx, org, user, at);
-    if (!m || (commander && m.role !== "commander"))
+    if (!m || (commander && !["commander", "administrator"].includes(m.role)))
       return p.fail(
         "INVALID_INPUT",
         commander
@@ -315,6 +313,7 @@ function execute(
       );
     if (
       inc &&
+      m.role !== "administrator" &&
       ctx.db.incidentMemberships.id.find(`${org}:${inc}:${user}`)
         ?.membershipStatus !== "active"
     )
@@ -879,9 +878,44 @@ export function incidentProjection(ctx: Reader, access: Access[]) {
     const i = ctx.db.incidents.id.find(k);
     if (!i) continue;
     emit("incident", i.id, i);
-    for (const f of ctx.db.findings.incidentKey.filter(k))
-      if (canReadFinding(ctx, a, f.id)) emit("finding", f.id, f);
-    for (const e of ctx.db.incidentEvents.incidentKey.filter(k)) {
+    const events = [...ctx.db.incidentEvents.incidentKey.filter(k)];
+    const timingCorrections = new Map(events
+      .filter((event) => event.type === "fixture_timing")
+      .sort((left, right) => left.id < right.id ? -1 : 1)
+      .map((event) => [event.correctsEventId, event]));
+    const findingTimes = new Map<string, { observedAt: bigint; createdAt: bigint; originalCreatedAt: bigint; originalObservedAt: bigint }>();
+    const evidenceTimes = new Map<string, bigint>();
+    for (const event of events) {
+      const correction = timingCorrections.get(event.id.toString());
+      if (!correction) continue;
+      const timing = JSON.parse(correction.newValue);
+      const createdAt = BigInt(timing.createdAt ?? event.createdAt);
+      if (event.type === "finding") findingTimes.set(event.findingId, {
+        observedAt: BigInt(timing.observedAt), createdAt, originalCreatedAt: event.createdAt, originalObservedAt: event.observedAt,
+      });
+      if (event.type === "evidence") evidenceTimes.set(event.title.replace("Evidence attached: ", ""), createdAt);
+    }
+    for (const f of ctx.db.findings.incidentKey.filter(k)) {
+      if (!canReadFinding(ctx, a, f.id)) continue;
+      const timing = findingTimes.get(f.id);
+      // Later responder edits take precedence over the original demo fixture correction.
+      emit("finding", f.id, timing && f.createdAt === timing.originalCreatedAt ? {
+        ...f,
+        observedAt: f.observedAt === timing.originalObservedAt ? timing.observedAt : f.observedAt,
+        createdAt: timing.createdAt,
+        updatedAt: f.updatedAt < timing.createdAt ? timing.createdAt : f.updatedAt,
+      } : f);
+    }
+    for (const e of events) {
+      if (e.type === "fixture_timing" || e.type === "fixture_context") continue;
+      // Legacy seed-maintenance notes remain in append-only storage, rather than
+      // displacing responder activity in the incident's operational feed.
+      if (e.type === "note" && e.actorId === "maya" && (
+        (e.title === "Demo conversation chronology corrected" &&
+          e.description === "The synthetic room was created before its first message. Original messages are preserved.") ||
+        (e.title === "Historical demo page chronology corrected" &&
+          e.description === "The synthetic page now follows creation of its linked task; acknowledgment remains receipt only.")
+      )) continue;
       if (
         !canReadCoordinationEvent(ctx, a, e.id) ||
         (e.findingId && !canReadFinding(ctx, a, e.findingId))
@@ -907,19 +941,29 @@ export function incidentProjection(ctx: Reader, access: Access[]) {
             findingId: "",
           };
       }
+      const correction = timingCorrections.get(e.id.toString());
+      const projected = correction ? {
+        ...safe,
+        observedAt: BigInt(JSON.parse(correction.newValue).observedAt),
+        createdAt: BigInt(JSON.parse(correction.newValue).createdAt ?? e.createdAt),
+        originalObservedAt: e.observedAt,
+        originalRecordedAt: e.createdAt,
+        timingCorrectionId: correction.id.toString(),
+        timingCorrectedAt: correction.createdAt,
+      } : safe;
       emit(
         "event",
         e.id,
         allowed.includes("evidence:view")
-          ? safe
-          : { ...safe, evidenceIds: "[]" },
+          ? projected
+          : { ...projected, evidenceIds: "[]" },
       );
     }
     if (allowed.includes("evidence:view")) {
       for (const e of ctx.db.evidence.incidentKey.filter(k)) {
         const { storageReference: _private, ...safe } = e;
         void _private;
-        emit("evidence", e.id, safe);
+        emit("evidence", e.id, { ...safe, uploadedAt: evidenceTimes.get(e.id) ?? safe.uploadedAt });
       }
       for (const l of ctx.db.evidenceLinks.incidentKey.filter(k))
         if (!l.findingId || canReadFinding(ctx, a, l.findingId))

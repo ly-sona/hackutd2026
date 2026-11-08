@@ -146,7 +146,7 @@ test("migrates an existing main database non-destructively and resumes scoped wo
         "archive",
         "--format=tar",
         `--output=${join(state, "main.tar")}`,
-        "9e158af",
+        "149b906",
         "backend/spacetimedb",
         "shared",
       ],
