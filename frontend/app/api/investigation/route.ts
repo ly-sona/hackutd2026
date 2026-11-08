@@ -40,9 +40,29 @@ export async function POST(request: NextRequest) {
         "agent.cancel",
         "agent.read",
         "agent.review",
+        "agent.assess",
+        "agent.inspect",
       ].includes(String(data.action))
     )
       throw new AccessError("INVALID_INPUT", "Unknown investigation action.");
+    if (data.action === "agent.assess") {
+      const result = await command<{
+        manifest: { snapshots: { evidenceId: string }[] };
+      }>("investigation.agent.read", hash, { ...data, offset: 0, limit: 1 });
+      for (const evidenceId of new Set(
+        result.manifest.snapshots.map((s) => s.evidenceId),
+      )) {
+        const original = await withGateway(async (conn) =>
+          unwrap<{ storageReference: string; sha256: string }>(
+            await conn.procedures.evidenceDescriptor({
+              sessionHash: hash,
+              evidenceId,
+            }),
+          ),
+        );
+        await readEvidence(original.storageReference, original.sha256);
+      }
+    }
     if (data.action === "agent.review" && data.decision === "Accept") {
       const result = await command<{ rows: ReviewedProposal[] }>(
         "investigation.agent.read",

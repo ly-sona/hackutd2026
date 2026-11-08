@@ -142,6 +142,8 @@ export async function processAgentJob(initial: AgentJob) {
           if (call.function.name === "parse_evidence")
             await verifyOriginal(current, String(d.snapshotId), String(d.key));
           if (call.function.name === "propose_findings") {
+            for (const snapshot of current.snapshots)
+              await readEvidence(snapshot.storageReference, snapshot.sha256);
             const { proposals } = d as {
               proposals: {
                 citations: {

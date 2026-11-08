@@ -1,3 +1,9 @@
+import {
+  deriveImpactCandidates,
+  isImpact,
+  type ImpactProposal,
+  type InvestigationProposal,
+} from "../../../shared/investigation-impact";
 import type { Ctx, Reader } from "./index";
 import {
   appendEvent,
@@ -310,24 +316,88 @@ function human(
       limit > 50
     )
       return p.fail("INVALID_INPUT", "Invalid page.");
-    const rows = [...ctx.db.analysisProposals.agentRunId.filter(job.id)];
+    const rows = [...ctx.db.analysisProposals.agentRunId.filter(job.id)].sort(
+      (a, b) =>
+        Number(isImpact(JSON.parse(a.content) as InvestigationProposal)) -
+        Number(isImpact(JSON.parse(b.content) as InvestigationProposal)),
+    );
     return {
       rows: rows.slice(offset, offset + limit),
       total: rows.length,
       trace: (JSON.parse(job.trace) as Receipt[]).map((r) => ({
         name: r.name,
         callId: r.callId,
+        args: r.args,
       })),
+      impactPrepared: rows.some((r) =>
+        isImpact(JSON.parse(r.content) as InvestigationProposal),
+      ),
+      assessedEntities: new Set(
+        [...ctx.db.scopeAssessments.incidentKey.filter(k)]
+          .filter(
+            (r) =>
+              r.status !== "Unassessed" &&
+              manifest(job).sourceIds.some((id) =>
+                r.entityId.startsWith(`${id}:`),
+              ),
+          )
+          .map((r) => r.entityId),
+      ).size,
       manifest: manifest(job),
       context: JSON.parse(job.context),
     };
   }
+  if (action === "investigation.agent.assess") {
+    p.authorize(ctx, hash, org, inc, "scope:edit", at);
+    return { created: ensureImpactProposals(ctx, job, actor.userId) };
+  }
+  if (action === "investigation.agent.inspect") {
+    const proposal = ctx.db.analysisProposals.id.find(text(d, "proposalId"));
+    if (!proposal || proposal.agentRunId !== job.id)
+      return p.fail("NOT_FOUND", "Proposal unavailable.");
+    const content = JSON.parse(proposal.content) as InvestigationProposal;
+    const citations = content.citations.map((ref) => {
+      const row = citationRecord(ctx, job, ref),
+        snapshot = ctx.db.sourceSnapshots.id.find(ref.snapshotId)!;
+      return {
+        ...ref,
+        record: row,
+        role: snapshot.role,
+        coverage: snapshot.coverage,
+        collectedAt: snapshot.collectedAt,
+        sourceId: snapshot.sourceId,
+      };
+    });
+    const current = isImpact(content)
+      ? ctx.db.scopeAssessments.id.find(content.assessmentId)
+      : undefined;
+    return {
+      citations,
+      currentAssessment: current,
+      manualReason:
+        isImpact(content) && proposal.status === "Pending"
+          ? assessmentManualReason(ctx, content)
+          : "",
+    };
+  }
   if (action !== "investigation.agent.review")
     return p.fail("INVALID_INPUT", "Unknown agent action.");
-  p.authorize(ctx, hash, org, inc, "findings:create", at);
   const proposal = ctx.db.analysisProposals.id.find(text(d, "proposalId"));
   if (!proposal || proposal.agentRunId !== job.id)
     return p.fail("NOT_FOUND", "Proposal unavailable.");
+  const proposedContent = JSON.parse(proposal.content) as InvestigationProposal;
+  if (isImpact(proposedContent))
+    return reviewImpact(
+      ctx,
+      job,
+      proposal,
+      proposedContent,
+      hash,
+      d,
+      p,
+      actor.userId,
+    );
+  p.authorize(ctx, hash, org, inc, "findings:create", at);
   const decision = text(d, "decision"),
     justification = text(d, "justification", 2000).trim(),
     status = String(d.status ?? "Suspected"),
@@ -745,7 +815,8 @@ export function agentWorker(
         createdAt: at,
         reviewedAt: 0n,
       });
-    result = { proposalIds: ids, terminal: true };
+    const impactCount = ensureImpactProposals(ctx, j, j.actorId);
+    result = { proposalIds: ids, impactCount, terminal: true };
     appendEvent(
       ctx,
       j.organizationId,
@@ -811,4 +882,202 @@ export function agentProjection(
       updatedAt: j.updatedAt,
     }),
   }));
+}
+
+function impactBases(ctx: Reader, job: Job) {
+  return deriveImpactCandidates(
+    observations(ctx, job),
+    (ref) => citationRecord(ctx, job, ref),
+    job.incidentKey,
+  ).filter((c) => {
+    const r = ctx.db.scopeRecords.id.find(c.entityId),
+      e = ctx.db.scopeEntities.id.find(c.entityId);
+    return r
+      ? r.organizationId === job.organizationId &&
+          !!ctx.db.scopeAssociations.id.find(`${job.incidentKey}:${r.groupId}`)
+      : e?.organizationId === job.organizationId &&
+          !!ctx.db.scopeAssociations.id.find(
+            `${job.incidentKey}:${c.entityId}`,
+          );
+  });
+}
+function assessmentManualReason(ctx: Reader, c: ImpactProposal) {
+  const current = ctx.db.scopeAssessments.id.find(c.assessmentId);
+  if (json(current ?? null) !== c.previousAssessment)
+    return "The Scope assessment changed after this proposal. Review the current assessment in Scope.";
+  if (current && current.status !== "Unassessed")
+    return "An existing human assessment is preserved. Review and change it directly in Scope.";
+  return "";
+}
+function ensureImpactProposals(ctx: Ctx, job: Job, actorId: string) {
+  const existing = [...ctx.db.analysisProposals.agentRunId.filter(job.id)].map(
+    (r) => JSON.parse(r.content) as InvestigationProposal,
+  );
+  let created = 0;
+  for (const base of impactBases(ctx, job)) {
+    if (
+      existing.some((c) => isImpact(c) && c.candidateKey === base.candidateKey)
+    )
+      continue;
+    const current = ctx.db.scopeAssessments.id.find(base.assessmentId);
+    const content: ImpactProposal = {
+      ...base,
+      previousAssessment: json(current ?? null),
+      manualReason:
+        current && current.status !== "Unassessed"
+          ? "An existing human assessment is preserved. Review it directly in Scope."
+          : "",
+    };
+    const id = moduleId(ctx, (id) => !!ctx.db.analysisProposals.id.find(id));
+    ctx.db.analysisProposals.insert({
+      id,
+      organizationId: job.organizationId,
+      incidentId: job.incidentId,
+      incidentKey: job.incidentKey,
+      agentRunId: job.id,
+      content: json(content),
+      status: "Pending",
+      reviewerId: "",
+      justification: "",
+      decisionFingerprint: "",
+      findingId: "",
+      relationshipId: "",
+      createdAt: time(ctx),
+      reviewedAt: 0n,
+    });
+    created++;
+  }
+  if (created)
+    appendEvent(
+      ctx,
+      job.organizationId,
+      job.incidentId,
+      actorId,
+      "scope",
+      "Potential impact ready for review",
+      `${created} evidence-derived candidates; no authoritative assessments changed.`,
+      {
+        newValue: json({
+          agentRunId: job.id,
+          created,
+          toolVersion: "aegis-impact-v1",
+        }),
+      },
+    );
+  return created;
+}
+type StoredProposal = NonNullable<
+  ReturnType<Ctx["db"]["analysisProposals"]["id"]["find"]>
+>;
+function reviewImpact(
+  ctx: Ctx,
+  job: Job,
+  proposal: StoredProposal,
+  content: ImpactProposal,
+  hash: string,
+  d: Record<string, unknown>,
+  p: Ports,
+  actor: string,
+) {
+  const at = time(ctx),
+    org = job.organizationId,
+    inc = job.incidentId;
+  p.authorize(ctx, hash, org, inc, "scope:edit", at);
+  const decision = text(d, "decision"),
+    justification = text(d, "justification", 2000).trim();
+  if (
+    !["Accept", "Reject"].includes(decision) ||
+    d.status !== content.proposedStatus
+  )
+    return p.fail(
+      "INVALID_INPUT",
+      "Review only the proposed unverified Scope state; confirmation is a separate Scope action.",
+    );
+  const fingerprint = canonical({
+    decision,
+    justification,
+    status: content.proposedStatus,
+    actor,
+    type: "assessment",
+  });
+  if (proposal.status !== "Pending") {
+    if (proposal.decisionFingerprint === fingerprint)
+      return {
+        status: proposal.status,
+        assessmentId:
+          proposal.status === "Accepted" ? content.assessmentId : "",
+      };
+    return p.fail("CONFLICT", "Proposal was already reviewed.");
+  }
+  const base = impactBases(ctx, job).find(
+    (c) => c.candidateKey === content.candidateKey,
+  );
+  if (
+    !base ||
+    canonical({
+      ...base,
+      previousAssessment: content.previousAssessment,
+      manualReason: content.manualReason,
+    }) !== canonical(content)
+  )
+    return p.fail("INVALID_INPUT", "Impact evidence no longer validates.");
+  let assessmentId = "";
+  if (decision === "Accept") {
+    const reason = assessmentManualReason(ctx, content);
+    if (reason) return p.fail("CONFLICT", reason);
+    scopeEntity(ctx, org, inc, content.entityId, p);
+    const result = scopeCommand(
+      ctx,
+      "scope.assessment",
+      hash,
+      {
+        organizationId: org,
+        incidentId: inc,
+        entityId: content.entityId,
+        dimension: content.dimension,
+        status: content.proposedStatus,
+        description: `${content.claim}\nLimitations: ${content.uncertainty}\nMissing information: ${content.missingInformation}`,
+        justification,
+        evidenceIds: [...new Set(content.citations.map((c) => c.evidenceId))],
+        findingId: "",
+        annotation: `Reviewed investigation proposal ${proposal.id}; ${content.toolVersion}`,
+        excerpt: "",
+      },
+      p,
+    ) as { assessmentId: string };
+    assessmentId = result.assessmentId;
+  }
+  ctx.db.analysisProposals.id.update({
+    ...proposal,
+    status: decision === "Accept" ? "Accepted" : "Rejected",
+    reviewerId: actor,
+    justification,
+    decisionFingerprint: fingerprint,
+    reviewedAt: at,
+  });
+  appendEvent(
+    ctx,
+    org,
+    inc,
+    actor,
+    "scope",
+    `Impact proposal ${decision === "Accept" ? "accepted" : "rejected"}`,
+    justification,
+    {
+      evidenceIds: json([
+        ...new Set(content.citations.map((c) => c.evidenceId)),
+      ]),
+      newValue: json({
+        proposalId: proposal.id,
+        agentRunId: job.id,
+        assessmentId,
+        dimension: content.dimension,
+        status: content.proposedStatus,
+      }),
+    },
+  );
+  return {
+    status: decision === "Accept" ? "Accepted" : "Rejected",
+    assessmentId,
+  };
 }

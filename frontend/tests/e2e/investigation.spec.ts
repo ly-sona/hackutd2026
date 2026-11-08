@@ -66,8 +66,16 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
   await expect(
     page.getByRole("heading", { name: "Investigation", exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("HR Records", { exact: true })).toBeDisabled();
-  await expect(page.getByLabel("Payroll", { exact: true })).toBeDisabled();
+  await page.getByRole("tab", { name: "Evidence", exact: true }).click();
+  await page
+    .getByText("Planned connectors · unavailable", { exact: true })
+    .click();
+  await expect(
+    page.getByText("HR Records · Unavailable", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Payroll · Unavailable", { exact: true }),
+  ).toBeVisible();
   await expect(
     page
       .getByRole("navigation", { name: "Incident navigation" })
@@ -76,7 +84,7 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
   const live = await connection(context);
   try {
     await page
-      .getByRole("button", { name: "Start analysis", exact: true })
+      .getByRole("button", { name: "Collect sources", exact: true })
       .click();
     await expect
       .poll(() => live.rows<InvestigationRun>("run", incidentId).length)
@@ -152,7 +160,9 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
     await page
       .getByRole("link", { name: "Open Investigation", exact: true })
       .click();
+    await page.getByRole("tab", { name: "Activity", exact: true }).click();
     await expect(page.getByTestId("run-status")).toHaveText("Complete");
+    await page.getByRole("tab", { name: "Evidence", exact: true }).click();
     await page
       .getByRole("button", { name: "Customer Records / CRM", exact: true })
       .click();
@@ -483,10 +493,16 @@ test("enforces scopes, role permissions, immutable operation identities, and pri
     await privatePage.goto(
       `/org/acme/incidents/${scope.incidentId}/investigation`,
     );
+    await privatePage
+      .getByRole("tab", { name: "Evidence", exact: true })
+      .click();
     await expect(
-      privatePage.getByText("Collection requires evidence upload/view", {
-        exact: false,
-      }),
+      privatePage.getByText(
+        "Collection requires current evidence and Scope permissions.",
+        {
+          exact: false,
+        },
+      ),
     ).toBeVisible();
     expect(
       (

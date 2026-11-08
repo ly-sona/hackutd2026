@@ -186,6 +186,11 @@ export function investigationCommand(
       return {
         rows: changes.slice(offset, offset + limit),
         total: changes.length,
+        counts: Object.fromEntries(
+          ["added", "modified", "missing", "unchanged", "uncompared"].map(
+            (kind) => [kind, changes.filter((c) => c.kind === kind).length],
+          ),
+        ),
         coverage: current.coverage,
         snapshots: pair.map(({ storageReference, ...s }) => ({
           ...s,
@@ -1039,7 +1044,12 @@ export function investigationProjection(
         fingerprint,
         operationKey,
         ...r
-      }) => emit("run", r.id, r),
+      }) =>
+        emit("run", r.id, {
+          ...r,
+          observationCount: [...ctx.db.analysisObservations.runId.filter(r.id)]
+            .length,
+        }),
     );
     return [
       ...(meta ? [emit("metadata", k, meta)] : []),
@@ -1050,6 +1060,12 @@ export function investigationProjection(
           collectedSnapshots: latestSnapshots.filter(
             (item) => item.sourceId === s.id && item.status === "Finalized",
           ).length,
+          snapshotTime: latestSnapshots.find(
+            (item) =>
+              item.sourceId === s.id &&
+              item.role === "current" &&
+              item.status === "Finalized",
+          )?.collectedAt,
           recordCount: latestSnapshots.find(
             (item) =>
               item.sourceId === s.id &&

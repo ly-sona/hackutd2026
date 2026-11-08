@@ -92,7 +92,7 @@ test("real model investigates changed fixture bytes; human acceptance populates 
     );
     await page.goto(`/org/acme/incidents/${scope.incidentId}/investigation`);
     await page
-      .getByRole("button", { name: "Run investigation agent", exact: true })
+      .getByRole("button", { name: "Run Investigation", exact: true })
       .click();
     let live = await connection(context);
     try {
@@ -117,7 +117,9 @@ test("real model investigates changed fixture bytes; human acceptance populates 
       live.conn.disconnect();
       live = await connection(context);
       await page.reload();
+      await page.getByRole("tab", { name: "Activity", exact: true }).click();
       await expect(page.getByTestId("agent-status")).toContainText("Complete");
+      await page.getByRole("tab", { name: /^Findings/ }).click();
       const details = await post(context.request, "investigation", {
         ...scope,
         action: "agent.read",
@@ -147,6 +149,7 @@ test("real model investigates changed fixture bytes; human acceptance populates 
           (r) => r.incidentId === scope.incidentId && r.kind === "finding",
         );
       expect(findings()).toHaveLength(0);
+      await page.getByTestId(`proposal-row-${proposal.id}`).click();
       await page
         .getByLabel("Review justification", { exact: true })
         .first()
@@ -160,6 +163,10 @@ test("real model investigates changed fixture bytes; human acceptance populates 
       await expect(page.getByTestId("agent-proposal").first()).toContainText(
         "Accepted",
       );
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Close", exact: true })
+        .click();
       await expect.poll(() => findings().length).toBe(1);
       const finding = JSON.parse(findings()[0].body) as {
         id: string;
@@ -355,19 +362,17 @@ test("backend rejects unsupported tools/citations, enforces human review, and pr
   const live = await connection(context);
   try {
     await page.goto(`/org/acme/incidents/${scope.incidentId}/investigation`);
+    await page.getByTestId(`proposal-row-${proposalId}`).click();
     await page
       .getByLabel("Review justification", { exact: true })
       .fill(decision.justification);
     // Match the exact displayed intent of the backend retry below.
     await page
-      .getByLabel(
-        "Link the finding to this existing Scope dataset as Suspected:",
-        { exact: false },
-      )
+      .getByLabel("Link this finding to its existing Scope dataset", {
+        exact: false,
+      })
       .uncheck();
-    await page
-      .getByRole("button", { name: "Reject proposal", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Reject", exact: true }).click();
     await expect(page.getByTestId("agent-proposal")).toContainText("Rejected");
     const events = () =>
       [...live.conn.db.visibleIncidentData.iter()].filter(
@@ -424,6 +429,7 @@ test("model unavailable keeps deterministic results and desktop dashboard usable
     });
   }
   await page.goto(`/org/acme/incidents/${scope.incidentId}/investigation`);
+  await page.getByRole("tab", { name: "Activity", exact: true }).click();
   await expect(page.getByTestId("agent-status")).toContainText("Unavailable");
   await expect(
     page.getByRole("region", { name: "Processing milestones" }),

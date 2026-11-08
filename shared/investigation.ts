@@ -327,6 +327,7 @@ export function analyzeSnapshot(
   return { changes, observations };
 }
 export interface InvestigationRun {
+  observationCount?: number;
   id: string;
   status: string;
   collectionStatus: string;
@@ -348,4 +349,5 @@ export interface InvestigationSource {
   status: string;
   collectedSnapshots?: number;
   recordCount?: number;
+  snapshotTime?: string;
 }
