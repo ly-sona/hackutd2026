@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { AgentInvestigationPanel } from "./agent-investigation-panel";
 import { useEffect, useRef, useState } from "react";
 import { connectors, type Change } from "../../shared/investigation";
 import { useAccess } from "./workspace-provider";
@@ -302,7 +303,7 @@ export function InvestigationWorkspace() {
                 <div>
                   <dt className="text-sm">Agent investigation</dt>
                   <dd className="mt-2 text-sm text-muted-foreground">
-                    Not configured · Deterministic results remain available
+                    {run.agentStatus} · Deterministic results remain available
                   </dd>
                 </div>
               </dl>
@@ -338,6 +339,7 @@ export function InvestigationWorkspace() {
               )}
             </section>
           )}
+          {run && <AgentInvestigationPanel run={run} />}
           {canDetails && readReady && (
             <section className="my-6 rounded-lg border border-border p-5">
               <h2 className="text-lg font-semibold">Source comparisons</h2>

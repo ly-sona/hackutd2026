@@ -1,3 +1,4 @@
+import { processNextAgentJob } from "../frontend/lib/server/investigation/agent";
 import { processNextJob } from "../frontend/lib/server/investigation/runner";
 // The supervisor supplies only the worker credential, not the application gateway token.
 delete process.env.SPACETIMEDB_SERVER_TOKEN;
@@ -10,6 +11,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const)
 do {
   try {
     await processNextJob();
+    await processNextAgentJob();
   } catch {
     console.error(
       "Investigation worker attempt interrupted; persisted jobs remain recoverable.",

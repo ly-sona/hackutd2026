@@ -98,6 +98,53 @@ export const analysisObservations = table(
     provenance: t.string(),
   },
 );
+
+// Independent immutable manifest and execution checkpoint; no session secret.
+export const agentRuns = table(
+  {},
+  {
+    id: t.string().primaryKey(),
+    ...incident,
+    collectionRunId: t.string().index("btree"),
+    operationKey: t.string().unique(),
+    fingerprint: t.string(),
+    actorId: t.string(),
+    membershipRevision: t.string(),
+    assignmentRevision: t.string(),
+    deadline: t.u64(),
+    manifest: t.string(),
+    context: t.string(),
+    status: t.string(),
+    error: t.string(),
+    model: t.string(),
+    modelEndpoint: t.string(),
+    promptVersion: t.string(),
+    requests: t.u32(),
+    attempts: t.u32(),
+    trace: t.string(),
+    leaseToken: t.string(),
+    leaseUntil: t.u64(),
+    createdAt: t.u64(),
+    updatedAt: t.u64(),
+  },
+);
+export const analysisProposals = table(
+  {},
+  {
+    id: t.string().primaryKey(),
+    ...incident,
+    agentRunId: t.string().index("btree"),
+    content: t.string(),
+    status: t.string(),
+    reviewerId: t.string(),
+    justification: t.string(),
+    decisionFingerprint: t.string(),
+    findingId: t.string(),
+    relationshipId: t.string(),
+    createdAt: t.u64(),
+    reviewedAt: t.u64(),
+  },
+);
 export const investigationTables = {
   incidentInvestigations,
   investigationSources,
@@ -105,4 +152,6 @@ export const investigationTables = {
   sourceSnapshots,
   snapshotRecordVersions,
   analysisObservations,
+  agentRuns,
+  analysisProposals,
 };

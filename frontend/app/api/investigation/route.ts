@@ -1,6 +1,16 @@
 import { NextRequest } from "next/server";
 import { sessionHash } from "@/lib/server/session";
-import { AccessError, command } from "@/lib/server/gateway";
+import { readEvidence } from "@/lib/server/evidence-store";
+import type {
+  ReviewedProposal,
+  GroundedProposal,
+} from "../../../../shared/agent-investigation";
+import {
+  AccessError,
+  command,
+  withGateway,
+  unwrap,
+} from "@/lib/server/gateway";
 import {
   boundedBody,
   incidentError,
@@ -21,8 +31,44 @@ export async function POST(request: NextRequest) {
     if (!body || typeof body !== "object" || Array.isArray(body))
       throw new AccessError("INVALID_INPUT", "Invalid request.");
     const data = body as Record<string, unknown>;
-    if (!["start", "cancel", "read"].includes(String(data.action)))
+    if (
+      ![
+        "start",
+        "cancel",
+        "read",
+        "agent.start",
+        "agent.cancel",
+        "agent.read",
+        "agent.review",
+      ].includes(String(data.action))
+    )
       throw new AccessError("INVALID_INPUT", "Unknown investigation action.");
+    if (data.action === "agent.review" && data.decision === "Accept") {
+      const result = await command<{ rows: ReviewedProposal[] }>(
+        "investigation.agent.read",
+        hash,
+        { ...data, offset: 0, limit: 50 },
+      );
+      const proposal = result.rows.find((p) => p.id === data.proposalId);
+      if (!proposal)
+        throw new AccessError("NOT_FOUND", "Proposal unavailable.");
+      const content = JSON.parse(proposal.content) as GroundedProposal;
+      for (const evidenceId of new Set(
+        content.citations.map((c) => c.evidenceId),
+      )) {
+        const original = await withGateway(async (conn) =>
+          unwrap<{ storageReference: string; sha256: string }>(
+            await conn.procedures.evidenceDescriptor({
+              sessionHash: hash,
+              evidenceId,
+            }),
+          ),
+        );
+        await readEvidence(original.storageReference, original.sha256);
+      }
+      // The command below rechecks current human/source/destination authority
+      // after private file I/O, and atomically persists the reviewed result.
+    }
     return incidentResponse(
       await command(`investigation.${data.action}`, hash, data),
     );

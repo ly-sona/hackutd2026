@@ -341,7 +341,20 @@ export function investigationCommand(
 }
 
 // Job authority is independent of session lifetime and cannot survive permission regrant.
-function eligible(ctx: Reader, run: Run, at: bigint) {
+export function eligible(
+  ctx: Reader,
+  run: Pick<
+    Run,
+    | "organizationId"
+    | "incidentId"
+    | "incidentKey"
+    | "actorId"
+    | "membershipRevision"
+    | "assignmentRevision"
+    | "deadline"
+  >,
+  at: bigint,
+) {
   const member = ctx.db.memberships.id.find(
       `${run.organizationId}:${run.actorId}`,
     ),

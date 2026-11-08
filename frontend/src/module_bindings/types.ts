@@ -34,6 +34,35 @@ export const AccessTimer = __t.object("AccessTimer", {
 });
 export type AccessTimer = __Infer<typeof AccessTimer>;
 
+export const AgentRuns = __t.object("AgentRuns", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  collectionRunId: __t.string(),
+  operationKey: __t.string(),
+  fingerprint: __t.string(),
+  actorId: __t.string(),
+  membershipRevision: __t.string(),
+  assignmentRevision: __t.string(),
+  deadline: __t.u64(),
+  manifest: __t.string(),
+  context: __t.string(),
+  status: __t.string(),
+  error: __t.string(),
+  model: __t.string(),
+  modelEndpoint: __t.string(),
+  promptVersion: __t.string(),
+  requests: __t.u32(),
+  attempts: __t.u32(),
+  trace: __t.string(),
+  leaseToken: __t.string(),
+  leaseUntil: __t.u64(),
+  createdAt: __t.u64(),
+  updatedAt: __t.u64(),
+});
+export type AgentRuns = __Infer<typeof AgentRuns>;
+
 export const AnalysisObservations = __t.object("AnalysisObservations", {
   id: __t.string(),
   organizationId: __t.string(),
@@ -48,6 +77,24 @@ export const AnalysisObservations = __t.object("AnalysisObservations", {
   provenance: __t.string(),
 });
 export type AnalysisObservations = __Infer<typeof AnalysisObservations>;
+
+export const AnalysisProposals = __t.object("AnalysisProposals", {
+  id: __t.string(),
+  organizationId: __t.string(),
+  incidentId: __t.string(),
+  incidentKey: __t.string(),
+  agentRunId: __t.string(),
+  content: __t.string(),
+  status: __t.string(),
+  reviewerId: __t.string(),
+  justification: __t.string(),
+  decisionFingerprint: __t.string(),
+  findingId: __t.string(),
+  relationshipId: __t.string(),
+  createdAt: __t.u64(),
+  reviewedAt: __t.u64(),
+});
+export type AnalysisProposals = __Infer<typeof AnalysisProposals>;
 
 export const AnalysisRuns = __t.object("AnalysisRuns", {
   id: __t.string(),

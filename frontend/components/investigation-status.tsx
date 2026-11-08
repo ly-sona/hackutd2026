@@ -27,7 +27,8 @@ export function InvestigationStatus() {
       {d.run && (
         <span>
           Collection: {d.run.collectionStatus} · Deterministic analysis:{" "}
-          {d.run.deterministicStatus} · Agent: Not configured
+          {d.run.deterministicStatus} · Agent: {d.run.agentStatus}
+          {d.agent?.pending ? ` · ${d.agent.pending} awaiting review` : ""}
         </span>
       )}
     </div>

@@ -1,6 +1,6 @@
 # Addition A: incident intake and deterministic processing
 
-Addition A adds a contextual Investigation workspace and synthetic snapshot processing. It does not include a model, proposals, proposal review, continuous collection, task generation, recovery recommendations, or new report formats. Additions B and C remain unimplemented.
+Addition A adds a contextual Investigation workspace and synthetic snapshot processing. It does not include a model, proposals, proposal review, continuous collection, task generation, recovery recommendations, or new report formats. Addition B now supplies the separate model/review workflow described in [investigation-b.md](investigation-b.md). Addition C remains unimplemented.
 
 ## Using the workspace
 
@@ -12,7 +12,7 @@ Collection is explicitly simulated. Parsing, validation, hashes, original preser
 
 The optional baseline checkbox permits current-snapshot processing without comparisons. Those records are **uncompared**, never unchanged or clean. A baseline is preserved evidence with unverified provenance; matching it does not establish source trust. Missing export entries do not establish deletion. Original timestamps are source-reported observations, separate from ingestion time.
 
-Collection and deterministic analysis have separate persisted milestones. Agent status is **Not configured**. Source registration creates source-specific staged inventory and explicit incident associations using existing Scope tables, but no findings or compromise/impact confirmations. Inventory counts describe staged exports, not the entire corporate database or affected population. Detailed paginated comparisons and observations require current evidence and record access. Existing evidence preview routes serve hash-checked originals; no private storage references reach browser projections.
+Collection and deterministic analysis have separate persisted milestones. Before launching an agent pass, agent status is **Not configured**; Addition B now supplies a separate independent agent status. Source registration creates source-specific staged inventory and explicit incident associations using existing Scope tables, but no findings or compromise/impact confirmations. Inventory counts describe staged exports, not the entire corporate database or affected population. Detailed paginated comparisons and observations require current evidence and record access. Existing evidence preview routes serve hash-checked originals; no private storage references reach browser projections.
 
 ## Durable execution and authority
 

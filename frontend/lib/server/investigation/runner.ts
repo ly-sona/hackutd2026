@@ -48,7 +48,10 @@ export async function workerCall<T>(
   }
 }
 // Checkpoints and originals are owned by the DB/private store, never this process.
-export async function processJob(job: WorkerJob) {
+export async function processJob(
+  job: WorkerJob,
+  collect: typeof collectSnapshot = collectSnapshot,
+) {
   const base = { runId: job.run.id, leaseToken: job.run.leaseToken };
   let sourceId: string | undefined;
   try {
@@ -65,7 +68,7 @@ export async function processJob(job: WorkerJob) {
           role,
         });
         if (snapshot.status === "Finalized") continue;
-        const { bytes, data } = await collectSnapshot(
+        const { bytes, data } = await collect(
           source.connectorId,
           snapshot.revision,
         );

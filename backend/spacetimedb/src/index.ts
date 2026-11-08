@@ -1,3 +1,9 @@
+import {
+  agentCommand,
+  agentWorker,
+  agentProjection,
+  processAgentJobs,
+} from "./agent-domain";
 import { recoveryTables } from "./recovery-schema";
 import { investigationTables } from "./investigation-schema";
 import {
@@ -497,6 +503,14 @@ function execute(
   data: Record<string, unknown>,
 ): unknown {
   const at = now(ctx);
+  if (action.startsWith("investigation.agent."))
+    return agentCommand(ctx, action, hash, data, {
+      authorize,
+      activeMember,
+      fail: (code, message): never => {
+        throw new Denied(code, message);
+      },
+    });
   if (action.startsWith("investigation."))
     return investigationCommand(ctx, action, hash, data, {
       authorize,
@@ -1395,6 +1409,7 @@ export const expire_access = db.reducer(
     processPages(ctx);
     processRecovery(ctx);
     processInvestigations(ctx);
+    processAgentJobs(ctx);
     for (const row of ctx.db.commandResults.iter())
       if (row.createdAt.microsSinceUnixEpoch / 1000n + 60000n < at)
         ctx.db.commandResults.id.delete(row.id);
@@ -1540,7 +1555,13 @@ export const visible_recovery_data = db.view(
 export const visible_investigation_data = db.view(
   { public: true },
   t.array(incidentDataRow),
-  (ctx) => investigationProjection(ctx, browserAccess(ctx)),
+  (ctx) => {
+    const access = browserAccess(ctx);
+    return [
+      ...investigationProjection(ctx, access),
+      ...access.flatMap((a) => agentProjection(ctx, a)),
+    ];
+  },
 );
 // Separate identity: it cannot use access_command, credentials, sessions or approval reducers.
 export const investigation_worker = db.procedure(
@@ -1566,7 +1587,9 @@ export const investigation_worker = db.procedure(
         data = parsed as Record<string, unknown>;
         return serialize({
           ok: true,
-          data: investigationWorker(tx, args.action, data, {
+          data: (args.action.startsWith("agent.")
+            ? agentWorker
+            : investigationWorker)(tx, args.action, data, {
             authorize,
             activeMember,
             fail: (code, message): never => {
@@ -1582,9 +1605,11 @@ export const investigation_worker = db.procedure(
             : caught;
         if (!(error instanceof Denied)) throw error;
         const run =
-          typeof data.runId === "string"
-            ? tx.db.analysisRuns.id.find(data.runId)
-            : undefined;
+          typeof data.agentRunId === "string"
+            ? tx.db.agentRuns.id.find(data.agentRunId)
+            : typeof data.runId === "string"
+              ? tx.db.analysisRuns.id.find(data.runId)
+              : undefined;
         audit(
           tx,
           run?.organizationId ?? "",
