@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
+import { InvestigationChanges } from "./investigation-changes";
 import { EvidenceButton } from "./evidence-panel";
 import {
   isImpact,
@@ -51,7 +52,7 @@ export function ProposalRows({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="divide-y divide-border border-y border-border">
+    <div className="space-y-3">
       {rows.map((p) => {
         const c = JSON.parse(p.content) as InvestigationProposal,
           impact = isImpact(c);
@@ -60,7 +61,7 @@ export function ProposalRows({
             key={p.id}
             type="button"
             onClick={() => onSelect(p.id)}
-            className="flex w-full items-start justify-between gap-6 py-4 text-left hover:bg-muted/20"
+            className="flex w-full items-start justify-between gap-6 rounded-md py-4 text-left hover:bg-muted/15"
             data-testid={`proposal-row-${p.id}`}
           >
             <div className="min-w-0">
@@ -69,7 +70,7 @@ export function ProposalRows({
                   {impact ? "Impact assessment" : "Agent interpretation"}
                 </span>
                 <span
-                  className={p.status === "Pending" ? "text-amber-300" : ""}
+                  className={`rounded px-2 py-0.5 ${p.status === "Pending" ? "text-amber-300" : p.status === "Accepted" ? "text-emerald-400" : "text-muted-foreground"}`}
                 >
                   {p.status === "Pending" ? "Needs review" : p.status}
                 </span>
@@ -140,7 +141,13 @@ function ProposalReview({
   const [inspection, setInspection] = useState<Inspection>(),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [result, setResult] = useState("");
+    [result, setResult] = useState(""),
+    [accepted, setAccepted] = useState<{
+      findingId?: string;
+      relationshipId?: string;
+      assessmentId?: string;
+    }>(),
+    [taskId, setTaskId] = useState<string>();
   const [justification, setJustification] = useState(""),
     [classification, setClassification] = useState("Suspected"),
     [linkScope, setLinkScope] = useState(a.can("scope:edit"));
@@ -168,7 +175,11 @@ function ProposalReview({
     setBusy(true);
     setError("");
     try {
-      await api("investigation", {
+      const applied = await api<{
+        findingId?: string;
+        relationshipId?: string;
+        assessmentId?: string;
+      }>("investigation", {
         action: "agent.review",
         organizationId: a.organizationId,
         incidentId: a.incidentId,
@@ -179,6 +190,7 @@ function ProposalReview({
         status: impact ? content.proposedStatus : classification,
         linkScope: impact ? false : linkScope,
       });
+      if (decision === "Accept") setAccepted(applied);
       setResult(
         decision === "Reject"
           ? "Proposal rejected. The evidence and decision history are retained."
@@ -204,6 +216,7 @@ function ProposalReview({
         agentRunId: p.agentRunId,
         proposalId: p.id,
       });
+      setTaskId(result.taskId);
       setResult(
         `Follow-up investigation task created: ${result.taskId}. Open Team to continue; recovery approvals remain separate.`,
       );
@@ -384,6 +397,7 @@ function ProposalReview({
             </label>
             <div className="mt-3 flex items-center gap-3">
               <Button
+                className="!h-8 !px-3 !text-sm"
                 disabled={
                   busy ||
                   !justification.trim() ||
@@ -395,6 +409,7 @@ function ProposalReview({
                 {impact ? "Accept assessment" : "Accept proposal"}
               </Button>
               <Button
+                className="!h-8 !px-3 !text-sm"
                 variant="outline"
                 disabled={busy || !justification.trim()}
                 onClick={() => review("Reject")}
@@ -412,8 +427,15 @@ function ProposalReview({
             {p.status === "Pending" &&
               !canReview &&
               " · Your current permissions do not allow this review."}
-            {p.status === "Accepted" && (
-              <div className="my-3 space-y-3">
+            {(p.status === "Accepted" || accepted) && (
+              <div className="my-4 space-y-3">
+                <h3 className="text-sm font-semibold">Applied to incident</h3>
+                <InvestigationChanges
+                  content={content}
+                  findingId={accepted?.findingId || p.findingId}
+                  relationshipId={accepted?.relationshipId || p.relationshipId}
+                  taskId={taskId}
+                />
                 <p className="text-xs text-muted-foreground">
                   Recommended next step: verify relevant source authenticity,
                   access and dependencies before requesting recovery. This
@@ -422,6 +444,7 @@ function ProposalReview({
                 <div className="flex flex-wrap items-center gap-4">
                   {a.can("tasks:create") && (
                     <Button
+                      className="!h-8 !px-3 !text-sm"
                       size="sm"
                       variant="outline"
                       disabled={busy}
@@ -440,19 +463,11 @@ function ProposalReview({
                     className="underline"
                     href={`${incidentBase(a.organizationId, a.incidentId)}/operations`}
                   >
-                    Recovery and report workflows
+                    Generate report or review recovery
                   </Link>
                 </div>
               </div>
             )}
-            <div className="mt-2 flex gap-4">
-              <Link
-                className="underline"
-                href={`${incidentBase(a.organizationId, a.incidentId)}/${impact ? `scope?entity=${encodeURIComponent(content.entityId)}` : "overview"}`}
-              >
-                {impact ? "View assessment in Scope" : "View incident finding"}
-              </Link>
-            </div>
           </div>
         )}
         {error && (

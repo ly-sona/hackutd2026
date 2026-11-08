@@ -12,6 +12,10 @@ import {
 import {
   groundProposal,
   validateTool,
+  resolveModelProposals,
+  resolveModelEvidence,
+  modelRecordReferences,
+  agentToolsFor,
   type AgentObservation,
   type Citation,
 } from "../../shared/agent-investigation";
@@ -80,9 +84,102 @@ function scenario() {
       (c) => records.get(`${c.snapshotId}:${c.key}`)!,
       (s) => `${s}:dataset`,
     );
-  return { p, ground, records };
+  return { p, ground, records, observations };
 }
 describe("evidence-grounded agent contract", () => {
+  it("offers only real cited record/snapshot pairs, with no evidence tool before inspection", () => {
+    const { observations, p } = scenario();
+    expect(
+      agentToolsFor([]).some((t) => t.function.name === "parse_evidence"),
+    ).toBe(false);
+    const tool = agentToolsFor(observations).find(
+      (t) => t.function.name === "parse_evidence",
+    )!;
+    expect(tool.function.parameters).toMatchObject({
+      properties: { recordRef: { enum: modelRecordReferences(observations) } },
+    });
+    for (const ref of p.citations)
+      expect(
+        resolveModelEvidence(
+          { recordRef: `${ref.snapshotId}:${ref.key}` },
+          observations,
+        ),
+      ).toEqual({ snapshotId: ref.snapshotId, key: ref.key });
+  });
+  it("rejects a real record key paired with the wrong source snapshot", () => {
+    const { observations } = scenario();
+    expect(() =>
+      resolveModelEvidence({ recordRef: "network-1:AUTH-002" }, observations),
+    ).toThrow("Do not invent record/snapshot pairs");
+    expect(() =>
+      resolveModelEvidence(
+        { snapshotId: "network-1", key: "AUTH-002" },
+        observations,
+      ),
+    ).toThrow("Invalid object fields");
+  });
+  it("does not offer a baseline record for an event absent from the baseline", () => {
+    const { observations } = scenario();
+    const currentOnly = observations.map((o) => ({
+      ...o,
+      provenance: JSON.stringify(
+        (JSON.parse(o.provenance) as Citation[]).filter((ref) =>
+          ref.snapshotId.endsWith("-1"),
+        ),
+      ),
+    }));
+    expect(
+      modelRecordReferences(currentOnly).every((ref) => !ref.includes("-0:")),
+    ).toBe(true);
+    expect(() =>
+      resolveModelEvidence({ recordRef: "network-0:NET-002" }, currentOnly),
+    ).toThrow("Do not invent record/snapshot pairs");
+  });
+  it("resolves model-selected leads to exact inspected citations and retains backend grounding", () => {
+    const { p, observations, ground } = scenario();
+    const { citations, ...selection } = p;
+    const result = resolveModelProposals(
+      { proposals: [selection] },
+      observations,
+    );
+    expect(result.proposals[0].citations).toEqual(citations);
+    expect(ground(result.proposals[0]).correlated).toBe(true);
+  });
+  it("rejects model-supplied citation replacements instead of accepting fabricated hashes", () => {
+    const { p, observations } = scenario();
+    expect(() =>
+      resolveModelProposals({ proposals: [p] }, observations),
+    ).toThrow("Invalid object fields");
+  });
+  it("cannot resolve uninspected observation IDs", () => {
+    const { p } = scenario();
+    const selection = {
+      observationIds: p.observationIds,
+      priority: p.priority,
+      interpretation: p.interpretation,
+    };
+    expect(() => resolveModelProposals({ proposals: [selection] }, [])).toThrow(
+      "returned by detect_anomalies",
+    );
+  });
+  it("provides a precise correction when interpretation and primary observation disagree", () => {
+    const { p, observations } = scenario();
+    const selection = {
+      observationIds: p.observationIds,
+      priority: p.priority,
+      interpretation: p.interpretation,
+    };
+    expect(() =>
+      resolveModelProposals(
+        {
+          proposals: [
+            { ...selection, interpretation: "Investigate account activity" },
+          ],
+        },
+        observations,
+      ),
+    ).toThrow('requires interpretation "Investigate containment"');
+  });
   it("returns exact authorized citations for a bounded model correction without accepting the invalid claim", () => {
     const { p, ground } = scenario();
     const bad = structuredClone(p);

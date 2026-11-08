@@ -1,3 +1,4 @@
+import { queueAuthorizedAgent } from "./agent-domain";
 import {
   analyzeIncremental,
   collectionManifest,
@@ -288,6 +289,9 @@ export function investigationCommand(
     return p.fail("INVALID_INPUT", "Select implemented P0 connectors only.");
   if (d.useBaseline !== undefined && typeof d.useBaseline !== "boolean")
     return p.fail("INVALID_INPUT", "Invalid baseline choice.");
+  if (d.autoInvestigate !== undefined && typeof d.autoInvestigate !== "boolean")
+    return p.fail("INVALID_INPUT", "Invalid automatic investigation choice.");
+  const autoInvestigate = d.autoInvestigate === true;
   const useBaseline = refresh || d.useBaseline !== false;
   const ids = [...selected].sort() as string[],
     fingerprint = json({
@@ -297,6 +301,7 @@ export function investigationCommand(
       revision,
       previousRunId: refresh ? previous?.id : undefined,
       previousSnapshots,
+      ...(autoInvestigate ? { autoInvestigate: true } : {}),
       useBaseline,
     }),
     operationKey = `${actor.userId}:${operationId}`;
@@ -305,6 +310,7 @@ export function investigationCommand(
     if (
       refresh
         ? collectionManifest(old).previousRunId !== d.runId ||
+          !!collectionManifest(old).autoInvestigate !== autoInvestigate ||
           old.incidentKey !== k
         : old.fingerprint !== fingerprint
     )
@@ -377,7 +383,7 @@ export function investigationCommand(
     status: "Queued",
     collectionStatus: "Queued",
     deterministicStatus: "Not started",
-    agentStatus: "Not configured",
+    agentStatus: autoInvestigate ? "Awaiting collection" : "Not configured",
     completedSnapshots: 0,
     expectedSnapshots: sourceIds.length * (useBaseline && !refresh ? 2 : 1),
     analyzedSources: 0,
@@ -894,6 +900,22 @@ export function investigationWorker(
     if (complete) {
       registerDependencyContext(ctx, run);
       finishReassessment(ctx, run);
+      if (collectionManifest(run).autoInvestigate) {
+        const finished = ctx.db.analysisRuns.id.find(run.id)!;
+        const deadline = at + 600_000n;
+        queueAuthorizedAgent(
+          ctx,
+          finished,
+          {
+            actorId: run.actorId,
+            membershipRevision: run.membershipRevision,
+            assignmentRevision: run.assignmentRevision,
+          },
+          `${run.incidentKey}:auto-agent:${run.id}`,
+          run.deadline < deadline ? run.deadline : deadline,
+        );
+        ctx.db.analysisRuns.id.update({ ...finished, agentStatus: "Queued" });
+      }
     }
     const counts = Object.fromEntries(
       ["added", "modified", "missing", "unchanged", "uncompared"].map(
@@ -1128,6 +1150,8 @@ export function investigationProjection(
           ...r,
           revision: collectionManifest({ fingerprint }).revision,
           previousRunId: collectionManifest({ fingerprint }).previousRunId,
+          autoInvestigate: !!collectionManifest({ fingerprint })
+            .autoInvestigate,
           observationCount: [...ctx.db.analysisObservations.runId.filter(r.id)]
             .length,
         }),

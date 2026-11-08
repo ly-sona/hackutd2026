@@ -171,6 +171,7 @@ test("later actual evidence drives a real agent review, Scope, follow-up task an
       }),
     );
     await page.reload();
+    await page.getByText("Snapshot changes", { exact: false }).click();
     await expect(page.getByTestId("reassessment-summary")).toContainText(
       "missing",
     );
@@ -231,9 +232,6 @@ test("later actual evidence drives a real agent review, Scope, follow-up task an
           ).length,
       )
       .toBeGreaterThan(0);
-    await page
-      .getByRole("button", { name: "Run Investigation", exact: true })
-      .click();
     await expect
       .poll(() => live.rows<{ id: string }>("agent", scope.incidentId).length)
       .toBe(1);
@@ -377,8 +375,10 @@ test("later actual evidence drives a real agent review, Scope, follow-up task an
     await page.getByLabel("Snapshot history").selectOption(initial.runId);
     await expect(
       page.getByRole("button", { name: "Run Investigation", exact: true }),
-    ).toBeDisabled();
-    await page.getByRole("tab", { name: "Evidence", exact: true }).click();
+    ).toHaveCount(0);
+    await page
+      .getByText("Source snapshots and comparisons", { exact: false })
+      .click();
     await page
       .getByRole("button", { name: "Customer Records / CRM", exact: true })
       .click();

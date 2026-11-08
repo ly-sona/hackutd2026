@@ -69,6 +69,7 @@ export function InvestigationEvidence({
         incidentId: a.incidentId,
         connectorIds: selected,
         useBaseline: baseline,
+        autoInvestigate: true,
         operationId: operation.current,
       });
       operation.current = undefined;
@@ -104,21 +105,26 @@ export function InvestigationEvidence({
   return (
     <section aria-label="Investigation evidence">
       <div className="mb-5">
-        <h2 className="text-lg font-semibold">Evidence sources</h2>
+        <h2 className="text-lg font-semibold">
+          {!run || (retry && !run.previousRunId)
+            ? "Connect evidence sources"
+            : "Evidence sources"}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Simulated connectors collect versioned plain-text snapshots. Source
-          trust remains unverified.
+          {!run || (retry && !run.previousRunId)
+            ? "Choose sources, then start. Connectors collect and compare snapshots, and the agent investigates automatically. You review the results."
+            : "Preserved source snapshots and computed comparisons. Source trust remains unverified."}
         </p>
       </div>
       {!run || (retry && !run.previousRunId) ? (
         <>
-          <div className="divide-y divide-border border-y border-border">
+          <div className="space-y-2">
             {connectors
               .filter((c) => c.implemented)
               .map((c) => (
                 <label
                   key={c.id}
-                  className="flex cursor-pointer items-center justify-between gap-5 py-4"
+                  className="flex cursor-pointer items-center justify-between gap-5 rounded-lg bg-muted/20 px-4 py-3"
                 >
                   <span className="flex items-center gap-3">
                     <input
@@ -137,23 +143,31 @@ export function InvestigationEvidence({
                     />
                     <span className="text-sm font-medium">{c.name}</span>
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    Baseline + collected snapshot
-                  </span>
                 </label>
               ))}
           </div>
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={baseline}
-                onChange={(e) => setBaseline(e.target.checked)}
-                disabled={!canCollect || busy}
-              />
-              Compare with supplied baseline · provenance unverified
-            </label>
+          <div className="mt-5 flex items-center justify-between gap-6">
+            <fieldset className="text-sm text-muted-foreground">
+              <legend className="mb-2 font-medium">Check for changes</legend>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  aria-describedby="baseline-comparison-note"
+                  checked={baseline}
+                  onChange={(e) => {
+                    setBaseline(e.target.checked);
+                    operation.current = undefined;
+                  }}
+                  disabled={!canCollect || busy}
+                />
+                Compare with an earlier copy to find changes
+              </label>
+              <p id="baseline-comparison-note" className="mt-2 text-xs">
+                The earlier copy has not been checked independently.
+              </p>
+            </fieldset>
             <Button
+              className="!h-8 !px-3 !text-sm"
               disabled={!canCollect || busy || !selected.length}
               onClick={start}
             >
@@ -161,19 +175,9 @@ export function InvestigationEvidence({
                 ? "Submitting…"
                 : retry
                   ? "Retry collection"
-                  : "Collect sources"}
+                  : "Start investigation"}
             </Button>
           </div>
-          <details className="mt-6 text-sm text-muted-foreground">
-            <summary>Planned connectors · unavailable</summary>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {connectors
-                .filter((c) => !c.implemented)
-                .map((c) => (
-                  <li key={c.id}>{c.name} · Unavailable</li>
-                ))}
-            </ul>
-          </details>
         </>
       ) : (
         <div className="overflow-x-auto">
@@ -307,6 +311,7 @@ export function InvestigationEvidence({
           </p>
           <div className="mt-3 flex gap-3">
             <Button
+              className="!h-8 !px-3 !text-sm"
               variant="outline"
               size="sm"
               disabled={!selection.offset}
@@ -315,6 +320,7 @@ export function InvestigationEvidence({
               Previous records
             </Button>
             <Button
+              className="!h-8 !px-3 !text-sm"
               variant="outline"
               size="sm"
               disabled={selection.offset + 25 >= selection.page.total}

@@ -81,6 +81,7 @@ test("real model investigates changed fixture bytes; human acceptance populates 
       ...scope,
       action: "start",
       connectorIds: ["customers", "identity", "network", "services"],
+      autoInvestigate: true,
       operationId: randomUUID(),
     });
     expect(queued.status()).toBe(200);
@@ -91,9 +92,6 @@ test("real model investigates changed fixture bytes; human acceptance populates 
       collectSnapshot(id, revision, fixtureRoot),
     );
     await page.goto(`/org/acme/incidents/${scope.incidentId}/investigation`);
-    await page
-      .getByRole("button", { name: "Run Investigation", exact: true })
-      .click();
     let live = await connection(context);
     try {
       await expect
@@ -117,9 +115,10 @@ test("real model investigates changed fixture bytes; human acceptance populates 
       live.conn.disconnect();
       live = await connection(context);
       await page.reload();
-      await page.getByRole("tab", { name: "Activity", exact: true }).click();
-      await expect(page.getByTestId("agent-status")).toContainText("Complete");
-      await page.getByRole("tab", { name: /^Findings/ }).click();
+      await expect(page.getByText("Run log", { exact: false })).toHaveCount(0);
+      expect(
+        live.rows<{ status: string }>("agent", scope.incidentId)[0].status,
+      ).toBe("Complete");
       const details = await post(context.request, "investigation", {
         ...scope,
         action: "agent.read",
@@ -190,7 +189,7 @@ test("real model investigates changed fixture bytes; human acceptance populates 
         ),
       ).toBe(true);
       await page
-        .getByRole("link", { name: "Back to incident dashboard", exact: false })
+        .getByRole("link", { name: "Return to Dashboard", exact: true })
         .click();
       await expect(page.getByTestId(`finding-${finding.id}`)).toContainText(
         content.title,
@@ -429,11 +428,24 @@ test("model unavailable keeps deterministic results and desktop dashboard usable
     });
   }
   await page.goto(`/org/acme/incidents/${scope.incidentId}/investigation`);
-  await page.getByRole("tab", { name: "Activity", exact: true }).click();
-  await expect(page.getByTestId("agent-status")).toContainText("Unavailable");
-  await expect(
-    page.getByRole("region", { name: "Processing milestones" }),
-  ).toContainText("Complete");
+  await expect(page.getByText("Run log", { exact: false })).toHaveCount(0);
+  await expect(page.getByTestId("investigation-stage")).toContainText(
+    "Analysis unavailable",
+  );
+  const unavailable = await connection(context);
+  try {
+    expect(
+      unavailable.rows<{ status: string }>("agent", scope.incidentId)[0].status,
+    ).toBe("Unavailable");
+    expect(
+      unavailable.rows<{ deterministicStatus: string }>(
+        "run",
+        scope.incidentId,
+      )[0].deterministicStatus,
+    ).toBe("Complete");
+  } finally {
+    unavailable.conn.disconnect();
+  }
   const observations = await post(context.request, "investigation", {
     ...scope,
     action: "read",
@@ -442,10 +454,14 @@ test("model unavailable keeps deterministic results and desktop dashboard usable
   expect(observations.status()).toBe(200);
   expect((await observations.json()).total).toBeGreaterThan(0);
   await page
-    .getByRole("link", { name: "Back to incident dashboard", exact: false })
+    .getByRole("link", { name: "Return to Dashboard", exact: true })
     .click();
+  await expect(page.getByTestId("investigation-status")).toHaveAttribute(
+    "title",
+    /Agent: Unavailable/,
+  );
   await expect(page.getByTestId("investigation-status")).toContainText(
-    "Agent: Unavailable",
+    "Analysis incomplete",
   );
   const retry = await post(context.request, "investigation", {
     ...scope,

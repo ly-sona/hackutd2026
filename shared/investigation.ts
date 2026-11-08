@@ -327,6 +327,7 @@ export function analyzeSnapshot(
   return { changes, observations };
 }
 export interface InvestigationRun {
+  autoInvestigate?: boolean;
   revision?: number;
   previousRunId?: string;
   observationCount?: number;

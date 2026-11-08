@@ -179,6 +179,101 @@ export function validateProposalShape(value: unknown): ProposalInput {
   }
   return d as unknown as ProposalInput;
 }
+export function modelRecordReferences(inspected: AgentObservation[]) {
+  return [
+    ...new Set(
+      inspected.flatMap((observation) =>
+        (
+          JSON.parse(observation.provenance) as Omit<
+            Citation,
+            "observationId"
+          >[]
+        ).map((ref) => `${ref.snapshotId}:${ref.key}`),
+      ),
+    ),
+  ];
+}
+export function resolveModelEvidence(
+  value: unknown,
+  inspected: AgentObservation[],
+) {
+  const { recordRef } = object(value, ["recordRef"]);
+  identifier(recordRef);
+  const reference = inspected
+    .flatMap(
+      (observation) =>
+        JSON.parse(observation.provenance) as Omit<Citation, "observationId">[],
+    )
+    .find((ref) => `${ref.snapshotId}:${ref.key}` === recordRef);
+  if (!reference)
+    throw new Error(
+      "Select an available recordRef from the parse_evidence tool. Do not invent record/snapshot pairs.",
+    );
+  return { snapshotId: reference.snapshotId, key: reference.key };
+}
+// The model selects inspected observations; it never reconstructs opaque hashes or evidence IDs.
+// This resolves provenance only. Backend grounding and original-byte checks remain mandatory.
+export function resolveModelProposals(
+  value: unknown,
+  inspected: AgentObservation[],
+) {
+  const d = object(value, ["proposals"]);
+  if (
+    !Array.isArray(d.proposals) ||
+    d.proposals.length > AGENT_LIMITS.proposals
+  )
+    throw new Error("Invalid proposal count.");
+  return {
+    proposals: d.proposals.map((value) => {
+      const selected = object(value, [
+        "observationIds",
+        "priority",
+        "interpretation",
+      ]);
+      if (
+        !Array.isArray(selected.observationIds) ||
+        !selected.observationIds.length ||
+        selected.observationIds.length > 3
+      )
+        throw new Error("Select one to three inspected observations.");
+      const observations = selected.observationIds.map((id) => {
+        identifier(id);
+        const observation = inspected.find((o) => o.id === id);
+        if (!observation)
+          throw new Error(
+            "Select observation IDs returned by detect_anomalies before proposing.",
+          );
+        return observation;
+      });
+      const p = validateProposalShape({
+        ...selected,
+        citations: observations.flatMap((o) =>
+          (JSON.parse(o.provenance) as Omit<Citation, "observationId">[]).map(
+            (ref) => ({ ...ref, observationId: o.id }),
+          ),
+        ),
+      });
+      const interpretations: Record<string, ProposalInput["interpretation"]> = {
+        "unexplained-field-change": "Investigate source change",
+        "missing-export-entry": "Investigate source change",
+        "new-signin-source": "Investigate account activity",
+        "new-access-context": "Investigate account activity",
+        "traffic-after-reported-isolation": "Investigate containment",
+        "reported-service-interruption": "Investigate service interruption",
+      };
+      const expected = interpretations[observations[0].rule];
+      if (!expected)
+        throw new Error(
+          "The primary observation is not an unexplained anomaly.",
+        );
+      if (p.interpretation !== expected)
+        throw new Error(
+          `The first observation ${observations[0].id} requires interpretation "${expected}". Choose that interpretation or reorder the selected observations.`,
+        );
+      return p;
+    }),
+  };
+}
 // Claims are compiled from validated facts, never free-form model assertions. The
 // model chooses observations, priority and a cautious interpretation, not certainty.
 export function groundProposal(
@@ -314,28 +409,8 @@ const strict = (properties: Record<string, unknown>) => ({
   required: Object.keys(properties),
   additionalProperties: false,
 });
-const citation = strict(
-  Object.fromEntries(
-    [
-      "observationId",
-      "evidenceId",
-      "snapshotId",
-      "key",
-      "location",
-      "observedAt",
-      "ruleVersion",
-      "recordHash",
-    ].map((k) => [k, string]),
-  ).valueOf() as Record<string, unknown>,
-);
-(citation.properties as Record<string, unknown>).fields = {
-  type: "array",
-  items: string,
-};
-citation.required.push("fields");
 const proposal = strict({
   observationIds: { type: "array", items: string },
-  citations: { type: "array", items: citation },
   priority: { type: "string", enum: ["High", "Medium", "Low"] },
   interpretation: {
     type: "string",
@@ -360,8 +435,8 @@ export const agentTools = [
   ],
   [
     "parse_evidence",
-    "Inspect one cited source record from the hash-verified immutable original.",
-    strict({ snapshotId: string, key: string }),
+    "Inspect one actual cited record from its hash-verified original. Select an available recordRef; each fixes the record and snapshot together. Once every citation for the selected observations has been inspected, propose_findings; do not look for nonexistent baseline entries.",
+    strict({ recordRef: string }),
   ],
   [
     "query_context_graph",
@@ -370,10 +445,31 @@ export const agentTools = [
   ],
   [
     "propose_findings",
-    "Finish with up to 3 grounded proposals after inspecting observations and their cited records. Copy all citations exactly. Zero proposals only if no applicable unexplained anomaly exists. No free-text factual assertions are accepted.",
+    "Finish with up to 3 grounded proposals after inspecting observations and their cited records. Select observation IDs, priority and interpretation; the worker attaches their exact immutable citations. The first observation is primary and must match the interpretation. Zero proposals only if no applicable unexplained anomaly exists. No free-text factual assertions are accepted.",
     strict({ proposals: { type: "array", items: proposal } }),
   ],
 ].map(([name, description, parameters]) => ({
   type: "function",
   function: { name, description, parameters, strict: true },
 }));
+
+// Limit model-visible evidence inspection to actual cited record/snapshot pairs.
+// Service/backend tools still validate the resolved snapshotId and key independently.
+export function agentToolsFor(inspected: AgentObservation[]) {
+  const references = modelRecordReferences(inspected);
+  return agentTools.flatMap((tool) => {
+    if (tool.function.name !== "parse_evidence") return [tool];
+    if (!references.length) return [];
+    return [
+      {
+        ...tool,
+        function: {
+          ...tool.function,
+          parameters: strict({
+            recordRef: { type: "string", enum: references },
+          }),
+        },
+      },
+    ];
+  });
+}

@@ -30,7 +30,7 @@ export function InvestigationMonitoring({
   const a = useAccess(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [summary, setSummary] = useState<Summary>(),
+    [summary, setSummary] = useState<Summary & { runId: string }>(),
     operation = useRef<string | undefined>(undefined);
   const canRead = a.can("scope:records") && a.can("evidence:view"),
     org = a.organizationId,
@@ -46,7 +46,7 @@ export function InvestigationMonitoring({
       runId: run.id,
     })
       .then((r) => {
-        if (active) setSummary(r);
+        if (active) setSummary({ ...r, runId: run.id });
       })
       .catch((e) => {
         if (active) setError((e as Error).message);
@@ -62,6 +62,7 @@ export function InvestigationMonitoring({
     try {
       await api("investigation", {
         action: "refresh",
+        autoInvestigate: true,
         organizationId: a.organizationId,
         incidentId: a.incidentId,
         runId: parent!.id,
@@ -81,61 +82,84 @@ export function InvestigationMonitoring({
     (parent.revision ?? 1) < 2 &&
     !runs.some((r) => ["Queued", "Collecting", "Analyzing"].includes(r.status));
   return (
-    <section
+    <div
       aria-label="Snapshot monitoring"
-      className="mb-6 border-y border-border py-4"
+      className="flex flex-wrap items-start gap-3"
     >
-      <div className="flex items-center justify-between gap-4">
-        <label className="text-sm">
-          Snapshot history{" "}
-          <select
-            aria-label="Snapshot history"
-            className="ml-3 border border-border bg-background px-2 py-1"
-            value={run.id}
-            onChange={(e) => onSelect(e.target.value)}
-          >
-            {runs.map((r) => (
-              <option key={r.id} value={r.id}>
-                Revision {r.revision ?? 1} · {r.status} ·{" "}
-                {new Date(Number(r.createdAt)).toLocaleTimeString()}
-              </option>
-            ))}
-          </select>
-        </label>
-        {canCollect && available && (
-          <Button size="sm" disabled={busy} onClick={collect}>
-            Collect next snapshot
-          </Button>
-        )}
-      </div>
-      {run.previousRunId && summary && (
-        <p
-          className="mt-3 text-xs text-muted-foreground"
-          data-testid="reassessment-summary"
+      <label className="relative text-[11px] text-muted-foreground">
+        <span className="absolute bottom-full left-0 mb-1 whitespace-nowrap">
+          Snapshot history
+        </span>
+        <select
+          aria-label="Snapshot history"
+          className="h-8 w-auto min-w-44 rounded-md border border-border bg-background px-2 text-xs text-foreground [field-sizing:content]"
+          value={run.id}
+          onChange={(e) => onSelect(e.target.value)}
         >
-          Compared with the preserved prior snapshot:{" "}
-          {summary.sources.reduce((n, s) => n + (s.counts.added ?? 0), 0)}{" "}
-          added,{" "}
-          {summary.sources.reduce((n, s) => n + (s.counts.modified ?? 0), 0)}{" "}
-          modified,{" "}
-          {summary.sources.reduce((n, s) => n + (s.counts.missing ?? 0), 0)}{" "}
-          missing,{" "}
-          {summary.sources.reduce((n, s) => n + (s.counts.unchanged ?? 0), 0)}{" "}
-          unchanged. {summary.observations} new observations. Prior human
-          decisions remain intact; missing entries do not establish deletion.
-        </p>
+          {runs.map((r) => (
+            <option key={r.id} value={r.id}>
+              Revision {r.revision ?? 1} · {r.status} ·{" "}
+              {new Date(Number(r.createdAt)).toLocaleTimeString()}
+            </option>
+          ))}
+        </select>
+      </label>
+      {canCollect && available && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="!h-8 !px-3 !text-sm"
+          disabled={busy}
+          onClick={collect}
+          title="Collect the next snapshot and investigate it automatically"
+        >
+          {busy ? "Starting…" : "Collect next snapshot"}
+        </Button>
+      )}
+      {run.previousRunId && summary?.runId === run.id && (
+        <details className="basis-full text-xs text-muted-foreground">
+          <summary className="cursor-pointer">
+            Snapshot changes · Revision {summary.revision}
+          </summary>
+          <p
+            className="mt-2 max-w-2xl leading-5"
+            data-testid="reassessment-summary"
+          >
+            Compared with the preserved prior snapshot:{" "}
+            <span className="text-foreground">
+              {summary.sources.reduce((n, s) => n + (s.counts.added ?? 0), 0)}{" "}
+              added
+            </span>
+            ,{" "}
+            <span className="text-foreground">
+              {summary.sources.reduce(
+                (n, s) => n + (s.counts.modified ?? 0),
+                0,
+              )}{" "}
+              modified
+            </span>
+            ,{" "}
+            <span className="text-foreground">
+              {summary.sources.reduce((n, s) => n + (s.counts.missing ?? 0), 0)}{" "}
+              missing
+            </span>
+            ,{" "}
+            {summary.sources.reduce((n, s) => n + (s.counts.unchanged ?? 0), 0)}{" "}
+            unchanged. {summary.observations} new observations. Prior decisions
+            remain intact; missing entries do not establish deletion.
+          </p>
+        </details>
       )}
       {(parent?.revision ?? 1) >= 2 && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Latest allowlisted demo snapshot collected. Further synthetic
-          revisions are unavailable.
-        </p>
+        <span className="basis-full text-xs text-muted-foreground">
+          Latest demo snapshot · Further revisions unavailable
+        </span>
       )}
       {error && (
-        <p role="alert" className="mt-2 text-sm text-amber-300">
+        <p role="alert" className="basis-full text-sm text-foreground">
           {error}
         </p>
       )}
-    </section>
+    </div>
   );
 }

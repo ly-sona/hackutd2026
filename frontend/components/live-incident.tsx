@@ -1,5 +1,6 @@
 "use client";
 import { InvestigationStatus } from "./investigation-status";
+import { useInvestigationData } from "./investigation-data";
 import {
   TaskForm,
   CoordinationAttention,
@@ -240,18 +241,35 @@ export function LiveOverview() {
   const a = useAccess(),
     d = useIncident(),
     coordination = useCoordination(),
+    investigation = useInvestigationData(),
     params = useSearchParams();
   const [selected, setSelected] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const i = d.incident,
     shown = selected ?? params.get("finding");
-  if (!d.ready) return <p role="status">Loading incident…</p>;
+  if (!d.ready || !investigation.ready)
+    return <p role="status">Loading incident…</p>;
   if (!i)
     return (
       <p role="alert">
         Incident documentation is not available. Run the Phase 2 seed.
       </p>
+    );
+  const hasIncidentData =
+    d.findings.length > 0 ||
+    d.evidence.length > 0 ||
+    coordination.tasks.length > 0 ||
+    Object.values(d.scopeSummary ?? {}).some((count) => count > 0);
+  if (investigation.metadata?.mode === "investigation" && !hasIncidentData)
+    return (
+      <section
+        aria-label="Incident awaiting data"
+        className="flex min-h-[45vh] flex-col items-center justify-center gap-6"
+      >
+        <h1 className="text-3xl font-semibold tracking-tight">No data yet</h1>
+        <InvestigationStatus prominent />
+      </section>
     );
   const newEvents =
     d.cutoff && d.cutoff !== "0"
@@ -302,6 +320,7 @@ export function LiveOverview() {
             >
               {i.severity}
             </Badge>
+            <InvestigationStatus inline />
             {a.can("findings:create") && <FindingForm />}
             <IncidentReports />
             <Button
@@ -316,7 +335,7 @@ export function LiveOverview() {
           </>
         }
       />
-      <InvestigationStatus />
+      {investigation.metadata?.mode === "reference" && <InvestigationStatus />}
       {toolsOpen && (
         <section
           aria-label="Incident details and actions"
@@ -837,10 +856,15 @@ export function LiveTimeline() {
                     <>
                       <dt>Time correction</dt>
                       <dd>
-                        Synthetic fixture correction #{current.timingCorrectionId}.
-                        Original observation: {incidentTime(current.originalObservedAt!)}.
-                        {current.originalRecordedAt && ` Original recording: ${incidentTime(current.originalRecordedAt)}.`}
-                        Corrected by {d.members.find((member) => member.userId === "maya")?.name ?? "maya"} on {incidentTime(current.timingCorrectedAt!)}.
+                        Synthetic fixture correction #
+                        {current.timingCorrectionId}. Original observation:{" "}
+                        {incidentTime(current.originalObservedAt!)}.
+                        {current.originalRecordedAt &&
+                          ` Original recording: ${incidentTime(current.originalRecordedAt)}.`}
+                        Corrected by{" "}
+                        {d.members.find((member) => member.userId === "maya")
+                          ?.name ?? "maya"}{" "}
+                        on {incidentTime(current.timingCorrectedAt!)}.
                       </dd>
                     </>
                   )}

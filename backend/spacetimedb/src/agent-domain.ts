@@ -237,68 +237,21 @@ function human(
       return p.fail("CONFLICT", "Incomplete source manifest.");
     const member = ctx.db.memberships.id.find(`${org}:${actor.userId}`)!,
       assignment = ctx.db.incidentMemberships.id.find(`${k}:${actor.userId}`);
-    const incident = ctx.db.incidents.id.find(k)!;
-    const id = moduleId(ctx, (id) => !!ctx.db.agentRuns.id.find(id));
-    ctx.db.agentRuns.insert({
-      id,
-      organizationId: org,
-      incidentId: inc,
-      incidentKey: k,
-      collectionRunId: parent.id,
-      operationKey,
-      fingerprint,
-      actorId: actor.userId,
-      membershipRevision: member.updatedAt.microsSinceUnixEpoch.toString(),
-      assignmentRevision:
-        member.role === "administrator"
-          ? "organization-administrator"
-          : assignment!.createdAt.microsSinceUnixEpoch.toString(),
-      deadline: at + 600_000n,
-      manifest: json({
-        snapshots: snapshots.map((s) => ({
-          id: s.id,
-          evidenceId: s.evidenceId,
-          sha256: s.sha256,
-          sourceId: s.sourceId,
-          coverage: s.coverage,
-          role: s.role,
-        })),
-        observationIds: [
-          ...ctx.db.analysisObservations.runId.filter(parent.id),
-        ].map((o) => o.id),
-        sourceIds: JSON.parse(parent.sourceIds),
-        incidentRevision: incident.updatedAt.toString(),
-        ruleVersion: "aegis-deterministic-v1",
-      }),
-      context: json({
-        title: incident.title,
-        description: incident.description,
-      }),
-      status: "Queued",
-      error: "",
-      model: "",
-      modelEndpoint: "",
-      promptVersion: AGENT_VERSION,
-      requests: 0,
-      attempts: 0,
-      trace: "[]",
-      leaseToken: "",
-      leaseUntil: 0n,
-      createdAt: at,
-      updatedAt: at,
-    });
-    appendEvent(
+    return queueAuthorizedAgent(
       ctx,
-      org,
-      inc,
-      actor.userId,
-      "action",
-      "Agent investigation queued",
-      "Fixed source manifest authorized; collection and deterministic results remain available.",
-      { newValue: json({ agentRunId: id, collectionRunId: parent.id }) },
+      parent,
+      {
+        actorId: actor.userId,
+        membershipRevision: member.updatedAt.microsSinceUnixEpoch.toString(),
+        assignmentRevision:
+          member.role === "administrator"
+            ? "organization-administrator"
+            : assignment!.createdAt.microsSinceUnixEpoch.toString(),
+      },
+      operationKey,
     );
-    return { agentRunId: id };
   }
+
   const job = ctx.db.agentRuns.id.find(text(d, "agentRunId"));
   if (!job || job.incidentKey !== k)
     return p.fail("NOT_FOUND", "Agent investigation unavailable.");
@@ -1185,4 +1138,86 @@ function reviewImpact(
     status: decision === "Accept" ? "Accepted" : "Rejected",
     assessmentId,
   };
+}
+
+// Internal only: callers have already checked current authority. Automatic
+// handoff inherits the collection's fixed delegation, never a browser session.
+export function queueAuthorizedAgent(
+  ctx: Ctx,
+  parent: NonNullable<ReturnType<Ctx["db"]["analysisRuns"]["id"]["find"]>>,
+  authority: Pick<Job, "actorId" | "membershipRevision" | "assignmentRevision">,
+  operationKey: string,
+  deadline = time(ctx) + 600_000n,
+) {
+  const existing = ctx.db.agentRuns.operationKey.find(operationKey);
+  if (existing) return { agentRunId: existing.id };
+  const at = time(ctx),
+    snapshots = comparisonSnapshots(ctx, parent);
+  if (
+    parent.status !== "Complete" ||
+    parent.deterministicStatus !== "Complete" ||
+    parent.incidentKey === "acme:IR-2041" ||
+    snapshots.filter((s) => s.runId === parent.id).length !==
+      parent.expectedSnapshots ||
+    snapshots.some((s) => s.status !== "Finalized")
+  )
+    throw new InvestigationInputError(
+      "Complete authorized collection before investigation.",
+    );
+  const incident = ctx.db.incidents.id.find(parent.incidentKey)!;
+  const id = moduleId(ctx, (id) => !!ctx.db.agentRuns.id.find(id));
+  ctx.db.agentRuns.insert({
+    id,
+    organizationId: parent.organizationId,
+    incidentId: parent.incidentId,
+    incidentKey: parent.incidentKey,
+    collectionRunId: parent.id,
+    operationKey,
+    fingerprint: canonical({ runId: parent.id }),
+    ...authority,
+    deadline,
+    manifest: json({
+      snapshots: snapshots.map((s) => ({
+        id: s.id,
+        evidenceId: s.evidenceId,
+        sha256: s.sha256,
+        sourceId: s.sourceId,
+        coverage: s.coverage,
+        role: s.role,
+      })),
+      observationIds: [
+        ...ctx.db.analysisObservations.runId.filter(parent.id),
+      ].map((o) => o.id),
+      sourceIds: JSON.parse(parent.sourceIds),
+      incidentRevision: incident.updatedAt.toString(),
+      ruleVersion: "aegis-deterministic-v1",
+    }),
+    context: json({
+      title: incident.title,
+      description: incident.description,
+    }),
+    status: "Queued",
+    error: "",
+    model: "",
+    modelEndpoint: "",
+    promptVersion: AGENT_VERSION,
+    requests: 0,
+    attempts: 0,
+    trace: "[]",
+    leaseToken: "",
+    leaseUntil: 0n,
+    createdAt: at,
+    updatedAt: at,
+  });
+  appendEvent(
+    ctx,
+    parent.organizationId,
+    parent.incidentId,
+    authority.actorId,
+    "action",
+    "Agent investigation queued",
+    "Fixed source manifest authorized; collection and deterministic results remain available.",
+    { newValue: json({ agentRunId: id, collectionRunId: parent.id }) },
+  );
+  return { agentRunId: id };
 }

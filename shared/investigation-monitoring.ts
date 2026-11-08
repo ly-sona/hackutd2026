@@ -16,6 +16,7 @@ export function analyzeIncremental(
 }
 
 export interface CollectionManifest {
+  autoInvestigate?: boolean;
   revision: number;
   previousRunId?: string;
   previousSnapshots?: Record<string, string>;

@@ -55,8 +55,14 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
   await dialog.getByLabel("Alex Rivera", { exact: true }).check();
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: title, exact: true }),
+    page.getByRole("heading", { name: "No data yet", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Needs your attention", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Add finding", exact: true }),
+  ).toHaveCount(0);
   const incidentId = /incidents\/(IR-\d+)/.exec(page.url())![1],
     scope = { organizationId: "acme", incidentId };
   await page
@@ -66,15 +72,23 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
   await expect(
     page.getByRole("heading", { name: "Investigation", exact: true }),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Evidence", exact: true }).click();
-  await page
-    .getByText("Planned connectors · unavailable", { exact: true })
-    .click();
   await expect(
-    page.getByText("HR Records · Unavailable", { exact: true }),
+    page.getByRole("heading", {
+      name: "Connect evidence sources",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
+    page.getByText("Planned connectors · unavailable", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("HR Records · Unavailable", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
     page.getByText("Payroll · Unavailable", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByLabel("Compare with an earlier copy to find changes", { exact: false }),
   ).toBeVisible();
   await expect(
     page
@@ -84,13 +98,13 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
   const live = await connection(context);
   try {
     await page
-      .getByRole("button", { name: "Collect sources", exact: true })
+      .getByRole("button", { name: "Start investigation", exact: true })
       .click();
     await expect
       .poll(() => live.rows<InvestigationRun>("run", incidentId).length)
       .toBe(1);
     await page
-      .getByRole("link", { name: "Back to incident dashboard", exact: false })
+      .getByRole("link", { name: "Return to Dashboard", exact: true })
       .click();
     await expect(
       page.getByRole("heading", { name: title, exact: true }),
@@ -104,7 +118,7 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
       analyzedSources: 4,
       collectionStatus: "Complete",
       deterministicStatus: "Complete",
-      agentStatus: "Not configured",
+      agentStatus: "Queued",
     });
     const incidentRows = [...live.conn.db.visibleIncidentData.iter()].filter(
       (r) => r.incidentId === incidentId,
@@ -160,9 +174,13 @@ test("creates through existing UI, collects four actual sources, keeps the dashb
     await page
       .getByRole("link", { name: "Open Investigation", exact: true })
       .click();
-    await page.getByRole("tab", { name: "Activity", exact: true }).click();
-    await expect(page.getByTestId("run-status")).toHaveText("Complete");
-    await page.getByRole("tab", { name: "Evidence", exact: true }).click();
+    await expect(page.getByText("Run log", { exact: false })).toHaveCount(0);
+    expect(live.rows<InvestigationRun>("run", incidentId)[0].status).toBe(
+      "Complete",
+    );
+    await page
+      .getByText("Source snapshots and comparisons", { exact: false })
+      .click();
     await page
       .getByRole("button", { name: "Customer Records / CRM", exact: true })
       .click();
@@ -494,7 +512,7 @@ test("enforces scopes, role permissions, immutable operation identities, and pri
       `/org/acme/incidents/${scope.incidentId}/investigation`,
     );
     await privatePage
-      .getByRole("tab", { name: "Evidence", exact: true })
+      .getByText("Source snapshots and comparisons", { exact: false })
       .click();
     await expect(
       privatePage.getByText(
